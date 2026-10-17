@@ -19,7 +19,7 @@ TimberLab keeps the parametric model independent of Qt. QML reads and writes the
 | UI | `src/ui`, `qml/` | Controller, OpenGL viewport, workspace. |
 | App | `apps/timberlab` | Process entry and the headless self-check. |
 
-`parentId` is a parent link. `setParent` rejects a missing part and a cycle. Assemblies do not fill it. `role` is an optional token on a part. A relay client, PDF, DXF, and a dimensioned drawing are still absent.
+`parentId` is a parent link. `setParent` rejects a missing part and a cycle. Assemblies do not fill it. `role` is an optional token on a part. PDF and DXF wires exist. The front dimension file states overall width and height from the model. A hidden-line drawing does not. A relay that stores a project does not.
 
 ## Boundaries
 
@@ -41,6 +41,6 @@ See `docs/adr/0002-units.md`. One inch is 25 400 000 nm, so binary fractions dow
 
 ## Persistence
 
-The project model lives in the versioned `.timberlab` archive, with a checksum. SQLite preferences are schema version 1. The user library is a second database, schema version 3, for custom materials and thickness presets, each with a revision. A CAD relay is still not implemented. Desktop sign-in can hold an nsec in memory or open a bunker socket. That socket does not replace the project file. Local AES-256-GCM can replace one library row when a sealed envelope wins the revision check. It does not replace the project file. The library must not become the only copy of a solid. See `DATA_FORMAT.md`, `docs/adr/0006-persistence.md`, and `docs/adr/0008-user-library.md`.
+The project model lives in the versioned `.timberlab` archive, with a checksum. SQLite preferences are schema version 1. The user library is a second database, schema version 3, for custom materials and thickness presets, each with a revision. A CAD relay is still not implemented. Desktop sign-in can hold an nsec in memory or open a bunker socket. That socket does not replace the project file. Local AES-256-GCM can replace one library row when a sealed envelope wins the revision check. A kind 30078 library event, opened with the nsec, can replace that same row. Neither path replaces the project file. The library must not become the only copy of a solid. See `DATA_FORMAT.md`, `docs/adr/0006-persistence.md`, and `docs/adr/0008-user-library.md`.
 
 Propagation evaluates linear bindings in topological order. A cycle, or a result outside the part and placement limits, rejects the whole edit. Joint sizes stay numbers on the joint. See `docs/adr/0007-propagation.md`.

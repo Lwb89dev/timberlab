@@ -20,6 +20,7 @@ using timberlab::manufacturing::billOfMaterials;
 using timberlab::manufacturing::cutList;
 using timberlab::manufacturing::cutListCsv;
 using timberlab::manufacturing::cutListJson;
+using timberlab::manufacturing::dimensionedFrontSvg;
 using timberlab::manufacturing::frontViewSvg;
 using timberlab::manufacturing::rightViewSvg;
 using timberlab::manufacturing::sheetSvg;
@@ -128,6 +129,26 @@ TEST_CASE("the front view is a wire of the cut solid with Y dropped") {
   const std::string cut = frontViewSvg(part, {joint}, {part, mate}, error);
   REQUIRE_FALSE(cut.empty());
   REQUIRE(cut.size() > plain.size());
+
+  const std::string dimensioned = dimensionedFrontSvg(part, {}, {part}, error);
+  REQUIRE(error.empty());
+  REQUIRE(dimensioned.find("id=\"width-text\"") != std::string::npos);
+  REQUIRE(dimensioned.find(">100 mm</text>") != std::string::npos);
+  REQUIRE(dimensioned.find(">200 mm</text>") != std::string::npos);
+  REQUIRE(dimensioned.find("id=\"width-line\" x1=\"1.000\" y1=\"207.000\" x2=\"101.000\"") != std::string::npos);
+  REQUIRE(dimensioned.find("id=\"height-line\"") != std::string::npos);
+  REQUIRE(dimensioned.find("y1=\"1.000\"") != std::string::npos);
+  REQUIRE(dimensioned.find("y2=\"201.000\"") != std::string::npos);
+  REQUIRE(dimensioned.find("Not hidden-line removal") != std::string::npos);
+  const std::string still = dimensionedFrontSvg(part, {joint}, {part, mate}, error);
+  REQUIRE(still.find(">100 mm</text>") != std::string::npos);
+  REQUIRE(still.find(">200 mm</text>") != std::string::npos);
+  Component cylinder;
+  cylinder.type = ComponentType::Cylinder;
+  cylinder.radiusNm = 10 * kMm;
+  cylinder.heightNm = 40 * kMm;
+  REQUIRE(dimensionedFrontSvg(cylinder, {}, {cylinder}, error).empty());
+  REQUIRE(error == "dimension.not_applicable");
 }
 
 TEST_CASE("top, right, sheet, DXF, and PDF are wires of the same solid") {

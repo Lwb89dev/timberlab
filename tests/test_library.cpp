@@ -2,9 +2,12 @@
 #include "timberlab/core/document.hpp"
 #include "timberlab/storage/archive.hpp"
 #include "timberlab/storage/library.hpp"
+#include "timberlab/storage/nostr.hpp"
 #include "timberlab/storage/preferences.hpp"
 #include "timberlab/storage/sha256.hpp"
 #include "timberlab/storage/sync.hpp"
+
+#include <openssl/crypto.h>
 #include "timberlab/units/units.hpp"
 
 #include <nlohmann/json.hpp>
@@ -414,4 +417,66 @@ TEST_CASE("a sealed library envelope updates the library and leaves the project 
   REQUIRE(library.presets()[0].revision == 4);
   REQUIRE(library.materials()[0].notes == "remote");
   REQUIRE(readBytes(projectPath) == projectBefore);
+}
+
+TEST_CASE("a nostr library event updates one row and leaves the project file") {
+  const auto libraryPath = testDirectory() / "library-event.sqlite";
+  const auto projectPath = testDirectory() / "library-event.timberlab";
+  removeDatabase(libraryPath);
+  std::filesystem::remove(projectPath);
+  timberlab::Document document;
+  document.addBoard();
+  std::string error;
+  REQUIRE(document.setProjectName("Keep", error));
+  REQUIRE(timberlab::storage::saveProject(projectPath.string(), document).ok);
+  const std::string projectBefore = readBytes(projectPath);
+
+  timberlab::storage::Library library(libraryPath.string());
+  REQUIRE(library.ok());
+  timberlab::storage::UserMaterial material;
+  material.id = "user_event";
+  material.name = "Shop oak";
+  material.visualHex = "#A67C52";
+  material.notes = "local";
+  REQUIRE(library.addMaterial(material, error));
+  std::string plaintext;
+  REQUIRE(library.materialPlaintext(material.id, plaintext, error));
+  std::string tag;
+  REQUIRE(timberlab::storage::libraryTagFor("material", material.id, tag, error));
+  unsigned char secret[32];
+  REQUIRE(timberlab::storage::decodeNsec("nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5", secret, error));
+  unsigned char nonce[32] = {};
+  unsigned char aux[32] = {};
+  nonce[0] = 11;
+  timberlab::storage::Event event;
+  REQUIRE(timberlab::storage::sealLibraryEvent(secret, tag, plaintext, 1700001111, nonce, aux, event, error));
+  const std::string file = timberlab::storage::libraryEventsToJson({event});
+  std::vector<timberlab::storage::Event> events;
+  REQUIRE(timberlab::storage::parseLibraryEvents(file, events, error));
+  std::string openedTag;
+  std::string opened;
+  REQUIRE(timberlab::storage::openLibraryEvent(secret, events[0], openedTag, opened, error));
+  REQUIRE(opened == plaintext);
+  std::string winner;
+  REQUIRE(library.importPlaintext(opened, winner, error));
+  REQUIRE(winner == "local");
+  REQUIRE(readBytes(projectPath) == projectBefore);
+
+  nlohmann::json remote = nlohmann::json::parse(opened);
+  remote["revision"] = 2;
+  remote["payload"]["notes"] = "relay";
+  remote["contentHash"] = timberlab::storage::sha256Hex(remote["payload"].dump());
+  REQUIRE(library.importPlaintext(remote.dump(), winner, error));
+  REQUIRE(winner == "remote");
+  REQUIRE(library.materials()[0].notes == "relay");
+  REQUIRE(library.materials()[0].revision == 2);
+  REQUIRE(readBytes(projectPath) == projectBefore);
+
+  remote["payload"]["notes"] = "conflict";
+  remote["contentHash"] = timberlab::storage::sha256Hex(remote["payload"].dump());
+  REQUIRE_FALSE(library.importPlaintext(remote.dump(), winner, error));
+  REQUIRE(error == "sync.conflict");
+  REQUIRE(library.materials()[0].notes == "relay");
+  REQUIRE(readBytes(projectPath) == projectBefore);
+  OPENSSL_cleanse(secret, sizeof(secret));
 }

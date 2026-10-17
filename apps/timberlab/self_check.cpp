@@ -97,7 +97,29 @@ bool nostrReady() {
   const storage::AmberRequest amber = storage::amberGetPublicKeyRequest();
   if (amber.packageName != "com.greenart7c3.nostrsigner") return false;
   if (amber.permissionsJson.find("sign_event") != std::string::npos) return false;
-  return amber.permissionsJson.find("get_public_key") != std::string::npos;
+  if (amber.permissionsJson.find("get_public_key") == std::string::npos) return false;
+
+  unsigned char owner[32];
+  if (!storage::decodeNsec("nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5", owner, error)) return false;
+  std::string tag;
+  unsigned char eventNonce[32] = {};
+  unsigned char aux[32] = {};
+  eventNonce[0] = 7;
+  aux[0] = 9;
+  storage::Event event;
+  const bool tagged = storage::libraryTagFor("material", "user_check", tag, error);
+  const bool sealedEvent =
+      tagged && tag == "timberlab:material:user_check" &&
+      storage::sealLibraryEvent(owner, tag, "{\"id\":\"user_check\"}", 1700000000, eventNonce, aux, event, error);
+  std::string openedTag;
+  std::string opened;
+  const bool openedOk = sealedEvent && event.kind == 30078 &&
+                        storage::openLibraryEvent(owner, event, openedTag, opened, error) && openedTag == tag &&
+                        opened == "{\"id\":\"user_check\"}";
+  OPENSSL_cleanse(owner, sizeof(owner));
+  OPENSSL_cleanse(eventNonce, sizeof(eventNonce));
+  OPENSSL_cleanse(aux, sizeof(aux));
+  return openedOk;
 }
 
 int runSelfCheck() {

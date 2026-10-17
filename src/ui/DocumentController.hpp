@@ -78,6 +78,7 @@ class DocumentController : public QObject {
   Q_PROPERTY(QString meshQuality READ meshQuality WRITE setMeshQuality NOTIFY documentChanged)
   Q_PROPERTY(bool signedIn READ signedIn NOTIFY accountChanged)
   Q_PROPERTY(QString accountNpub READ accountNpub NOTIFY accountChanged)
+  Q_PROPERTY(bool canPublishLibrary READ canPublishLibrary NOTIFY accountChanged)
 
  public:
   explicit DocumentController(QObject* parent = nullptr);
@@ -109,6 +110,9 @@ class DocumentController : public QObject {
   void setMeshQuality(const QString& quality);
   bool signedIn() const { return signer_.signedIn(); }
   QString accountNpub() const { return QString::fromStdString(signer_.npub()); }
+  bool canPublishLibrary() const {
+    return signer_.signedIn() && signer_.method() == storage::SignerMethod::Nsec;
+  }
 
   const Document& document() const { return document_; }
   std::vector<ScenePart> copyScene() const;
@@ -144,6 +148,8 @@ class DocumentController : public QObject {
   Q_INVOKABLE bool exportCutList(const QUrl& url, const QString& allowanceText);
   Q_INVOKABLE bool exportFrontView(const QUrl& url);
   Q_INVOKABLE bool exportDrawing(const QUrl& url, const QString& kind);
+  Q_INVOKABLE bool exportLibraryEvents(const QUrl& url);
+  Q_INVOKABLE bool importLibraryEvents(const QUrl& url);
   Q_INVOKABLE bool restoreBackup();
   Q_INVOKABLE void setDisplayUnit(const QString& unitKey);
   Q_INVOKABLE void setFractionPrecision(int denom);

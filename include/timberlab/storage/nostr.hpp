@@ -7,8 +7,11 @@
 
 namespace timberlab::storage {
 
-// Nostr sign-in. Secret bytes stay in memory. Nothing here opens a project
-// file, writes a key, or publishes a CAD event.
+// Nostr sign-in and a library event. Secret bytes stay in memory. Nothing here
+// opens a project file, writes a key, or opens a socket. A library event is
+// kind 30078, an application schema, not a NIP. Its d tag is
+// timberlab:material:<id> or timberlab:preset:<id>. The content is NIP-44
+// ciphertext for the author's own key. The plaintext is the library envelope.
 
 struct Event {
   std::string id;
@@ -132,6 +135,19 @@ std::string relayCloseMessage(std::string_view sub);
 std::string relayAuthMessage(const Event& event);
 bool parseRelayMessage(std::string_view json, RelayMessage& out, std::string& error);
 
+// The id uses the library charset: lowercase letters, digits, underscore,
+// hyphen, and dot, 1 to 64 bytes. A bad kind or id is sync.mismatch.
+bool libraryTagFor(std::string_view kind, std::string_view id, std::string& tag, std::string& error);
+bool sealLibraryEvent(const unsigned char secret[32], std::string_view tag, std::string_view plaintext,
+                      std::int64_t createdAt, const unsigned char nonce[32], const unsigned char aux[32], Event& event,
+                      std::string& error);
+bool openLibraryEvent(const unsigned char secret[32], const Event& event, std::string& tag, std::string& plaintext,
+                      std::string& error);
+std::string eventToJson(const Event& event);
+bool parseEventJson(std::string_view json, Event& event, std::string& error);
+std::string libraryEventsToJson(const std::vector<Event>& events);
+bool parseLibraryEvents(std::string_view json, std::vector<Event>& events, std::string& error);
+
 class SignerSession {
  public:
   SignerSession();
@@ -147,6 +163,10 @@ class SignerSession {
   bool signAuth(std::string_view relayUrl, std::string_view challenge, std::int64_t now, Event& event,
                 std::string& error);
   bool signLocal(Event& event, std::int64_t now, std::string& error);
+  // Nsec only. Bunker and Amber do not hold the user secret, so they cannot
+  // seal or open a library event.
+  bool sealLibrary(std::string_view tag, std::string_view plaintext, std::int64_t now, Event& event, std::string& error);
+  bool openLibrary(const Event& event, std::string& tag, std::string& plaintext, std::string& error);
   void logout();
 
   bool signedIn() const { return state_ == SignerState::SignedIn; }

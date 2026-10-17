@@ -12,7 +12,7 @@ Qt Quick 3D is not installed here, so it has no SPDX entry in this tree. Qt's `q
 
 `moc`, `rcc`, `lrelease`, and `lupdate` are GPL-3.0-only with the Qt GPL exception. They run at build time and are not linked into the application. LinguistTools is a host tool. An Android cross build still needs them on the host.
 
-LGPL still has source and relink obligations if a binary is shipped. Shipping is not happening. When it does, TimberLab's source travels with the binary (GPL-3), and the corresponding Qt and OCCT sources, or an offer for them, travel too. Shared libraries are how this Linux build meets the relink requirement. A store package and GPLv3 installation information for a locked tablet have not been checked.
+LGPL still has source and relink obligations when a binary is shipped. The version-tag `.deb` ships TimberLab's binary together with the Qt 6.8.3 and Open CASCADE 7.9.2 shared libraries it was linked against. The git tag is the TimberLab source. `packaging/copyright` names the upstream Qt and OCCT source archives and is installed as `/usr/share/doc/timberlab/copyright`. The OCCT LGPL text and exception are copied into that directory. Shared libraries are how this package meets the relink requirement. A store package, and GPLv3 installation information for a locked tablet, have not been checked.
 
 ## Other components
 

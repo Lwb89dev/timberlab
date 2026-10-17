@@ -485,6 +485,145 @@ void addSlidingCuts(const Joint& joint, const Component& part, std::vector<Local
   pushTrapezoid(cuts, face, outer, inner, tip1, uSize, shoulder1, uSize, vSize);
 }
 
+bool fitFinger(const Joint& joint, const Component& partA, const Component& partB, std::string& error) {
+  if (joint.count < 2 || joint.count > 8) {
+    error = "joint.parameter";
+    return false;
+  }
+  const FaceAxes faceA = faceAxes(joint.faceA);
+  const FaceAxes faceB = faceAxes(joint.faceB);
+  const std::int64_t uA = axisNm(partA, faceA.u);
+  const std::int64_t uB = axisNm(partB, faceB.u);
+  const std::int64_t nA = axisNm(partA, faceA.normal);
+  const std::int64_t nB = axisNm(partB, faceB.normal);
+  if (uA != uB || uA <= 0 || (uA % joint.count) != 0) {
+    error = "joint.parameter";
+    return false;
+  }
+  if (!inRange(joint.lengthNm) || joint.lengthNm >= nA || joint.lengthNm >= nB) {
+    error = "joint.parameter";
+    return false;
+  }
+  return true;
+}
+
+bool fitHalfBlind(const Joint& joint, const Component& pins, const Component& tails, std::string& error) {
+  if (!fitDovetail(joint, pins, tails, error)) return false;
+  const std::int64_t nPins = axisNm(pins, faceAxes(joint.faceA).normal);
+  if (joint.depthNm >= nPins) {
+    error = "joint.parameter";
+    return false;
+  }
+  return true;
+}
+
+bool fitTongue(const Joint& joint, const Component& host, const Component& tongue, std::string& error) {
+  const FaceAxes hostFace = faceAxes(joint.faceA);
+  const FaceAxes tongueFace = faceAxes(joint.faceB);
+  const std::int64_t hostU = axisNm(host, hostFace.u);
+  const std::int64_t hostN = axisNm(host, hostFace.normal);
+  const std::int64_t tongueU = axisNm(tongue, tongueFace.u);
+  const std::int64_t tongueN = axisNm(tongue, tongueFace.normal);
+  if (!inRange(joint.thicknessNm) || !inRange(joint.depthNm)) {
+    error = "joint.parameter";
+    return false;
+  }
+  if (joint.thicknessNm >= hostU || joint.thicknessNm >= tongueU) {
+    error = "joint.parameter";
+    return false;
+  }
+  if (tongueU - joint.thicknessNm < 2) {
+    error = "joint.parameter";
+    return false;
+  }
+  if (joint.depthNm >= hostN || joint.depthNm >= tongueN) {
+    error = "joint.parameter";
+    return false;
+  }
+  return true;
+}
+
+bool fitDowel(const Joint& joint, const Component& partA, const Component& partB, std::string& error) {
+  if (joint.thicknessNm < 2 || (joint.thicknessNm % 2) != 0 || !inRange(joint.thicknessNm) || !inRange(joint.depthNm)) {
+    error = "joint.parameter";
+    return false;
+  }
+  const FaceAxes faceA = faceAxes(joint.faceA);
+  const FaceAxes faceB = faceAxes(joint.faceB);
+  const std::int64_t radius = joint.thicknessNm / 2;
+  const std::int64_t limits[] = {axisNm(partA, faceA.u) / 2, axisNm(partA, faceA.v) / 2, axisNm(partB, faceB.u) / 2,
+                                 axisNm(partB, faceB.v) / 2};
+  for (const std::int64_t limit : limits) {
+    if (radius >= limit) {
+      error = "joint.parameter";
+      return false;
+    }
+  }
+  const std::int64_t nA = axisNm(partA, faceA.normal);
+  const std::int64_t nB = axisNm(partB, faceB.normal);
+  if (joint.depthNm > nA || joint.depthNm > nB) {
+    error = "joint.parameter";
+    return false;
+  }
+  return true;
+}
+
+void addFingerCuts(const Joint& joint, const Component& part, std::vector<LocalCut>& cuts) {
+  const bool oddBoard = part.id == joint.partA;
+  const FaceAxes face = faceAxes(oddBoard ? joint.faceA : joint.faceB);
+  const std::int64_t uSize = axisNm(part, face.u);
+  const std::int64_t vSize = axisNm(part, face.v);
+  const std::int64_t normal = axisNm(part, face.normal);
+  const std::int64_t finger = uSize / joint.count;
+  std::int64_t n0 = 0;
+  std::int64_t n1 = 0;
+  endSlab(face, joint.lengthNm, normal, n0, n1);
+  for (int band = 0; band < joint.count; ++band) {
+    const bool odd = (band % 2) == 1;
+    if (odd != oddBoard) continue;
+    const std::int64_t u0 = static_cast<std::int64_t>(band) * finger;
+    pushIfOpen(cuts, ranged(part, face, n0, n1, u0, u0 + finger, 0, vSize));
+  }
+}
+
+void addTongueCuts(const Joint& joint, const Component& part, std::vector<LocalCut>& cuts) {
+  const bool host = part.id == joint.partA;
+  const FaceAxes face = faceAxes(host ? joint.faceA : joint.faceB);
+  const std::int64_t uSize = axisNm(part, face.u);
+  const std::int64_t vSize = axisNm(part, face.v);
+  const std::int64_t normal = axisNm(part, face.normal);
+  std::int64_t n0 = 0;
+  std::int64_t n1 = 0;
+  endSlab(face, joint.depthNm, normal, n0, n1);
+  if (host) {
+    const std::int64_t u0 = (uSize - joint.thicknessNm) / 2;
+    pushIfOpen(cuts, ranged(part, face, n0, n1, u0, u0 + joint.thicknessNm, 0, vSize));
+    return;
+  }
+  const std::int64_t shoulder = (uSize - joint.thicknessNm) / 2;
+  pushIfOpen(cuts, ranged(part, face, n0, n1, 0, shoulder, 0, vSize));
+  pushIfOpen(cuts, ranged(part, face, n0, n1, shoulder + joint.thicknessNm, uSize, 0, vSize));
+}
+
+void addDowelHole(const Component& part, PartFace which, std::int64_t diameter, std::int64_t depth,
+                  std::vector<LocalCut>& cuts) {
+  const FaceAxes face = faceAxes(which);
+  const std::int64_t uSize = axisNm(part, face.u);
+  const std::int64_t vSize = axisNm(part, face.v);
+  const std::int64_t normal = axisNm(part, face.normal);
+  const std::int64_t radius = diameter / 2;
+  const std::int64_t u0 = uSize / 2 - radius;
+  const std::int64_t v0 = vSize / 2 - radius;
+  std::int64_t n0 = 0;
+  std::int64_t n1 = 0;
+  endSlab(face, depth, normal, n0, n1);
+  LocalCut cut = ranged(part, face, n0, n1, u0, u0 + diameter, v0, v0 + diameter);
+  cut.cylinderAxis = face.normal;
+  cut.radiusNm = radius;
+  if (cut.x1 <= cut.x0 || cut.y1 <= cut.y0 || cut.z1 <= cut.z0 || radius <= 0) return;
+  cuts.push_back(cut);
+}
+
 }  // namespace
 
 FaceAxes faceAxes(PartFace face) {
@@ -533,6 +672,14 @@ const char* jointTypeKey(JointType type) {
       return "joint.dovetail";
     case JointType::SlidingDovetail:
       return "joint.sliding_dovetail";
+    case JointType::Finger:
+      return "joint.finger";
+    case JointType::HalfBlindDovetail:
+      return "joint.half_blind_dovetail";
+    case JointType::TongueGroove:
+      return "joint.tongue_groove";
+    case JointType::Dowel:
+      return "joint.dowel";
   }
   return "joint.mortise_tenon";
 }
@@ -576,6 +723,22 @@ bool jointTypeFromKey(std::string_view key, JointType& out) {
   }
   if (key == "joint.sliding_dovetail") {
     out = JointType::SlidingDovetail;
+    return true;
+  }
+  if (key == "joint.finger") {
+    out = JointType::Finger;
+    return true;
+  }
+  if (key == "joint.half_blind_dovetail") {
+    out = JointType::HalfBlindDovetail;
+    return true;
+  }
+  if (key == "joint.tongue_groove") {
+    out = JointType::TongueGroove;
+    return true;
+  }
+  if (key == "joint.dowel") {
+    out = JointType::Dowel;
     return true;
   }
   return false;
@@ -695,6 +858,14 @@ bool jointFits(const Joint& joint, const Component& partA, const Component& part
       return fitDovetail(joint, partA, partB, error);
     case JointType::SlidingDovetail:
       return fitSliding(joint, partA, partB, error);
+    case JointType::Finger:
+      return fitFinger(joint, partA, partB, error);
+    case JointType::HalfBlindDovetail:
+      return fitHalfBlind(joint, partA, partB, error);
+    case JointType::TongueGroove:
+      return fitTongue(joint, partA, partB, error);
+    case JointType::Dowel:
+      return fitDowel(joint, partA, partB, error);
   }
   error = "joint.parameter";
   return false;
@@ -750,6 +921,19 @@ bool cutsForPart(const Joint& joint, const Component& part, std::vector<LocalCut
       break;
     case JointType::SlidingDovetail:
       addSlidingCuts(joint, part, cuts);
+      break;
+    case JointType::Finger:
+      addFingerCuts(joint, part, cuts);
+      break;
+    case JointType::HalfBlindDovetail:
+      addDovetailCuts(joint, part, cuts);
+      break;
+    case JointType::TongueGroove:
+      addTongueCuts(joint, part, cuts);
+      break;
+    case JointType::Dowel:
+      if (part.id == joint.partA) addDowelHole(part, joint.faceA, joint.thicknessNm, joint.depthNm, cuts);
+      if (part.id == joint.partB) addDowelHole(part, joint.faceB, joint.thicknessNm, joint.depthNm, cuts);
       break;
   }
   if (cuts.size() == before) {
@@ -826,6 +1010,48 @@ bool defaultJoint(JointType type, const Component& selected, const Component& ma
     out.depthNm = shrinkTo(selected.heightNm / 4, std::min(selected.heightNm, mate.widthNm));
     const std::int64_t wide = out.widthNm + 2 * out.offset2Nm;
     out.offsetNm = std::max(out.offset2Nm, (selected.widthNm - wide) / 2);
+  } else if (type == JointType::Finger) {
+    out.partA = selected.id;
+    out.partB = mate.id;
+    out.faceA = PartFace::X0;
+    out.faceB = PartFace::X0;
+    out.count = 3;
+    const std::int64_t room = std::min(selected.widthNm, mate.widthNm);
+    out.lengthNm = shrinkTo(room / 4, room);
+  } else if (type == JointType::HalfBlindDovetail) {
+    out.partA = mate.id;
+    out.partB = selected.id;
+    out.faceA = PartFace::X1;
+    out.faceB = PartFace::X0;
+    out.count = 1;
+    const std::int64_t u = std::min(selected.thicknessNm, mate.thicknessNm);
+    out.thicknessNm = shrinkTo(u / 3, u);
+    out.widthNm = shrinkTo(u / 3, u);
+    out.lengthNm = shrinkTo(selected.widthNm / 3, selected.widthNm);
+    out.depthNm = shrinkTo(out.lengthNm, mate.widthNm);
+    out.offsetNm = shrinkTo(std::min(out.thicknessNm, out.widthNm) / 4, std::min(out.thicknessNm, out.widthNm) / 2);
+  } else if (type == JointType::TongueGroove) {
+    out.partA = selected.id;
+    out.partB = mate.id;
+    out.faceA = PartFace::Z1;
+    out.faceB = PartFace::X0;
+    const std::int64_t hostU = selected.widthNm;
+    const std::int64_t tongueU = mate.thicknessNm;
+    out.thicknessNm = shrinkTo(std::min(hostU, tongueU) / 3, std::min(hostU, tongueU));
+    const std::int64_t reach = std::min(selected.heightNm, mate.widthNm);
+    out.depthNm = shrinkTo(reach / 4, reach);
+  } else if (type == JointType::Dowel) {
+    out.partA = selected.id;
+    out.partB = mate.id;
+    out.faceA = PartFace::X0;
+    out.faceB = PartFace::X0;
+    const std::int64_t across = std::min(selected.thicknessNm, mate.thicknessNm);
+    const std::int64_t tall = std::min(selected.heightNm, mate.heightNm);
+    std::int64_t diameter = std::min(across, tall) / 3;
+    if ((diameter % 2) != 0) --diameter;
+    out.thicknessNm = diameter;
+    const std::int64_t room = std::min(selected.widthNm, mate.widthNm);
+    out.depthNm = shrinkTo(room / 4, room);
   } else {
     out.partA = selected.id;
     out.partB = mate.id;

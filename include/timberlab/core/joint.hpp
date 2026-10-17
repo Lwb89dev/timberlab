@@ -21,7 +21,11 @@ enum class JointType {
   Castle,
   Miter,
   Dovetail,
-  SlidingDovetail
+  SlidingDovetail,
+  Finger,
+  HalfBlindDovetail,
+  TongueGroove,
+  Dowel
 };
 enum class PartFace { X0, X1, Y0, Y1, Z0, Z1 };
 enum class FaceEdge { U0, U1, V0, V1 };
@@ -57,6 +61,16 @@ struct FaceAxes {
 // Sliding dovetail: a trapezoid dado on partA and the matching tongue on partB.
 // width is the opening at the face, offset2 is the slope on each side, depth is
 // both the groove depth and the tongue length.
+// Finger: count equal bands fill both U axes. Those axes must be equal, and
+// U must divide by count. Part A loses the odd bands, part B the even bands.
+// length is the engagement. The cut runs the full V.
+// Half-blind dovetail: the same prisms as a through dovetail. depth must stay
+// short of the pin board, so the show face remains solid.
+// Tongue and groove: part A is the groove, part B the tongue. thickness is the
+// tongue width, centered. depth is both the groove depth and the tongue length.
+// Dowel: both faces get one centered cylindrical hole. thickness is the
+// diameter and must be even, so the radius is an integer. depth may reach the
+// far face. The hole stays inside both faces.
 struct Joint {
   std::string id;
   JointType type = JointType::MortiseTenon;
@@ -80,6 +94,9 @@ struct Joint {
 // A prism (prismAxis 0, 1, or 2) extrudes pointCount profile points, which all
 // share that axis coordinate, out to prismEnd. The boolean opens a box past an
 // outer face. A prism keeps its sloped profile and is extended only outside.
+// A cylinder (cylinderAxis 0, 1, or 2) uses radiusNm. The radius is not taken
+// from the box, because opening the box for the boolean would widen it. The
+// axis may extend past an outer face. That extension stays outside the solid.
 struct LocalCut {
   std::int64_t x0 = 0;
   std::int64_t y0 = 0;
@@ -93,6 +110,8 @@ struct LocalCut {
   std::int64_t py[4] = {};
   std::int64_t pz[4] = {};
   std::int64_t prismEnd = 0;
+  int cylinderAxis = -1;
+  std::int64_t radiusNm = 0;
 };
 
 FaceAxes faceAxes(PartFace face);

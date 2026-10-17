@@ -22,4 +22,4 @@ Build tools in the same prefix (`moc`, `rcc`, `lrelease`, `lupdate`) are `GPL-3.
 
 ## Consequences
 
-Details and the third-party table are in `LICENSES.md`. A binary distribution has to ship TimberLab source (GPL-3) and offer the corresponding Qt and OCCT sources, with shared libraries the user can replace. No such distribution exists yet. A store package, and GPLv3's installation-information requirement on a locked tablet, are unchecked. Static linking would add the LGPL relink obligation that shared libraries already satisfy.
+Details and the third-party table are in `LICENSES.md`. A binary distribution has to ship TimberLab source (GPL-3) and offer the corresponding Qt and OCCT sources, with shared libraries the user can replace. The version-tag `.deb` is that distribution for Linux amd64: shared Qt and OCCT libraries, the git tag as TimberLab source, and the upstream archive URLs in `packaging/copyright`. A store package, and GPLv3's installation-information requirement on a locked tablet, are unchecked. Static linking would add the LGPL relink obligation that shared libraries already satisfy.

@@ -1,0 +1,44 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: TimberLab
+Upstream-Contact: Lwb89dev <luigi.antona89@protonmail.com>
+Source: https://github.com/Lwb89dev/timberlab
+
+Files: *
+Copyright: 2026 Lwb89dev
+License: GPL-3.0-or-later
+ TimberLab's own source is GPL-3.0-or-later. The full text is
+ /usr/share/common-licenses/GPL-3 and the LICENSE file in the git tag.
+ This copyright file is not a legal review.
+
+Files: usr/lib/timberlab/lib/libQt6*
+Copyright: The Qt Company Ltd. and contributors
+License: LGPL-3.0-only
+ The Qt 6.8.3 modules shipped here (Core, Gui, OpenGL, Qml, Quick,
+ QuickControls2, Network, DBus, and the xcb platform plugin) are used
+ under LGPL-3.0-only. The GPL-2.0-only and GPL-3.0-only Qt alternatives
+ are not elected. The Wayland compositor module and the dmabuf and EGL
+ client-buffer plugins are not included.
+ .
+ Corresponding source:
+ https://download.qt.io/archive/qt/6.8/6.8.3/single/qt-everywhere-src-6.8.3.tar.xz
+ .
+ On Debian and Ubuntu the LGPL-3.0 text is
+ /usr/share/common-licenses/LGPL-3.
+
+Files: usr/lib/timberlab/lib/libTK*
+Copyright: Open CASCADE S.A.S.
+License: LGPL-2.1-only
+ Open CASCADE Technology 7.9.2 is LGPL-2.1 only, plus the OCCT exception
+ in OCCT_LGPL_EXCEPTION.txt. It does not say "or any later version".
+ Copies of LICENSE_LGPL_21.txt and OCCT_LGPL_EXCEPTION.txt are installed
+ next to this file. The libraries are shared, so they can be replaced.
+ .
+ Corresponding source:
+ https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_2.tar.gz
+
+Files: usr/lib/timberlab/lib/libicu*
+Copyright: Unicode, Inc. and contributors
+License: Unicode-3.0
+ ICU 73 is shipped because the Qt 6.8.3 desktop build links it. The
+ Unicode license is distributed with the ICU source inside the Qt source
+ archive named above.

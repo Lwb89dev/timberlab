@@ -1069,6 +1069,9 @@ bool DocumentController::exportDrawing(const QUrl& url, const QString& kind) {
   } else if (kind == QLatin1String("pdf")) {
     text = manufacturing::wirePdf(*component, joints, parts, error);
     written = tr("PDF wire written. It is a tessellation wire, not a dimensioned drawing.");
+  } else if (kind == QLatin1String("dimensions")) {
+    text = manufacturing::dimensionedFrontSvg(*component, joints, parts, error);
+    written = tr("Front dimensions written. Width and height are the model sizes. The outline is still a tessellation, not hidden-line removal.");
   } else {
     report("drawing.kind", false);
     return false;
@@ -1089,6 +1092,113 @@ bool DocumentController::exportDrawing(const QUrl& url, const QString& kind) {
   }
   status_ = written;
   emit statusChanged();
+  return true;
+}
+
+bool DocumentController::exportLibraryEvents(const QUrl& url) {
+  if (!canPublishLibrary()) {
+    report("signer.state", false);
+    return false;
+  }
+  const QString path = url.toLocalFile();
+  if (path.isEmpty()) {
+    report("storage.io", false);
+    return false;
+  }
+  if (!library_ || !library_->ok()) {
+    report(library_ && !library_->error().empty() ? library_->error() : "library.open", false);
+    return false;
+  }
+  const auto now = std::time(nullptr);
+  if (now < 0) {
+    report("signer.state", false);
+    return false;
+  }
+  std::vector<storage::Event> events;
+  std::string error;
+  const auto sealRow = [&](const std::string& kind, const std::string& id) {
+    std::string plaintext;
+    const bool got = kind == "material" ? library_->materialPlaintext(id, plaintext, error)
+                                        : library_->presetPlaintext(id, plaintext, error);
+    if (!got) return false;
+    std::string tag;
+    if (!storage::libraryTagFor(kind, id, tag, error)) return false;
+    storage::Event event;
+    if (!signer_.sealLibrary(tag, plaintext, static_cast<std::int64_t>(now), event, error)) return false;
+    events.push_back(std::move(event));
+    return true;
+  };
+  for (const storage::UserMaterial& material : library_->materials()) {
+    if (!sealRow("material", material.id)) {
+      report(error.empty() ? "signer.state" : error, false);
+      return false;
+    }
+  }
+  for (const storage::UserPreset& preset : library_->presets()) {
+    if (!sealRow("preset", preset.id)) {
+      report(error.empty() ? "signer.state" : error, false);
+      return false;
+    }
+  }
+  const std::string text = storage::libraryEventsToJson(events);
+  QFile file(path);
+  if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+    report("storage.io", false);
+    return false;
+  }
+  const QByteArray bytes = QByteArray::fromStdString(text);
+  if (file.write(bytes) != bytes.size()) {
+    report("storage.io", false);
+    return false;
+  }
+  status_ = tr("Library events written. The project was not published.");
+  emit statusChanged();
+  return true;
+}
+
+bool DocumentController::importLibraryEvents(const QUrl& url) {
+  if (!canPublishLibrary()) {
+    report("signer.state", false);
+    return false;
+  }
+  const QString path = url.toLocalFile();
+  if (path.isEmpty()) {
+    report("storage.io", false);
+    return false;
+  }
+  if (!library_ || !library_->ok()) {
+    report(library_ && !library_->error().empty() ? library_->error() : "library.open", false);
+    return false;
+  }
+  QFile file(path);
+  if (!file.open(QIODevice::ReadOnly)) {
+    report("storage.io", false);
+    return false;
+  }
+  const QByteArray bytes = file.readAll();
+  std::vector<storage::Event> events;
+  std::string error;
+  const std::string_view view(bytes.constData(), static_cast<std::size_t>(bytes.size()));
+  if (!storage::parseLibraryEvents(view, events, error)) {
+    report(error.empty() ? "sync.mismatch" : error, false);
+    return false;
+  }
+  for (const storage::Event& event : events) {
+    std::string tag;
+    std::string plaintext;
+    if (!signer_.openLibrary(event, tag, plaintext, error)) {
+      report(error.empty() ? "sync.crypto" : error, false);
+      return false;
+    }
+    std::string winner;
+    if (!library_->importPlaintext(plaintext, winner, error)) {
+      report(error.empty() ? "sync.mismatch" : error, false);
+      return false;
+    }
+  }
+  reloadLibrary();
+  status_ = tr("Library events imported. The project file was not changed.");
+  touch(false);
   return true;
 }
 
@@ -1272,6 +1382,10 @@ QString DocumentController::messageFor(const QString& code) const {
   if (code == "signer.rejected") return tr("The bunker rejected the connection.");
   if (code == "signer.crypto") return tr("The bunker response could not be decrypted.");
   if (code == "signer.state") return tr("The sign-in session is no longer valid.");
+  if (code == "sync.mismatch") return tr("That library event does not match this library.");
+  if (code == "sync.conflict") return tr("That library event conflicts with the local row.");
+  if (code == "sync.crypto") return tr("That library event could not be opened.");
+  if (code == "sync.range") return tr("That library revision is not valid.");
   return tr("Something went wrong.");
 }
 

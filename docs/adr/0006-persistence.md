@@ -23,4 +23,4 @@ Nostr is blocked until that library exists and has been round-tripped locally. T
 - `timberlab --accept` saves and reopens a real archive through the editor controller. Catch2 covers the archive format without Qt.
 - A failed rename does not delete the previous archive. The loader refuses a file over 32 MiB, a model over 2000 components, or duplicate component ids. Project files and the preferences database are owner-read/write only.
 - Moving the model itself into SQLite is not this decision. Replacing a checksummed file with an unproven database would be the failure mode this ADR is avoiding.
-- A signer socket may open for bunker sign-in. It must not call save, load, restore, or library import. An nsec stays in memory and is not sent to a relay. Publishing a project is still not implemented. See `NOSTR_SYNC.md`.
+- A signer socket may open for bunker sign-in. It must not call save, load, restore, or library import. An nsec stays in memory and is not sent to a relay. A library-event file, written only while that nsec is signed in, can replace one library row. It does not open the project. Publishing a project is still not implemented. See `NOSTR_SYNC.md`.

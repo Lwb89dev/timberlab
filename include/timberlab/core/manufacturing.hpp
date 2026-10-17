@@ -49,9 +49,14 @@ std::string cutListJson(std::int64_t allowanceNm, const std::vector<CutPiece>& p
 // margin. Front drops Y (X horizontal, Z up). Top drops Z (X horizontal, Y up).
 // Right drops X (Y horizontal, Z up). The sheet places front, then right, then
 // top, with a 10 mm gap. DXF is R12 LINE entities in millimetres, one layer per
-// view. PDF is the same edges. None of these is a dimensioned drawing.
+// view. PDF is the same edges. Those wires are not dimensioned drawings.
+// dimensionedFrontSvg adds the model's overall width and height, in millimetres,
+// on the front wire. The numbers come from the part, not from the tessellation.
+// It is not hidden-line removal. A cylinder has no width and height in that sense.
 std::string frontViewSvg(const Component& component, const std::vector<Joint>& joints,
                          const std::vector<Component>& parts, std::string& error);
+std::string dimensionedFrontSvg(const Component& component, const std::vector<Joint>& joints,
+                                const std::vector<Component>& parts, std::string& error);
 std::string topViewSvg(const Component& component, const std::vector<Joint>& joints,
                        const std::vector<Component>& parts, std::string& error);
 std::string rightViewSvg(const Component& component, const std::vector<Joint>& joints,

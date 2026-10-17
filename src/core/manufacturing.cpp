@@ -187,6 +187,28 @@ std::string pathElement(const ViewWire& view) {
   return "<path fill=\"none\" stroke=\"#1c1b19\" stroke-width=\"0.2\" d=\"" + pathData(view) + "\"/>\n";
 }
 
+std::string millimetreText(std::int64_t nm) {
+  const bool negative = nm < 0;
+  const std::uint64_t magnitude =
+      negative ? static_cast<std::uint64_t>(-(nm + 1)) + 1 : static_cast<std::uint64_t>(nm);
+  const std::uint64_t whole = magnitude / static_cast<std::uint64_t>(units::kNmPerMm);
+  std::uint64_t frac = magnitude % static_cast<std::uint64_t>(units::kNmPerMm);
+  std::ostringstream out;
+  if (negative) out << '-';
+  out << whole;
+  if (frac != 0) {
+    std::string digits(6, '0');
+    for (int place = 5; place >= 0; --place) {
+      digits[static_cast<std::size_t>(place)] = static_cast<char>('0' + static_cast<int>(frac % 10));
+      frac /= 10;
+    }
+    while (!digits.empty() && digits.back() == '0') digits.pop_back();
+    out << '.' << digits;
+  }
+  out << " mm";
+  return out.str();
+}
+
 std::string singleSvg(const ViewWire& view) {
   std::ostringstream out;
   out << "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 " << svgNumber(viewWidth(view)) << ' '
@@ -426,6 +448,49 @@ std::string frontViewSvg(const Component& component, const std::vector<Joint>& j
   ViewWire right;
   if (!threeViews(component, joints, parts, front, top, right, error)) return {};
   return singleSvg(front);
+}
+
+std::string dimensionedFrontSvg(const Component& component, const std::vector<Joint>& joints,
+                                const std::vector<Component>& parts, std::string& error) {
+  if (component.type == ComponentType::Cylinder || component.widthNm <= 0 || component.heightNm <= 0) {
+    error = "dimension.not_applicable";
+    return {};
+  }
+  ViewWire front;
+  ViewWire top;
+  ViewWire right;
+  if (!threeViews(component, joints, parts, front, top, right, error)) return {};
+  const std::int64_t widthUm = component.widthNm / 1000;
+  const std::int64_t heightUm = component.heightNm / 1000;
+  const std::int64_t x1 = -front.minU + kMarginUm;
+  const std::int64_t x2 = widthUm - front.minU + kMarginUm;
+  const std::int64_t yTop = front.maxV - heightUm + kMarginUm;
+  const std::int64_t yBottom = front.maxV + kMarginUm;
+  constexpr std::int64_t kGapUm = 5000;
+  constexpr std::int64_t kSideUm = 24000;
+  constexpr std::int64_t kBelowUm = 8000;
+  const std::int64_t widthLineY = viewHeight(front) + kGapUm;
+  const std::int64_t heightLineX = viewWidth(front) + kGapUm;
+  const std::int64_t sheetW = std::max(viewWidth(front), x2) + kSideUm;
+  const std::int64_t sheetH = std::max(viewHeight(front), yBottom) + kBelowUm;
+  std::ostringstream out;
+  out << "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 " << svgNumber(sheetW) << ' ' << svgNumber(sheetH)
+      << "\">\n";
+  out << "<!-- Overall width and height from the model nanometres. The outline is a tessellation. "
+         "Not hidden-line removal. -->\n";
+  out << pathElement(front);
+  out << "<g id=\"dimensions\">\n";
+  out << "<line id=\"width-line\" x1=\"" << svgNumber(x1) << "\" y1=\"" << svgNumber(widthLineY) << "\" x2=\""
+      << svgNumber(x2) << "\" y2=\"" << svgNumber(widthLineY) << "\" fill=\"none\" stroke=\"#1c1b19\" stroke-width=\"0.2\"/>\n";
+  out << "<text id=\"width-text\" x=\"" << svgNumber((x1 + x2) / 2) << "\" y=\"" << svgNumber(widthLineY - 800)
+      << "\" font-size=\"3\" text-anchor=\"middle\">" << millimetreText(component.widthNm) << "</text>\n";
+  out << "<line id=\"height-line\" x1=\"" << svgNumber(heightLineX) << "\" y1=\"" << svgNumber(yTop) << "\" x2=\""
+      << svgNumber(heightLineX) << "\" y2=\"" << svgNumber(yBottom)
+      << "\" fill=\"none\" stroke=\"#1c1b19\" stroke-width=\"0.2\"/>\n";
+  out << "<text id=\"height-text\" x=\"" << svgNumber(heightLineX + 1200) << "\" y=\"" << svgNumber((yTop + yBottom) / 2)
+      << "\" font-size=\"3\">" << millimetreText(component.heightNm) << "</text>\n";
+  out << "</g>\n</svg>\n";
+  return out.str();
 }
 
 std::string topViewSvg(const Component& component, const std::vector<Joint>& joints,

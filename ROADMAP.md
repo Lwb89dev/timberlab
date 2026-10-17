@@ -16,17 +16,19 @@ Milestone 0 and the first slice of milestone 1:
 - Bridle, castle, miter, through dovetail, and sliding dovetail, added to the first joinery set. Miter and both dovetails are prism booleans.
 - A parent link (`setParent`) and a role token on each part.
 - Cut list and bill of materials. CSV and JSON. An allowance separates rough stock from the finished size. The menu export uses allowance zero. See `docs/adr/0010-cut-list.md`.
-- Front, top, and right SVG wires, one sheet, a DXF R12 of those edges, and a PDF of the same edges. They are tessellation wires. See `docs/adr/0010-cut-list.md`.
+- Front, top, and right SVG wires, one sheet, a DXF R12 of those edges, and a PDF of the same edges. They are tessellation wires. A separate front file adds the model's overall width and height in millimetres. Hidden-line removal is not used. See `docs/adr/0010-cut-list.md`.
 - Local AES-256-GCM, a revision compare, and a sealed library-row envelope. A remote win updates the library row. The project file is not part of that path. That envelope code opens no socket and stores no key. See `docs/adr/0011-local-sync.md`.
+- Finger joint, half-blind dovetail, tongue and groove, and dowel. The dowel cutter is a cylinder. The half-blind dovetail is the through-dovetail prism and refuses a depth that reaches the far face.
+- A library event, kind 30078, sealed with NIP-44 to the author's own nsec. The file is a JSON array of those events. Import writes a library row under the same revision rule and does not change the project file. Nothing in that path opens a relay. See `NOSTR_SYNC.md`.
 - An explicit restore from `.bak`, after the backup loads. Load does not call it.
 - Length conversion uses a portable 128-bit multiply and divide. On this GCC build that result is checked against `__int128`.
 
 ## Next
 
-1. **Drawings.** The wires above are the tessellation. A dimensioned drawing and hidden-line projection are not implemented. TKHLR is linked and unused.
-2. **Sync.** The local cipher, the conflict rule, and a library-row envelope exist. Desktop sign-in can hold an nsec in memory or start a bunker session over a WebSocket. That socket does not read or write the project. Amber is an Android request; this Linux build returns an error and does not talk to a phone. A CAD event kind is not assigned, and nothing publishes a project. See `NOSTR_SYNC.md`. No CRDT. Milestone 6 is not finished.
+1. **Drawings.** The shop wires are still the tessellation. The front dimension file states the model's overall width and height. It does not dimension features, and it is not a hidden-line view. TKHLR is linked and unused.
+2. **Sync.** A library row can be sealed as kind 30078 and imported from a file. Desktop sign-in can hold an nsec in memory or start a bunker session over a WebSocket. That socket does not read or write the project. Amber is an Android request; this Linux build returns an error and does not talk to a phone. No test and no run of this tree published an event to a relay. A project is not an event. See `NOSTR_SYNC.md`. No CRDT. Milestone 6 is not finished.
 3. **Other platforms**, only after each one has been built and used. Android is required by the product. The renderer can select an OpenGL ES 3.00 shader path, and the desktop Qt/OCCT prefixes are not injected into an Android configure. The length math no longer requires `__int128`. No tablet, Windows, or macOS build has been run on this machine.
-4. **The remaining joints** in the product list (half-blind dovetail, finger, dowel, biscuit, and the rest), species data with citations, and manufacturing checks.
-5. **Hardening.** A successful save copies the previous file to `.bak`. Restore is a separate call and refuses a backup that does not load. `-DTIMBERLAB_SANITIZE=ON` builds the model tests with AddressSanitizer and UndefinedBehaviorSanitizer. That suite was run on this machine with leak detection off, and it passed. A GitHub workflow is not in this tree: Qt and OCCT are not in the git checkout, and no runner has executed a build. Measured frame rate and save time are not published.
+4. **The remaining joints** in the product list (haunched, wedged, and loose tenons, cross lap, end lap, splined miter, biscuit, pocket screw), species data with citations, and manufacturing checks.
+5. **Hardening.** A successful save copies the previous file to `.bak`. Restore is a separate call and refuses a backup that does not load. `-DTIMBERLAB_SANITIZE=ON` builds the model tests with AddressSanitizer and UndefinedBehaviorSanitizer. That suite was run on this machine with leak detection off, and it passed. `.github/workflows/package.yml` runs on a version tag, builds Qt and OCCT on the runner (they are not in the git checkout), and publishes `timberlab_<version>_amd64.deb` when that job succeeds. Measured frame rate and save time are not published.
 
 Performance numbers are not published until they are measured on the scenes listed in the product specification.

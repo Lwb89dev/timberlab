@@ -22,8 +22,8 @@ Work stays inside this repository. `deps/` and `build/` are local. Do not commit
 - Do not invent density or hardness. Leave the field null.
 - Joints are booleans with stored sizes. Do not fake a joint with a decorative mesh.
 - An assembly is a recipe that writes ordinary parts, parameters, bindings, and a role. It does not cut a joint, it does not set `parentId`, and it is not solved again when a part changes.
-- A cut list is finished size plus an allowance. The SVG, DXF, and PDF views are tessellation wires. Do not describe them as a dimensioned drawing.
-- Sync code may seal a library row and compare revisions. It must not rewrite a project file. A bunker sign-in may open its own socket. That socket must not save, load, restore, or import a library row. An nsec stays in memory for the session: it is not written to disk and it is not sent to a relay.
+- A cut list is finished size plus an allowance. The SVG, DXF, and PDF views are tessellation wires. Do not describe them as a dimensioned drawing. The front dimension file may state overall width and height taken from the model nanometres. Do not call that hidden-line removal.
+- Sync code may seal a library row and compare revisions. It must not rewrite a project file. A bunker sign-in may open its own socket. That socket must not save, load, restore, or import a library row. An nsec stays in memory for the session: it is not written to disk and it is not sent to a relay. A library event is kind 30078, sealed to that nsec. Importing the file writes a library row only.
 - The user library is `library.sqlite`, schema version 3. Do not store a solid in it, and do not fold it into the preferences database. A failed project load must not copy `.bak` over the project. Restore is `restoreBackup`, and only after the backup loads.
 - OCCT stays on the calling thread.
 

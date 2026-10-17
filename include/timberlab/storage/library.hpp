@@ -59,11 +59,16 @@ class Library {
 
   // Seals one library row. The key is not stored. importEnvelope opens that
   // blob, compares revisions, and writes a library row only when the remote
-  // record wins. A conflict or a local win writes nothing. Neither function
-  // reads or writes a project file.
+  // record wins. A conflict or a local win writes nothing. materialPlaintext
+  // and presetPlaintext are the same JSON the seal encrypts. importPlaintext
+  // is that JSON after it has been opened. None of these reads or writes a
+  // project file.
   bool sealMaterial(const std::string& id, const unsigned char key[32], SealedBlob& sealed, std::string& error);
   bool sealPreset(const std::string& id, const unsigned char key[32], SealedBlob& sealed, std::string& error);
+  bool materialPlaintext(const std::string& id, std::string& plaintext, std::string& error);
+  bool presetPlaintext(const std::string& id, std::string& plaintext, std::string& error);
   bool importEnvelope(const unsigned char key[32], const SealedBlob& sealed, std::string& winner, std::string& error);
+  bool importPlaintext(const std::string& plaintext, std::string& winner, std::string& error);
 
  private:
   struct Sqlite;

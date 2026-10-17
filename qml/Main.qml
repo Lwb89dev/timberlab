@@ -50,6 +50,10 @@ ApplicationWindow {
             MenuItem { text: qsTr("Export sheet…"); onTriggered: openDrawing("sheet", "svg", qsTr("Export sheet"), qsTr("Sheet wire (*.svg)")) }
             MenuItem { text: qsTr("Export DXF wire…"); onTriggered: openDrawing("dxf", "dxf", qsTr("Export DXF wire"), qsTr("DXF wire (*.dxf)")) }
             MenuItem { text: qsTr("Export PDF wire…"); onTriggered: openDrawing("pdf", "pdf", qsTr("Export PDF wire"), qsTr("PDF wire (*.pdf)")) }
+            MenuItem { text: qsTr("Export front dimensions…"); onTriggered: openDrawing("dimensions", "svg", qsTr("Export front dimensions"), qsTr("Front dimensions (*.svg)")) }
+            MenuSeparator {}
+            MenuItem { text: qsTr("Export library events…"); enabled: app.canPublishLibrary; onTriggered: libraryExportDialog.open() }
+            MenuItem { text: qsTr("Import library events…"); enabled: app.canPublishLibrary; onTriggered: libraryImportDialog.open() }
             MenuSeparator {}
             MenuItem { text: qsTr("Restore backup…"); onTriggered: confirmRestore.open() }
         }
@@ -249,6 +253,21 @@ ApplicationWindow {
         defaultSuffix: "svg"
         nameFilters: [qsTr("Front view wire (*.svg)")]
         onAccepted: app.exportDrawing(selectedFile, kind)
+    }
+    FileDialog {
+        id: libraryExportDialog
+        title: qsTr("Export library events")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "json"
+        nameFilters: [qsTr("Library events (*.json)")]
+        onAccepted: app.exportLibraryEvents(selectedFile)
+    }
+    FileDialog {
+        id: libraryImportDialog
+        title: qsTr("Import library events")
+        fileMode: FileDialog.OpenFile
+        nameFilters: [qsTr("Library events (*.json)")]
+        onAccepted: app.importLibraryEvents(selectedFile)
     }
     Dialog {
         id: nsecDialog

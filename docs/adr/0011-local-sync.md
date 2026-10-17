@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted for the local half. A Nostr client is not accepted because it does not exist.
+Accepted for the local half and for a library event file. A relay client that stores the event is not accepted: this build did not publish one.
 
 ## Context
 
@@ -16,8 +16,10 @@ The user library and the project file already round-trip on disk. A sync bug mus
 
 `Library::importEnvelope` opens a sealed library row and calls `chooseRevision`. The library schema is 3, with a revision on each material and preset. A remote win upserts that one row. A local win or a conflict leaves the database unchanged. The call does not take a project path. A test saves a project, imports an envelope, and checks the project bytes are unchanged.
 
+`importPlaintext` is the same compare after the ciphertext is already open. A library event is kind 30078, NIP-78's addressable kind, with a TimberLab `d` tag and NIP-44 ciphertext for the author's own key. The plaintext is the envelope JSON. `sealLibraryEvent` does not open a socket. A test saves a project, imports the opened plaintext, and checks those project bytes too. AES-GCM remains the local record format. NIP-44 is the event content. Neither is a claim that a relay stored the row.
+
 ## Consequences
 
-- Milestone 6 is not finished. There is no CAD event kind. A bunker sign-in socket exists and does not import, save, or load a project. An nsec is not written to disk. Amber has not been executed on Android.
-- NIP-44 is still the cipher to evaluate when a payload is published. This AES-GCM layout is the local record format, not a claim that a relay will store it.
+- Milestone 6 is not finished. The library event is an application schema for one row. A project is not that event. A bunker sign-in socket exists and does not import, save, or load a project. An nsec is not written to disk. Amber has not been executed on Android. No event from this tree was sent to a relay.
+- NIP-44 encrypts the library event to the author's own key. AES-GCM remains the local record format. Neither result was stored by a relay in this build.
 - A conflict leaves both records with the caller. The function does not merge geometry, and it does not replace a `.timberlab` file.

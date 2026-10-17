@@ -300,6 +300,55 @@ bool fuseTools(const TopoDS_Shape& left, const TopoDS_Shape& right, TopoDS_Shape
   return true;
 }
 
+bool makeCylinder(const LocalCut& original, const Component& part, TopoDS_Shape& shape, std::string& error) {
+  if (original.cylinderAxis < 0 || original.cylinderAxis > 2 || original.radiusNm <= 0) {
+    error = "joint.no_effect";
+    return false;
+  }
+  LocalCut span = original;
+  expandBoundary(span, part);
+  const std::int64_t axisLow[3] = {span.x0, span.y0, span.z0};
+  const std::int64_t axisHigh[3] = {span.x1, span.y1, span.z1};
+  const std::int64_t boxLow[3] = {original.x0, original.y0, original.z0};
+  const std::int64_t boxHigh[3] = {original.x1, original.y1, original.z1};
+  const int axis = original.cylinderAxis;
+  if (axisHigh[axis] <= axisLow[axis]) {
+    error = "joint.no_effect";
+    return false;
+  }
+  const double radius = units::toMillimetres(original.radiusNm);
+  if (!(radius > 0.0)) {
+    error = "joint.no_effect";
+    return false;
+  }
+  double origin[3] = {};
+  for (int i = 0; i < 3; ++i) {
+    if (i == axis) origin[i] = units::toMillimetres(axisLow[i]);
+    else origin[i] = units::toMillimetres((boxLow[i] + boxHigh[i]) / 2);
+  }
+  gp_Dir direction(1, 0, 0);
+  if (axis == 1) direction = gp_Dir(0, 1, 0);
+  if (axis == 2) direction = gp_Dir(0, 0, 1);
+  const double height = units::toMillimetres(axisHigh[axis] - axisLow[axis]);
+  BRepPrimAPI_MakeCylinder cylinder(gp_Ax2(gp_Pnt(origin[0], origin[1], origin[2]), direction), radius, height);
+  cylinder.Build();
+  if (!cylinder.IsDone()) {
+    error = "geometry.kernel";
+    return false;
+  }
+  shape = cylinder.Shape();
+  return true;
+}
+
+bool makeTool(LocalCut cut, const Component& part, TopoDS_Shape& piece, std::string& error) {
+  if (cut.cylinderAxis >= 0) return makeCylinder(cut, part, piece, error);
+  if (cut.prismAxis < 0) {
+    expandBoundary(cut, part);
+    return makeBox(cut, piece, error);
+  }
+  return makePrism(cut, part, piece, error);
+}
+
 bool subtractTool(TopoDS_Shape& current, const TopoDS_Shape& tool, std::string& error) {
   TopTools_ListOfShape arguments;
   arguments.Append(current);
@@ -322,14 +371,9 @@ bool applyCuts(TopoDS_Shape& shape, const Component& part, const std::vector<Loc
   const double before = volumeOf(shape);
   TopoDS_Shape tool;
   bool haveTool = false;
-  for (LocalCut cut : cuts) {
+  for (const LocalCut& cut : cuts) {
     TopoDS_Shape piece;
-    if (cut.prismAxis < 0) {
-      expandBoundary(cut, part);
-      if (!makeBox(cut, piece, error)) return false;
-    } else if (!makePrism(cut, part, piece, error)) {
-      return false;
-    }
+    if (!makeTool(cut, part, piece, error)) return false;
     if (!haveTool) {
       tool = piece;
       haveTool = true;

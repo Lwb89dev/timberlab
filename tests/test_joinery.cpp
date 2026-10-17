@@ -401,7 +401,15 @@ TEST_CASE("a sliding dovetail cuts a flared dado and two shoulders") {
 }
 
 TEST_CASE("starting sizes of the new joints fit two default boards") {
-  const char* keys[] = {"joint.bridle", "joint.castle", "joint.miter", "joint.dovetail", "joint.sliding_dovetail"};
+  const char* keys[] = {"joint.bridle",
+                        "joint.castle",
+                        "joint.miter",
+                        "joint.dovetail",
+                        "joint.sliding_dovetail",
+                        "joint.finger",
+                        "joint.half_blind_dovetail",
+                        "joint.tongue_groove",
+                        "joint.dowel"};
   for (const char* key : keys) {
     Document document;
     std::string error;
@@ -439,4 +447,111 @@ TEST_CASE("castle and dovetail require a count and reload it") {
   missing["joints"][0].erase("count");
   REQUIRE_FALSE(Document::fromJson(missing.dump(), loaded, error));
   REQUIRE(error == "storage.json");
+
+  for (const char* key : {"joint.finger", "joint.half_blind_dovetail"}) {
+    Document fresh;
+    const std::string partA = fresh.addBoard();
+    const std::string partB = fresh.addBoard();
+    REQUIRE_FALSE(fresh.addJoint(key, partA, partB, error).empty());
+    nlohmann::json body = nlohmann::json::parse(fresh.toJson());
+    body["joints"][0].erase("count");
+    Document rejected;
+    REQUIRE_FALSE(Document::fromJson(body.dump(), rejected, error));
+    REQUIRE(error == "storage.json");
+  }
+}
+
+TEST_CASE("a finger joint removes alternating full-width bands") {
+  Component partA = board("female", 80 * kMm, 40 * kMm, 30 * kMm);
+  Component partB = board("male", 80 * kMm, 40 * kMm, 30 * kMm);
+  Joint joint;
+  joint.type = JointType::Finger;
+  joint.partA = partA.id;
+  joint.partB = partB.id;
+  joint.faceA = PartFace::X1;
+  joint.faceB = PartFace::X0;
+  joint.count = 4;
+  joint.lengthNm = 15 * kMm;
+  std::vector<Component> parts{partA, partB};
+  const std::vector<Joint> joints{joint};
+  expectVolume(partA, joints, parts, 80.0 * 40.0 * 30.0 - 9000.0);
+  expectVolume(partB, joints, parts, 80.0 * 40.0 * 30.0 - 9000.0);
+  REQUIRE(classifyLocal(partA, joints, parts, 70, 15, 15) == PointSide::Out);
+  REQUIRE(classifyLocal(partA, joints, parts, 70, 5, 15) == PointSide::In);
+  REQUIRE(classifyLocal(partB, joints, parts, 5, 5, 15) == PointSide::Out);
+  REQUIRE(classifyLocal(partB, joints, parts, 5, 15, 15) == PointSide::In);
+}
+
+TEST_CASE("a half-blind dovetail stops before the show face") {
+  Component pins = board("pins", 40 * kMm, 48 * kMm, 20 * kMm);
+  Component tails = board("tails", 40 * kMm, 48 * kMm, 20 * kMm);
+  Joint joint;
+  joint.type = JointType::HalfBlindDovetail;
+  joint.partA = pins.id;
+  joint.partB = tails.id;
+  joint.faceA = PartFace::X1;
+  joint.faceB = PartFace::X0;
+  joint.count = 2;
+  joint.thicknessNm = 12 * kMm;
+  joint.widthNm = 12 * kMm;
+  joint.offsetNm = 2 * kMm;
+  joint.lengthNm = 10 * kMm;
+  joint.depthNm = 10 * kMm;
+  std::vector<Component> parts{pins, tails};
+  const std::vector<Joint> joints{joint};
+  expectVolume(tails, joints, parts, 40.0 * 48.0 * 20.0 - 5600.0);
+  expectVolume(pins, joints, parts, 40.0 * 48.0 * 20.0 - 4000.0);
+  REQUIRE(classifyLocal(pins, joints, parts, 5, 24, 10) == PointSide::In);
+  REQUIRE(classifyLocal(pins, joints, parts, 38, 12, 10) == PointSide::Out);
+  std::string error;
+  Joint through = joint;
+  through.depthNm = 40 * kMm;
+  REQUIRE_FALSE(timberlab::jointFits(through, pins, tails, error));
+  through.type = JointType::Dovetail;
+  REQUIRE(timberlab::jointFits(through, pins, tails, error));
+}
+
+TEST_CASE("a tongue and groove cuts one centered slot and two shoulders") {
+  Component host = board("host", 100 * kMm, 30 * kMm, 40 * kMm);
+  Component tongue = board("tongue", 40 * kMm, 20 * kMm, 30 * kMm);
+  Joint joint;
+  joint.type = JointType::TongueGroove;
+  joint.partA = host.id;
+  joint.partB = tongue.id;
+  joint.faceA = PartFace::Z1;
+  joint.faceB = PartFace::X0;
+  joint.thicknessNm = 10 * kMm;
+  joint.depthNm = 8 * kMm;
+  std::vector<Component> parts{host, tongue};
+  const std::vector<Joint> joints{joint};
+  expectVolume(host, joints, parts, 100.0 * 30.0 * 40.0 - 2400.0);
+  expectVolume(tongue, joints, parts, 40.0 * 20.0 * 30.0 - 2400.0);
+  REQUIRE(classifyLocal(host, joints, parts, 50, 15, 36) == PointSide::Out);
+  REQUIRE(classifyLocal(host, joints, parts, 20, 15, 36) == PointSide::In);
+  REQUIRE(classifyLocal(tongue, joints, parts, 2, 2, 15) == PointSide::Out);
+  REQUIRE(classifyLocal(tongue, joints, parts, 2, 10, 15) == PointSide::In);
+}
+
+TEST_CASE("a dowel cuts a centered cylindrical hole in each face") {
+  Component partA = board("partA", 80 * kMm, 40 * kMm, 30 * kMm);
+  Component partB = board("partB", 80 * kMm, 40 * kMm, 30 * kMm);
+  Joint joint;
+  joint.type = JointType::Dowel;
+  joint.partA = partA.id;
+  joint.partB = partB.id;
+  joint.faceA = PartFace::X1;
+  joint.faceB = PartFace::X1;
+  joint.thicknessNm = 8 * kMm;
+  joint.depthNm = 15 * kMm;
+  std::vector<Component> parts{partA, partB};
+  const std::vector<Joint> joints{joint};
+  const double removed = 3.141592653589793 * 16.0 * 15.0;
+  expectVolume(partA, joints, parts, 80.0 * 40.0 * 30.0 - removed);
+  expectVolume(partB, joints, parts, 80.0 * 40.0 * 30.0 - removed);
+  REQUIRE(classifyLocal(partA, joints, parts, 79, 20, 15) == PointSide::Out);
+  REQUIRE(classifyLocal(partA, joints, parts, 79, 26, 15) == PointSide::In);
+  std::string error;
+  Joint odd = joint;
+  odd.thicknessNm = 8 * kMm + 1;
+  REQUIRE_FALSE(timberlab::jointFits(odd, partA, partB, error));
 }

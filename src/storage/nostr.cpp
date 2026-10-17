@@ -917,6 +917,173 @@ bool verifyEvent(const Event& event) {
   return schnorrVerify(pubkey, id, 32, signature);
 }
 
+namespace {
+
+bool libraryIdOk(std::string_view id) {
+  if (id.empty() || id.size() > 64) return false;
+  for (const unsigned char c : id) {
+    if (c >= 'a' && c <= 'z') continue;
+    if (c >= '0' && c <= '9') continue;
+    if (c == '_' || c == '-' || c == '.') continue;
+    return false;
+  }
+  return true;
+}
+
+bool splitLibraryTag(std::string_view tag, std::string& kind, std::string& id) {
+  constexpr std::string_view kMaterial = "timberlab:material:";
+  constexpr std::string_view kPreset = "timberlab:preset:";
+  std::string_view prefix;
+  if (tag.size() > kMaterial.size() && tag.substr(0, kMaterial.size()) == kMaterial) {
+    kind = "material";
+    prefix = kMaterial;
+  } else if (tag.size() > kPreset.size() && tag.substr(0, kPreset.size()) == kPreset) {
+    kind = "preset";
+    prefix = kPreset;
+  } else {
+    return false;
+  }
+  const std::string_view rest = tag.substr(prefix.size());
+  if (!libraryIdOk(rest)) return false;
+  id.assign(rest);
+  return true;
+}
+
+const std::string* libraryTagOf(const Event& event) {
+  const std::string* found = nullptr;
+  for (const auto& tag : event.tags) {
+    if (tag.size() < 2 || tag[0] != "d") continue;
+    if (found != nullptr) return nullptr;
+    found = &tag[1];
+  }
+  return found;
+}
+
+}  // namespace
+
+bool libraryTagFor(std::string_view kind, std::string_view id, std::string& tag, std::string& error) {
+  tag.clear();
+  if ((kind != "material" && kind != "preset") || !libraryIdOk(id)) {
+    error = "sync.mismatch";
+    return false;
+  }
+  tag = "timberlab:";
+  tag.append(kind);
+  tag.push_back(':');
+  tag.append(id);
+  error.clear();
+  return true;
+}
+
+bool sealLibraryEvent(const unsigned char secret[32], std::string_view tag, std::string_view plaintext,
+                      std::int64_t createdAt, const unsigned char nonce[32], const unsigned char aux[32], Event& event,
+                      std::string& error) {
+  event = Event{};
+  std::string kind;
+  std::string id;
+  if (createdAt < 0 || !splitLibraryTag(tag, kind, id)) {
+    error = createdAt < 0 ? "signer.crypto" : "sync.mismatch";
+    return false;
+  }
+  unsigned char pubkey[32];
+  if (!publicKeyFromSecret(secret, pubkey, error)) return false;
+  unsigned char shared[32];
+  if (!conversationKey(secret, pubkey, shared, error)) return false;
+  std::string content;
+  const bool encrypted = nip44Encrypt(shared, plaintext, nonce, content, error);
+  OPENSSL_cleanse(shared, sizeof(shared));
+  if (!encrypted) return false;
+  event.kind = 30078;
+  event.tags = {{"d", std::string(tag)}};
+  event.content = std::move(content);
+  return signEvent(event, secret, createdAt, aux, error);
+}
+
+bool openLibraryEvent(const unsigned char secret[32], const Event& event, std::string& tag, std::string& plaintext,
+                      std::string& error) {
+  tag.clear();
+  plaintext.clear();
+  if (!verifyEvent(event) || event.kind != 30078) {
+    error = "sync.mismatch";
+    return false;
+  }
+  const std::string* dTag = libraryTagOf(event);
+  std::string kind;
+  std::string id;
+  if (dTag == nullptr || !splitLibraryTag(*dTag, kind, id)) {
+    error = "sync.mismatch";
+    return false;
+  }
+  unsigned char pubkey[32];
+  if (!publicKeyFromSecret(secret, pubkey, error)) return false;
+  if (event.pubkey != hexEncode(pubkey, 32)) {
+    error = "sync.mismatch";
+    return false;
+  }
+  unsigned char shared[32];
+  if (!conversationKey(secret, pubkey, shared, error)) return false;
+  const bool opened = nip44Decrypt(shared, event.content, plaintext, error);
+  OPENSSL_cleanse(shared, sizeof(shared));
+  if (!opened) {
+    wipeString(plaintext);
+    error = "sync.crypto";
+    return false;
+  }
+  tag = *dTag;
+  error.clear();
+  return true;
+}
+
+std::string eventToJson(const Event& event) { return eventJson(event).dump(); }
+
+bool parseEventJson(std::string_view json, Event& event, std::string& error) {
+  nlohmann::json body;
+  try {
+    body = nlohmann::json::parse(json);
+  } catch (const nlohmann::json::exception&) {
+    error = "sync.mismatch";
+    return false;
+  }
+  if (!eventFromJson(body, event)) {
+    error = "sync.mismatch";
+    return false;
+  }
+  error.clear();
+  return true;
+}
+
+std::string libraryEventsToJson(const std::vector<Event>& events) {
+  nlohmann::json array = nlohmann::json::array();
+  for (const Event& event : events) array.push_back(eventJson(event));
+  return array.dump();
+}
+
+bool parseLibraryEvents(std::string_view json, std::vector<Event>& events, std::string& error) {
+  events.clear();
+  nlohmann::json body;
+  try {
+    body = nlohmann::json::parse(json);
+  } catch (const nlohmann::json::exception&) {
+    error = "sync.mismatch";
+    return false;
+  }
+  if (!body.is_array()) {
+    error = "sync.mismatch";
+    return false;
+  }
+  for (const auto& item : body) {
+    Event event;
+    if (!eventFromJson(item, event)) {
+      events.clear();
+      error = "sync.mismatch";
+      return false;
+    }
+    events.push_back(std::move(event));
+  }
+  error.clear();
+  return true;
+}
+
 bool parseRelayUrl(std::string_view text, RelayLocation& out, std::string& error) {
   error = "signer.bunker";
   constexpr std::string_view kScheme = "wss://";
@@ -1589,6 +1756,34 @@ bool SignerSession::signLocal(Event& event, std::int64_t now, std::string& error
     return false;
   }
   return signWith(event, now, error);
+}
+
+bool SignerSession::sealLibrary(std::string_view tag, std::string_view plaintext, std::int64_t now, Event& event,
+                                std::string& error) {
+  if (method_ != SignerMethod::Nsec || !hasSecret_ || state_ != SignerState::SignedIn) {
+    error = "signer.state";
+    return false;
+  }
+  unsigned char nonce[32];
+  unsigned char aux[32];
+  if (RAND_bytes(nonce, sizeof(nonce)) != 1 || RAND_bytes(aux, sizeof(aux)) != 1) {
+    OPENSSL_cleanse(nonce, sizeof(nonce));
+    OPENSSL_cleanse(aux, sizeof(aux));
+    error = "signer.crypto";
+    return false;
+  }
+  const bool ok = sealLibraryEvent(secret_, tag, plaintext, now, nonce, aux, event, error);
+  OPENSSL_cleanse(nonce, sizeof(nonce));
+  OPENSSL_cleanse(aux, sizeof(aux));
+  return ok;
+}
+
+bool SignerSession::openLibrary(const Event& event, std::string& tag, std::string& plaintext, std::string& error) {
+  if (method_ != SignerMethod::Nsec || !hasSecret_ || state_ != SignerState::SignedIn) {
+    error = "signer.state";
+    return false;
+  }
+  return openLibraryEvent(secret_, event, tag, plaintext, error);
 }
 
 void SignerSession::logout() { wipe(); }

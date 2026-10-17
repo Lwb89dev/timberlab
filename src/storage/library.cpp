@@ -143,6 +143,16 @@ nlohmann::json presetPayload(const UserPreset& preset) {
           {"thicknessNm", preset.thicknessNm}};
 }
 
+std::string envelopeText(const nlohmann::json& payload, const std::string& id, const std::string& kind,
+                         std::int64_t revision) {
+  const nlohmann::json envelope = {{"contentHash", sha256Hex(payload.dump())},
+                                   {"id", id},
+                                   {"kind", kind},
+                                   {"payload", payload},
+                                   {"revision", revision}};
+  return envelope.dump();
+}
+
 }  // namespace
 
 struct Library::Sqlite {
@@ -741,12 +751,7 @@ bool Library::sealMaterial(const std::string& id, const unsigned char key[32], S
     return false;
   }
   const nlohmann::json payload = materialPayload(material);
-  const nlohmann::json envelope = {{"contentHash", sha256Hex(payload.dump())},
-                                   {"id", material.id},
-                                   {"kind", "material"},
-                                   {"payload", payload},
-                                   {"revision", material.revision}};
-  return sealAes256Gcm(key, envelope.dump(), sealed, error);
+  return sealAes256Gcm(key, envelopeText(payload, material.id, "material", material.revision), sealed, error);
 }
 
 bool Library::sealPreset(const std::string& id, const unsigned char key[32], SealedBlob& sealed, std::string& error) {
@@ -761,12 +766,37 @@ bool Library::sealPreset(const std::string& id, const unsigned char key[32], Sea
     return false;
   }
   const nlohmann::json payload = presetPayload(preset);
-  const nlohmann::json envelope = {{"contentHash", sha256Hex(payload.dump())},
-                                   {"id", preset.id},
-                                   {"kind", "preset"},
-                                   {"payload", payload},
-                                   {"revision", preset.revision}};
-  return sealAes256Gcm(key, envelope.dump(), sealed, error);
+  return sealAes256Gcm(key, envelopeText(payload, preset.id, "preset", preset.revision), sealed, error);
+}
+
+bool Library::materialPlaintext(const std::string& id, std::string& plaintext, std::string& error) {
+  plaintext.clear();
+  if (!ok_) {
+    error = error_;
+    return false;
+  }
+  UserMaterial material;
+  if (!findMaterial(id, material)) {
+    error = "library.missing";
+    return false;
+  }
+  plaintext = envelopeText(materialPayload(material), material.id, "material", material.revision);
+  return true;
+}
+
+bool Library::presetPlaintext(const std::string& id, std::string& plaintext, std::string& error) {
+  plaintext.clear();
+  if (!ok_) {
+    error = error_;
+    return false;
+  }
+  UserPreset preset;
+  if (!findPreset(id, preset)) {
+    error = "library.missing";
+    return false;
+  }
+  plaintext = envelopeText(presetPayload(preset), preset.id, "preset", preset.revision);
+  return true;
 }
 
 bool Library::importEnvelope(const unsigned char key[32], const SealedBlob& sealed, std::string& winner,
@@ -778,6 +808,15 @@ bool Library::importEnvelope(const unsigned char key[32], const SealedBlob& seal
   }
   std::string plaintext;
   if (!openAes256Gcm(key, sealed, plaintext, error)) return false;
+  return importPlaintext(plaintext, winner, error);
+}
+
+bool Library::importPlaintext(const std::string& plaintext, std::string& winner, std::string& error) {
+  winner.clear();
+  if (!ok_) {
+    error = error_;
+    return false;
+  }
   IncomingRecord incoming;
   if (!readEnvelope(plaintext, incoming, error)) return false;
 

@@ -201,6 +201,14 @@ bool jointNeeds(JointType type, const char* key) {
       return name == "length" || name == "width" || name == "thickness" || name == "depth" || name == "offset";
     case JointType::SlidingDovetail:
       return name == "width" || name == "depth" || name == "offset" || name == "offset2";
+    case JointType::Finger:
+      return name == "length";
+    case JointType::HalfBlindDovetail:
+      return name == "length" || name == "width" || name == "thickness" || name == "depth" || name == "offset";
+    case JointType::TongueGroove:
+      return name == "thickness" || name == "depth";
+    case JointType::Dowel:
+      return name == "thickness" || name == "depth";
   }
   return false;
 }
@@ -285,7 +293,8 @@ bool readJoint(const nlohmann::json& item, Joint& joint, std::string& error) {
       !takeNm(item, "offset2", jointNeeds(joint.type, "offset2"), joint.offset2Nm, error)) {
     return false;
   }
-  const bool countRequired = joint.type == JointType::Castle || joint.type == JointType::Dovetail;
+  const bool countRequired = joint.type == JointType::Castle || joint.type == JointType::Dovetail ||
+                             joint.type == JointType::Finger || joint.type == JointType::HalfBlindDovetail;
   if (!item.contains("count")) {
     joint.count = 0;
     if (countRequired) {

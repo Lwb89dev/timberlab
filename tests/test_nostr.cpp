@@ -529,3 +529,76 @@ TEST_CASE("WebSocket frames and relay messages round-trip") {
   REQUIRE(req.find("nsec") == std::string::npos);
   OPENSSL_cleanse(secret, sizeof(secret));
 }
+
+TEST_CASE("a library event is kind 30078 sealed to the author's own key") {
+  using timberlab::storage::libraryEventsToJson;
+  using timberlab::storage::libraryTagFor;
+  using timberlab::storage::openLibraryEvent;
+  using timberlab::storage::parseLibraryEvents;
+  using timberlab::storage::sealLibraryEvent;
+  std::string error;
+  std::string tag;
+  REQUIRE(libraryTagFor("material", "user_sync", tag, error));
+  REQUIRE(tag == "timberlab:material:user_sync");
+  REQUIRE_FALSE(libraryTagFor("board", "user_sync", tag, error));
+  REQUIRE(error == "sync.mismatch");
+  REQUIRE_FALSE(libraryTagFor("material", "User", tag, error));
+
+  unsigned char secret[32];
+  REQUIRE(decodeNsec("nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5", secret, error));
+  unsigned char nonce[32] = {};
+  unsigned char aux[32] = {};
+  nonce[0] = 4;
+  const std::string plaintext = "{\"id\":\"user_sync\",\"kind\":\"material\"}";
+  Event event;
+  REQUIRE(sealLibraryEvent(secret, "timberlab:material:user_sync", plaintext, 1700000000, nonce, aux, event, error));
+  REQUIRE(event.kind == 30078);
+  REQUIRE(event.tags.size() == 1);
+  REQUIRE(event.tags[0].size() == 2);
+  REQUIRE(event.tags[0][0] == "d");
+  REQUIRE(event.tags[0][1] == "timberlab:material:user_sync");
+  REQUIRE(verifyEvent(event));
+  std::string openedTag;
+  std::string opened;
+  REQUIRE(openLibraryEvent(secret, event, openedTag, opened, error));
+  REQUIRE(openedTag == "timberlab:material:user_sync");
+  REQUIRE(opened == plaintext);
+
+  const std::string file = libraryEventsToJson({event});
+  std::vector<Event> parsed;
+  REQUIRE(parseLibraryEvents(file, parsed, error));
+  REQUIRE(parsed.size() == 1);
+  REQUIRE(parsed[0].id == event.id);
+  REQUIRE_FALSE(parseLibraryEvents("{}", parsed, error));
+  REQUIRE(error == "sync.mismatch");
+
+  Event wrongKind = event;
+  wrongKind.kind = 1;
+  REQUIRE_FALSE(openLibraryEvent(secret, wrongKind, openedTag, opened, error));
+  REQUIRE(error == "sync.mismatch");
+
+  unsigned char other[32] = {};
+  other[31] = 3;
+  REQUIRE_FALSE(openLibraryEvent(other, event, openedTag, opened, error));
+  REQUIRE(error == "sync.mismatch");
+
+  REQUIRE(libraryTagFor("material", "user_sync", tag, error));
+  SignerSession session;
+  REQUIRE(session.loginWithNsec("nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5", error));
+  Event sealed;
+  REQUIRE(session.sealLibrary(tag, plaintext, 1700000002, sealed, error));
+  REQUIRE(sealed.kind == 30078);
+  REQUIRE(session.openLibrary(sealed, openedTag, opened, error));
+  REQUIRE(opened == plaintext);
+  session.logout();
+  REQUIRE_FALSE(session.sealLibrary(tag, plaintext, 1700000002, sealed, error));
+  REQUIRE(error == "signer.state");
+
+  unsigned char pubkey[32];
+  REQUIRE(decodeNpub("npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6", pubkey, error));
+  REQUIRE(session.loginWithPublicKey(hexEncode(pubkey, 32), SignerMethod::Amber, error));
+  REQUIRE_FALSE(session.sealLibrary(tag, plaintext, 10, sealed, error));
+  REQUIRE(error == "signer.state");
+  OPENSSL_cleanse(secret, sizeof(secret));
+  OPENSSL_cleanse(other, sizeof(other));
+}

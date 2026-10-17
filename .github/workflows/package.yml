@@ -1,0 +1,160 @@
+name: Package
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+
+jobs:
+  deb:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - name: Check out the tag
+        uses: actions/checkout@v4
+
+      - name: Check the version
+        run: |
+          set -euo pipefail
+          grep -q "project(TimberLab VERSION ${GITHUB_REF_NAME} " CMakeLists.txt
+          grep -q "setApplicationVersion(\"${GITHUB_REF_NAME}\")" apps/timberlab/main.cpp
+
+      - name: Install build packages
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build pkg-config \
+            python3 python3-pip python3-venv \
+            patchelf imagemagick dpkg-dev file rsync \
+            ca-certificates curl xz-utils \
+            libgl-dev libegl-dev libopengl-dev \
+            libssl-dev libsqlite3-dev \
+            libfontconfig1-dev libfreetype6-dev \
+            libx11-dev libx11-xcb-dev \
+            libxkbcommon-dev libxkbcommon-x11-dev \
+            libxcb1-dev libxcb-cursor-dev libxcb-glx0-dev \
+            libxcb-icccm4-dev libxcb-image0-dev libxcb-keysyms1-dev \
+            libxcb-randr0-dev libxcb-render0-dev libxcb-render-util0-dev \
+            libxcb-shape0-dev libxcb-shm0-dev libxcb-sync-dev \
+            libxcb-xfixes0-dev libxcb-xkb-dev \
+            zlib1g-dev
+
+      - name: Restore Qt 6.8.3
+        id: qt-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.cache/qt
+          key: qt-6.8.3-linux_gcc_64-desktop-archives-v1
+
+      - name: Install Qt 6.8.3
+        if: steps.qt-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          python3 -m venv "${RUNNER_TEMP}/aqt"
+          "${RUNNER_TEMP}/aqt/bin/pip" install 'aqtinstall==3.2.1'
+          "${RUNNER_TEMP}/aqt/bin/aqt" install-qt linux desktop 6.8.3 linux_gcc_64 \
+            -O "${GITHUB_WORKSPACE}/.cache/qt" \
+            --archives icu qtbase qtdeclarative qtsvg qttools qttranslations qtwayland
+          test -f "${GITHUB_WORKSPACE}/.cache/qt/6.8.3/gcc_64/lib/cmake/Qt6/Qt6Config.cmake"
+
+      - name: Restore Open CASCADE 7.9.2
+        id: occt-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.cache/occt-install
+          key: occt-7.9.2-modeling-only-v1
+
+      - name: Build Open CASCADE 7.9.2
+        if: steps.occt-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          curl -fsSL -o "${RUNNER_TEMP}/occt.tar.gz" \
+            https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_2.tar.gz
+          echo "3cd080d3fc33ba0c6c157e110afe3e015859524c4694dbb09812ec9d61595639  ${RUNNER_TEMP}/occt.tar.gz" | sha256sum -c
+          tar -xzf "${RUNNER_TEMP}/occt.tar.gz" -C "${RUNNER_TEMP}"
+          cmake -S "${RUNNER_TEMP}/OCCT-7_9_2" -B "${RUNNER_TEMP}/occt-build" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_LIBRARY_TYPE=Shared \
+            -DINSTALL_DIR="${GITHUB_WORKSPACE}/.cache/occt-install" \
+            -DINSTALL_DIR_LAYOUT=Unix \
+            -DBUILD_MODULE_FoundationClasses=ON \
+            -DBUILD_MODULE_ModelingData=ON \
+            -DBUILD_MODULE_ModelingAlgorithms=ON \
+            -DBUILD_MODULE_Visualization=OFF \
+            -DBUILD_MODULE_ApplicationFramework=OFF \
+            -DBUILD_MODULE_DataExchange=OFF \
+            -DBUILD_MODULE_Draw=OFF \
+            -DBUILD_MODULE_DETools=OFF \
+            -DBUILD_DOC_Overview=OFF \
+            -DBUILD_Inspector=OFF \
+            -DBUILD_SAMPLES_QT=OFF \
+            -DUSE_FREETYPE=OFF \
+            -DUSE_FREEIMAGE=OFF \
+            -DUSE_FFMPEG=OFF \
+            -DUSE_OPENGL=OFF \
+            -DUSE_GLES2=OFF \
+            -DUSE_RAPIDJSON=OFF \
+            -DUSE_DRACO=OFF \
+            -DUSE_TBB=OFF \
+            -DUSE_TK=OFF \
+            -DUSE_XLIB=OFF \
+            -DUSE_EIGEN=OFF
+          cmake --build "${RUNNER_TEMP}/occt-build" --target install
+          test -f "${GITHUB_WORKSPACE}/.cache/occt-install/lib/cmake/opencascade/OpenCASCADEConfig.cmake"
+
+      - name: Keep the Open CASCADE source for the license files
+        run: |
+          set -euo pipefail
+          if [[ ! -f "${RUNNER_TEMP}/OCCT-7_9_2/LICENSE_LGPL_21.txt" ]]; then
+            curl -fsSL -o "${RUNNER_TEMP}/occt.tar.gz" \
+              https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_2.tar.gz
+            echo "3cd080d3fc33ba0c6c157e110afe3e015859524c4694dbb09812ec9d61595639  ${RUNNER_TEMP}/occt.tar.gz" | sha256sum -c
+            tar -xzf "${RUNNER_TEMP}/occt.tar.gz" -C "${RUNNER_TEMP}"
+          fi
+
+      - name: Configure and build
+        run: |
+          set -euo pipefail
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/.cache/qt/6.8.3/gcc_64;${GITHUB_WORKSPACE}/.cache/occt-install"
+          ninja -C build timberlab timberlab-tests
+
+      - name: Test
+        run: |
+          set -euo pipefail
+          ./build/timberlab-tests
+          TIMBERLAB_DATA_DIR="$PWD/build/self-check" TIMBERLAB_SOURCE_DIR="$PWD" ./build/timberlab --check
+          TIMBERLAB_DATA_DIR="$PWD/build/accept" ./build/timberlab --accept
+
+      - name: Assemble the Debian package
+        run: |
+          set -euo pipefail
+          chmod +x packaging/assemble-deb.sh
+          ./packaging/assemble-deb.sh \
+            --binary "$PWD/build/timberlab" \
+            --qt "${GITHUB_WORKSPACE}/.cache/qt/6.8.3/gcc_64" \
+            --occt "${GITHUB_WORKSPACE}/.cache/occt-install" \
+            --occt-source "${RUNNER_TEMP}/OCCT-7_9_2" \
+            --version "${GITHUB_REF_NAME}" \
+            --output "$PWD/dist/timberlab_${GITHUB_REF_NAME}_amd64.deb"
+
+      - name: Upload the package
+        uses: actions/upload-artifact@v4
+        with:
+          name: timberlab-${{ github.ref_name }}-amd64
+          path: dist/timberlab_${{ github.ref_name }}_amd64.deb
+          if-no-files-found: error
+
+      - name: Publish the GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: TimberLab ${{ github.ref_name }}
+          files: dist/timberlab_${{ github.ref_name }}_amd64.deb
+          body_path: CHANGELOG.md
+          fail_on_unmatched_files: true
