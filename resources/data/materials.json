@@ -1,0 +1,918 @@
+{
+  "schema": "timberlab.materials",
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "european-oak",
+      "category": "hardwood",
+      "scientificName": "Quercus robur",
+      "visualHex": "#C4A36A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "European oak",
+        "it": "Rovere europeo"
+      },
+      "grain": "ring-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "sessile-oak",
+      "category": "hardwood",
+      "scientificName": "Quercus petraea",
+      "visualHex": "#B8956A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Sessile oak",
+        "it": "Rovere sessile"
+      },
+      "grain": "ring-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "white-oak",
+      "category": "hardwood",
+      "scientificName": "Quercus alba",
+      "visualHex": "#D7C4A3",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "American white oak",
+        "it": "Rovere bianco americano"
+      },
+      "grain": "ring-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "red-oak",
+      "category": "hardwood",
+      "scientificName": "Quercus rubra",
+      "visualHex": "#C47A52",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Northern red oak",
+        "it": "Quercia rossa"
+      },
+      "grain": "ring-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "european-walnut",
+      "category": "hardwood",
+      "scientificName": "Juglans regia",
+      "visualHex": "#6B4A32",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "European walnut",
+        "it": "Noce europeo"
+      },
+      "grain": "semi-ring-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "black-walnut",
+      "category": "hardwood",
+      "scientificName": "Juglans nigra",
+      "visualHex": "#3E2A1E",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "American black walnut",
+        "it": "Noce nero americano"
+      },
+      "grain": "semi-ring-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "hard-maple",
+      "category": "hardwood",
+      "scientificName": "Acer saccharum",
+      "visualHex": "#E6D3B0",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Hard maple",
+        "it": "Acero duro"
+      },
+      "grain": "diffuse-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "red-maple",
+      "category": "hardwood",
+      "scientificName": "Acer rubrum",
+      "visualHex": "#D8B48A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Red maple",
+        "it": "Acero rosso"
+      },
+      "grain": "diffuse-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "european-beech",
+      "category": "hardwood",
+      "scientificName": "Fagus sylvatica",
+      "visualHex": "#D2A679",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "European beech",
+        "it": "Faggio europeo"
+      },
+      "grain": "diffuse-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "european-ash",
+      "category": "hardwood",
+      "scientificName": "Fraxinus excelsior",
+      "visualHex": "#E4D2B0",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "European ash",
+        "it": "Frassino europeo"
+      },
+      "grain": "ring-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "black-cherry",
+      "category": "hardwood",
+      "scientificName": "Prunus serotina",
+      "visualHex": "#8C4A3A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Black cherry",
+        "it": "Ciliegio nero"
+      },
+      "grain": "diffuse-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "sweet-cherry",
+      "category": "hardwood",
+      "scientificName": "Prunus avium",
+      "visualHex": "#A85A48",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Sweet cherry",
+        "it": "Ciliegio selvatico"
+      },
+      "grain": "diffuse-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "silver-birch",
+      "category": "hardwood",
+      "scientificName": "Betula pendula",
+      "visualHex": "#F0E2C8",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Silver birch",
+        "it": "Betulla bianca"
+      },
+      "grain": "diffuse-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "black-poplar",
+      "category": "hardwood",
+      "scientificName": "Populus nigra",
+      "visualHex": "#E7D7B8",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Black poplar",
+        "it": "Pioppo nero"
+      },
+      "grain": "diffuse-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "black-alder",
+      "category": "hardwood",
+      "scientificName": "Alnus glutinosa",
+      "visualHex": "#C9865A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Black alder",
+        "it": "Ontano nero"
+      },
+      "grain": "diffuse-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "wych-elm",
+      "category": "hardwood",
+      "scientificName": "Ulmus glabra",
+      "visualHex": "#B08A5A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Wych elm",
+        "it": "Olmo montano"
+      },
+      "grain": "ring-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "sweet-chestnut",
+      "category": "hardwood",
+      "scientificName": "Castanea sativa",
+      "visualHex": "#A87448",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Sweet chestnut",
+        "it": "Castagno europeo"
+      },
+      "grain": "ring-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "black-locust",
+      "category": "hardwood",
+      "scientificName": "Robinia pseudoacacia",
+      "visualHex": "#C6A15A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Black locust",
+        "it": "Robinia"
+      },
+      "grain": "ring-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "teak",
+      "category": "hardwood",
+      "scientificName": "Tectona grandis",
+      "visualHex": "#B8864A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Teak",
+        "it": "Teak"
+      },
+      "grain": "ring-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "sapele",
+      "category": "hardwood",
+      "scientificName": "Entandrophragma cylindricum",
+      "visualHex": "#A85B3C",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Sapele",
+        "it": "Sapelli"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "iroko",
+      "category": "hardwood",
+      "scientificName": "Milicia excelsa",
+      "visualHex": "#C4923E",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Iroko",
+        "it": "Iroko"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "wenge",
+      "category": "hardwood",
+      "scientificName": "Millettia laurentii",
+      "visualHex": "#2C2118",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Wenge",
+        "it": "Wengé"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "zebrano",
+      "category": "hardwood",
+      "scientificName": "Microberlinia brazzavillensis",
+      "visualHex": "#C4A15A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Zebrano",
+        "it": "Zebrano"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "rubberwood",
+      "category": "hardwood",
+      "scientificName": "Hevea brasiliensis",
+      "visualHex": "#E2C89A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Rubberwood",
+        "it": "Legno di gomma"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "shagbark-hickory",
+      "category": "hardwood",
+      "scientificName": "Carya ovata",
+      "visualHex": "#C9A06A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Shagbark hickory",
+        "it": "Hickory"
+      },
+      "grain": "ring-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "sycamore-maple",
+      "category": "hardwood",
+      "scientificName": "Acer pseudoplatanus",
+      "visualHex": "#E8D8BE",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Sycamore maple",
+        "it": "Acero di monte"
+      },
+      "grain": "diffuse-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "american-sycamore",
+      "category": "hardwood",
+      "scientificName": "Platanus occidentalis",
+      "visualHex": "#D9C7A4",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "American sycamore",
+        "it": "Platano americano"
+      },
+      "grain": "diffuse-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "hornbeam",
+      "category": "hardwood",
+      "scientificName": "Carpinus betulus",
+      "visualHex": "#E0CBA8",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Hornbeam",
+        "it": "Carpino bianco"
+      },
+      "grain": "diffuse-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "okoume",
+      "category": "hardwood",
+      "scientificName": "Aucoumea klaineana",
+      "visualHex": "#E4B07A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Okoumé",
+        "it": "Okoumé"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "african-padauk",
+      "category": "hardwood",
+      "scientificName": "Pterocarpus soyauxii",
+      "visualHex": "#C2412D",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "African padauk",
+        "it": "Padouk africano"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "honduran-mahogany",
+      "category": "hardwood",
+      "scientificName": "Swietenia macrophylla",
+      "visualHex": "#8A3E2A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Honduran mahogany",
+        "it": "Mogano dell'Honduras"
+      },
+      "grain": "diffuse-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "european-olive",
+      "category": "hardwood",
+      "scientificName": "Olea europaea",
+      "visualHex": "#C2B48A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "European olive",
+        "it": "Olivo"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "norway-maple",
+      "category": "hardwood",
+      "scientificName": "Acer platanoides",
+      "visualHex": "#E7D2A4",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Norway maple",
+        "it": "Acero riccio"
+      },
+      "grain": "diffuse-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "yellow-poplar",
+      "category": "hardwood",
+      "scientificName": "Liriodendron tulipifera",
+      "visualHex": "#E3C27A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Yellow poplar",
+        "it": "Pioppo tulipifero"
+      },
+      "grain": "diffuse-porous",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "purpleheart",
+      "category": "hardwood",
+      "scientificName": "Peltogyne spp.",
+      "visualHex": "#6A3A78",
+      "identityAmbiguous": true,
+      "commonNames": {
+        "en": "Purpleheart",
+        "it": "Amaranto"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": "This commercial name covers more than one species. It is not a single botanical identity."
+    },
+    {
+      "id": "ebony",
+      "category": "hardwood",
+      "scientificName": "Diospyros spp.",
+      "visualHex": "#1A1714",
+      "identityAmbiguous": true,
+      "commonNames": {
+        "en": "Ebony",
+        "it": "Ebano"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": "This commercial name covers more than one species. It is not a single botanical identity."
+    },
+    {
+      "id": "meranti",
+      "category": "hardwood",
+      "scientificName": "Shorea spp.",
+      "visualHex": "#C46A4A",
+      "identityAmbiguous": true,
+      "commonNames": {
+        "en": "Meranti",
+        "it": "Meranti"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": "This commercial name covers more than one species. It is not a single botanical identity."
+    },
+    {
+      "id": "scots-pine",
+      "category": "softwood",
+      "scientificName": "Pinus sylvestris",
+      "visualHex": "#E6C98A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Scots pine",
+        "it": "Pino silvestre"
+      },
+      "grain": "softwood",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "norway-spruce",
+      "category": "softwood",
+      "scientificName": "Picea abies",
+      "visualHex": "#F3E6C4",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Norway spruce",
+        "it": "Abete rosso"
+      },
+      "grain": "softwood",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "douglas-fir",
+      "category": "softwood",
+      "scientificName": "Pseudotsuga menziesii",
+      "visualHex": "#C9A56B",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Douglas fir",
+        "it": "Abete di Douglas"
+      },
+      "grain": "softwood",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "european-larch",
+      "category": "softwood",
+      "scientificName": "Larix decidua",
+      "visualHex": "#D7B07A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "European larch",
+        "it": "Larice europeo"
+      },
+      "grain": "softwood",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "western-red-cedar",
+      "category": "softwood",
+      "scientificName": "Thuja plicata",
+      "visualHex": "#C46A4E",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Western red cedar",
+        "it": "Cedro rosso occidentale"
+      },
+      "grain": "softwood",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "silver-fir",
+      "category": "softwood",
+      "scientificName": "Abies alba",
+      "visualHex": "#F6EBD2",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "European silver fir",
+        "it": "Abete bianco"
+      },
+      "grain": "softwood",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "eastern-white-pine",
+      "category": "softwood",
+      "scientificName": "Pinus strobus",
+      "visualHex": "#F2E3C0",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Eastern white pine",
+        "it": "Pino strobo"
+      },
+      "grain": "softwood",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "european-yew",
+      "category": "softwood",
+      "scientificName": "Taxus baccata",
+      "visualHex": "#8C5A3C",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "European yew",
+        "it": "Tasso"
+      },
+      "grain": "softwood",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "mediterranean-cypress",
+      "category": "softwood",
+      "scientificName": "Cupressus sempervirens",
+      "visualHex": "#C8B48A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Mediterranean cypress",
+        "it": "Cipresso"
+      },
+      "grain": "softwood",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
+      "notes": ""
+    },
+    {
+      "id": "birch-plywood",
+      "category": "engineered",
+      "scientificName": "",
+      "visualHex": "#E7D3A1",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Birch plywood",
+        "it": "Multistrato di betulla"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+    },
+    {
+      "id": "poplar-plywood",
+      "category": "engineered",
+      "scientificName": "",
+      "visualHex": "#EAD7B4",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Poplar plywood",
+        "it": "Multistrato di pioppo"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+    },
+    {
+      "id": "softwood-plywood",
+      "category": "engineered",
+      "scientificName": "",
+      "visualHex": "#E4C98A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Softwood plywood",
+        "it": "Multistrato di conifera"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+    },
+    {
+      "id": "hardwood-plywood",
+      "category": "engineered",
+      "scientificName": "",
+      "visualHex": "#C9A36E",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Hardwood plywood",
+        "it": "Multistrato di latifoglia"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+    },
+    {
+      "id": "marine-plywood",
+      "category": "engineered",
+      "scientificName": "",
+      "visualHex": "#D7B56A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Marine plywood",
+        "it": "Compensato marino"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+    },
+    {
+      "id": "mdf",
+      "category": "engineered",
+      "scientificName": "",
+      "visualHex": "#C4A888",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "MDF",
+        "it": "MDF"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+    },
+    {
+      "id": "hdf",
+      "category": "engineered",
+      "scientificName": "",
+      "visualHex": "#B09070",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "HDF",
+        "it": "HDF"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+    },
+    {
+      "id": "particleboard",
+      "category": "engineered",
+      "scientificName": "",
+      "visualHex": "#D2BE96",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Particleboard",
+        "it": "Truciolare"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+    },
+    {
+      "id": "melamine-white",
+      "category": "engineered",
+      "scientificName": "",
+      "visualHex": "#F4F1EA",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "White melamine-faced particleboard",
+        "it": "Truciolare melaminico bianco"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+    },
+    {
+      "id": "osb",
+      "category": "engineered",
+      "scientificName": "",
+      "visualHex": "#D8C07A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "OSB",
+        "it": "OSB"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+    },
+    {
+      "id": "engineered-bamboo",
+      "category": "engineered",
+      "scientificName": "",
+      "visualHex": "#C6B05A",
+      "identityAmbiguous": false,
+      "commonNames": {
+        "en": "Engineered bamboo",
+        "it": "Bambù ingegnerizzato"
+      },
+      "grain": "",
+      "densityKgM3": null,
+      "jankaN": null,
+      "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+    }
+  ]
+}

@@ -1,0 +1,428 @@
+{
+  "schema": "timberlab.presets",
+  "schemaVersion": 1,
+  "thicknesses": [
+    {
+      "id": "ply-3",
+      "group": "plywood",
+      "label": "Plywood 3 mm",
+      "nm": 3000000
+    },
+    {
+      "id": "ply-4",
+      "group": "plywood",
+      "label": "Plywood 4 mm",
+      "nm": 4000000
+    },
+    {
+      "id": "ply-6",
+      "group": "plywood",
+      "label": "Plywood 6 mm",
+      "nm": 6000000
+    },
+    {
+      "id": "ply-9",
+      "group": "plywood",
+      "label": "Plywood 9 mm",
+      "nm": 9000000
+    },
+    {
+      "id": "ply-12",
+      "group": "plywood",
+      "label": "Plywood 12 mm",
+      "nm": 12000000
+    },
+    {
+      "id": "ply-15",
+      "group": "plywood",
+      "label": "Plywood 15 mm",
+      "nm": 15000000
+    },
+    {
+      "id": "ply-18",
+      "group": "plywood",
+      "label": "Plywood 18 mm",
+      "nm": 18000000
+    },
+    {
+      "id": "ply-21",
+      "group": "plywood",
+      "label": "Plywood 21 mm",
+      "nm": 21000000
+    },
+    {
+      "id": "ply-24",
+      "group": "plywood",
+      "label": "Plywood 24 mm",
+      "nm": 24000000
+    },
+    {
+      "id": "mdf-3",
+      "group": "mdf",
+      "label": "MDF 3 mm",
+      "nm": 3000000
+    },
+    {
+      "id": "particle-3",
+      "group": "particleboard",
+      "label": "Particleboard 3 mm",
+      "nm": 3000000
+    },
+    {
+      "id": "mdf-6",
+      "group": "mdf",
+      "label": "MDF 6 mm",
+      "nm": 6000000
+    },
+    {
+      "id": "particle-6",
+      "group": "particleboard",
+      "label": "Particleboard 6 mm",
+      "nm": 6000000
+    },
+    {
+      "id": "mdf-8",
+      "group": "mdf",
+      "label": "MDF 8 mm",
+      "nm": 8000000
+    },
+    {
+      "id": "particle-8",
+      "group": "particleboard",
+      "label": "Particleboard 8 mm",
+      "nm": 8000000
+    },
+    {
+      "id": "mdf-10",
+      "group": "mdf",
+      "label": "MDF 10 mm",
+      "nm": 10000000
+    },
+    {
+      "id": "particle-10",
+      "group": "particleboard",
+      "label": "Particleboard 10 mm",
+      "nm": 10000000
+    },
+    {
+      "id": "mdf-12",
+      "group": "mdf",
+      "label": "MDF 12 mm",
+      "nm": 12000000
+    },
+    {
+      "id": "particle-12",
+      "group": "particleboard",
+      "label": "Particleboard 12 mm",
+      "nm": 12000000
+    },
+    {
+      "id": "mdf-16",
+      "group": "mdf",
+      "label": "MDF 16 mm",
+      "nm": 16000000
+    },
+    {
+      "id": "particle-16",
+      "group": "particleboard",
+      "label": "Particleboard 16 mm",
+      "nm": 16000000
+    },
+    {
+      "id": "mdf-18",
+      "group": "mdf",
+      "label": "MDF 18 mm",
+      "nm": 18000000
+    },
+    {
+      "id": "particle-18",
+      "group": "particleboard",
+      "label": "Particleboard 18 mm",
+      "nm": 18000000
+    },
+    {
+      "id": "mdf-19",
+      "group": "mdf",
+      "label": "MDF 19 mm",
+      "nm": 19000000
+    },
+    {
+      "id": "particle-19",
+      "group": "particleboard",
+      "label": "Particleboard 19 mm",
+      "nm": 19000000
+    },
+    {
+      "id": "mdf-22",
+      "group": "mdf",
+      "label": "MDF 22 mm",
+      "nm": 22000000
+    },
+    {
+      "id": "particle-22",
+      "group": "particleboard",
+      "label": "Particleboard 22 mm",
+      "nm": 22000000
+    },
+    {
+      "id": "mdf-25",
+      "group": "mdf",
+      "label": "MDF 25 mm",
+      "nm": 25000000
+    },
+    {
+      "id": "particle-25",
+      "group": "particleboard",
+      "label": "Particleboard 25 mm",
+      "nm": 25000000
+    },
+    {
+      "id": "solid-15",
+      "group": "solid-wood",
+      "label": "Solid wood 15 mm",
+      "nm": 15000000
+    },
+    {
+      "id": "solid-18",
+      "group": "solid-wood",
+      "label": "Solid wood 18 mm",
+      "nm": 18000000
+    },
+    {
+      "id": "solid-20",
+      "group": "solid-wood",
+      "label": "Solid wood 20 mm",
+      "nm": 20000000
+    },
+    {
+      "id": "solid-25",
+      "group": "solid-wood",
+      "label": "Solid wood 25 mm",
+      "nm": 25000000
+    },
+    {
+      "id": "solid-30",
+      "group": "solid-wood",
+      "label": "Solid wood 30 mm",
+      "nm": 30000000
+    },
+    {
+      "id": "solid-40",
+      "group": "solid-wood",
+      "label": "Solid wood 40 mm",
+      "nm": 40000000
+    },
+    {
+      "id": "solid-50",
+      "group": "solid-wood",
+      "label": "Solid wood 50 mm",
+      "nm": 50000000
+    },
+    {
+      "id": "batten-20x20",
+      "group": "batten",
+      "label": "Batten 20×20 mm",
+      "nm": 20000000
+    },
+    {
+      "id": "batten-30x30",
+      "group": "batten",
+      "label": "Batten 30×30 mm",
+      "nm": 30000000
+    },
+    {
+      "id": "batten-40x40",
+      "group": "batten",
+      "label": "Batten 40×40 mm",
+      "nm": 40000000
+    },
+    {
+      "id": "batten-30x50",
+      "group": "batten",
+      "label": "Batten 30×50 mm",
+      "nm": 30000000
+    },
+    {
+      "id": "batten-40x60",
+      "group": "batten",
+      "label": "Batten 40×60 mm",
+      "nm": 40000000
+    },
+    {
+      "id": "batten-50x50",
+      "group": "batten",
+      "label": "Batten 50×50 mm",
+      "nm": 50000000
+    },
+    {
+      "id": "imp-1-8",
+      "group": "imperial",
+      "label": "1/8\"",
+      "nm": 3175000
+    },
+    {
+      "id": "imp-1-4",
+      "group": "imperial",
+      "label": "1/4\"",
+      "nm": 6350000
+    },
+    {
+      "id": "imp-3-8",
+      "group": "imperial",
+      "label": "3/8\"",
+      "nm": 9525000
+    },
+    {
+      "id": "imp-1-2",
+      "group": "imperial",
+      "label": "1/2\"",
+      "nm": 12700000
+    },
+    {
+      "id": "imp-5-8",
+      "group": "imperial",
+      "label": "5/8\"",
+      "nm": 15875000
+    },
+    {
+      "id": "imp-3-4",
+      "group": "imperial",
+      "label": "3/4\"",
+      "nm": 19050000
+    },
+    {
+      "id": "imp-1",
+      "group": "imperial",
+      "label": "1\"",
+      "nm": 25400000
+    },
+    {
+      "id": "imp-1-1-4",
+      "group": "imperial",
+      "label": "1 1/4\"",
+      "nm": 31750000
+    },
+    {
+      "id": "imp-1-1-2",
+      "group": "imperial",
+      "label": "1 1/2\"",
+      "nm": 38100000
+    },
+    {
+      "id": "imp-2",
+      "group": "imperial",
+      "label": "2\"",
+      "nm": 50800000
+    },
+    {
+      "id": "imp-3",
+      "group": "imperial",
+      "label": "3\"",
+      "nm": 76200000
+    },
+    {
+      "id": "imp-4",
+      "group": "imperial",
+      "label": "4\"",
+      "nm": 101600000
+    }
+  ],
+  "lumber": [
+    {
+      "id": "quarter-4-4",
+      "nominal": "4/4",
+      "roughThicknessNm": 25400000,
+      "surfacedThicknessNm": 20637500,
+      "surfacedWidthNm": 0,
+      "note": "Nominal quarter thickness. Surfaced thickness is a typical North American S4S starting size, not a finished part. Width is not defined. Actual size stays editable."
+    },
+    {
+      "id": "quarter-5-4",
+      "nominal": "5/4",
+      "roughThicknessNm": 31750000,
+      "surfacedThicknessNm": 26987500,
+      "surfacedWidthNm": 0,
+      "note": "Nominal quarter thickness. Surfaced thickness is a typical North American S4S starting size, not a finished part. Width is not defined. Actual size stays editable."
+    },
+    {
+      "id": "quarter-6-4",
+      "nominal": "6/4",
+      "roughThicknessNm": 38100000,
+      "surfacedThicknessNm": 33337500,
+      "surfacedWidthNm": 0,
+      "note": "Nominal quarter thickness. Surfaced thickness is a typical North American S4S starting size, not a finished part. Width is not defined. Actual size stays editable."
+    },
+    {
+      "id": "quarter-8-4",
+      "nominal": "8/4",
+      "roughThicknessNm": 50800000,
+      "surfacedThicknessNm": 44450000,
+      "surfacedWidthNm": 0,
+      "note": "Nominal quarter thickness. Surfaced thickness is a typical North American S4S starting size, not a finished part. Width is not defined. Actual size stays editable."
+    },
+    {
+      "id": "quarter-10-4",
+      "nominal": "10/4",
+      "roughThicknessNm": 63500000,
+      "surfacedThicknessNm": 57150000,
+      "surfacedWidthNm": 0,
+      "note": "Nominal quarter thickness. Surfaced thickness is a typical North American S4S starting size, not a finished part. Width is not defined. Actual size stays editable."
+    },
+    {
+      "id": "quarter-12-4",
+      "nominal": "12/4",
+      "roughThicknessNm": 76200000,
+      "surfacedThicknessNm": 69850000,
+      "surfacedWidthNm": 0,
+      "note": "Nominal quarter thickness. Surfaced thickness is a typical North American S4S starting size, not a finished part. Width is not defined. Actual size stays editable."
+    },
+    {
+      "id": "dim-1x2",
+      "nominal": "1×2",
+      "roughThicknessNm": 25400000,
+      "surfacedThicknessNm": 19050000,
+      "surfacedWidthNm": 38100000,
+      "note": "Nominal is the trade name, not the physical size. Surfaced sizes are typical North American dressed lumber. Supplier stock can differ. Actual size stays editable."
+    },
+    {
+      "id": "dim-1x4",
+      "nominal": "1×4",
+      "roughThicknessNm": 25400000,
+      "surfacedThicknessNm": 19050000,
+      "surfacedWidthNm": 88900000,
+      "note": "Nominal is the trade name, not the physical size. Surfaced sizes are typical North American dressed lumber. Supplier stock can differ. Actual size stays editable."
+    },
+    {
+      "id": "dim-2x2",
+      "nominal": "2×2",
+      "roughThicknessNm": 50800000,
+      "surfacedThicknessNm": 38100000,
+      "surfacedWidthNm": 38100000,
+      "note": "Nominal is the trade name, not the physical size. Surfaced sizes are typical North American dressed lumber. Supplier stock can differ. Actual size stays editable."
+    },
+    {
+      "id": "dim-2x4",
+      "nominal": "2×4",
+      "roughThicknessNm": 50800000,
+      "surfacedThicknessNm": 38100000,
+      "surfacedWidthNm": 88900000,
+      "note": "Nominal is the trade name, not the physical size. Surfaced sizes are typical North American dressed lumber. Supplier stock can differ. Actual size stays editable."
+    },
+    {
+      "id": "dim-2x6",
+      "nominal": "2×6",
+      "roughThicknessNm": 50800000,
+      "surfacedThicknessNm": 38100000,
+      "surfacedWidthNm": 139700000,
+      "note": "Nominal is the trade name, not the physical size. Surfaced sizes are typical North American dressed lumber. Supplier stock can differ. Actual size stays editable."
+    },
+    {
+      "id": "dim-4x4",
+      "nominal": "4×4",
+      "roughThicknessNm": 101600000,
+      "surfacedThicknessNm": 88900000,
+      "surfacedWidthNm": 88900000,
+      "note": "Nominal is the trade name, not the physical size. Surfaced sizes are typical North American dressed lumber. Supplier stock can differ. Actual size stays editable."
+    }
+  ]
+}

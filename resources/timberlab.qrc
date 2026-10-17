@@ -1,0 +1,15 @@
+<RCC>
+    <qresource prefix="/qt/qml/TimberLab">
+        <file alias="qmldir">../qml/qmldir</file>
+        <file alias="Theme.qml">../qml/Theme.qml</file>
+    </qresource>
+    <qresource prefix="/qml">
+        <file alias="Main.qml">../qml/Main.qml</file>
+        <file alias="PartsPanel.qml">../qml/PartsPanel.qml</file>
+        <file alias="Inspector.qml">../qml/Inspector.qml</file>
+    </qresource>
+    <qresource prefix="/data">
+        <file alias="materials.json">data/materials.json</file>
+        <file alias="presets.json">data/presets.json</file>
+    </qresource>
+</RCC>

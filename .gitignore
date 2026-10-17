@@ -1,0 +1,12 @@
+deps/
+build/
+aqtinstall.log
+cmake-build-*/
+.cache/
+compile_commands.json
+*.user
+*.autosave
+*.timberlab.tmp
+*.timberlab.bak
+*.qm
+/testdata/
