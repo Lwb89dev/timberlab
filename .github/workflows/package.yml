@@ -3,7 +3,9 @@ name: Package
 on:
   push:
     tags:
-      - "[0-9]+.[0-9]+.[0-9]+"
+      # Match every tag. The version step below rejects a name that is not
+      # the X.Y.Z already written in CMake and in the application.
+      - "*"
 
 permissions:
   contents: write
