@@ -7,8 +7,11 @@
 #include "timberlab/materials/catalog.hpp"
 #include "timberlab/storage/archive.hpp"
 #include "timberlab/storage/library.hpp"
+#include "timberlab/storage/nostr.hpp"
 #include "timberlab/storage/preferences.hpp"
 #include "timberlab/units/units.hpp"
+
+#include <openssl/crypto.h>
 
 #include <algorithm>
 #include <cmath>
@@ -53,6 +56,49 @@ bool overlaps(const Component& a, const Component& b) {
 }
 
 }  // namespace
+
+bool nostrReady() {
+  unsigned char secret[32];
+  std::string error;
+  if (!storage::decodeNsec("nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5", secret, error)) return false;
+  const bool secretMatches =
+      storage::hexEncode(secret, 32) == "67dea2ed018072d675f5415ecfaed7d2597555e202d85b3d65ea4e58d2d92ffa";
+  OPENSSL_cleanse(secret, sizeof(secret));
+  if (!secretMatches) return false;
+
+  unsigned char pubkey[32];
+  std::string npub;
+  if (!storage::parseHex("3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d", pubkey, 32)) return false;
+  if (!storage::encodeNpub(pubkey, npub, error)) return false;
+  if (npub != "npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6") return false;
+  unsigned char decoded[32];
+  if (!storage::decodeNpub(npub, decoded, error)) return false;
+  if (storage::hexEncode(decoded, 32) != storage::hexEncode(pubkey, 32)) return false;
+
+  unsigned char sec1[32] = {};
+  unsigned char sec2[32] = {};
+  sec1[31] = 1;
+  sec2[31] = 2;
+  unsigned char pub2[32];
+  unsigned char key[32];
+  const bool keyed = storage::publicKeyFromSecret(sec2, pub2, error) && storage::conversationKey(sec1, pub2, key, error);
+  unsigned char nonce[32] = {};
+  nonce[31] = 1;
+  std::string payload;
+  const bool sealed =
+      keyed && storage::nip44Encrypt(key, "a", nonce, payload, error) &&
+      payload == "AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABee0G5VSK0/9YypIObAtDKfYEAjD35uVkHyB0F4DwrcNaCXlCWZKaArsGrY6M9wnuTMxWfp1RTN9Xga8no+kF5Vsb";
+  OPENSSL_cleanse(sec1, sizeof(sec1));
+  OPENSSL_cleanse(sec2, sizeof(sec2));
+  OPENSSL_cleanse(key, sizeof(key));
+  OPENSSL_cleanse(pub2, sizeof(pub2));
+  if (!sealed) return false;
+
+  const storage::AmberRequest amber = storage::amberGetPublicKeyRequest();
+  if (amber.packageName != "com.greenart7c3.nostrsigner") return false;
+  if (amber.permissionsJson.find("sign_event") != std::string::npos) return false;
+  return amber.permissionsJson.find("get_public_key") != std::string::npos;
+}
 
 int runSelfCheck() {
   using units::LengthUnit;
@@ -294,6 +340,7 @@ int runSelfCheck() {
   if (!(at("width") < at("apron") && at("apron") < at("tenon") && at("width") < at("leg"))) return fail("topo order");
   graph.addEdge("tenon", "width");
   if (!graph.hasCycle() || !graph.topologicalOrder().empty()) return fail("missed cycle");
+  if (!nostrReady()) return fail("nostr");
 
   std::cout << "self-check ok\n";
   return 0;

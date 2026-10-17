@@ -61,6 +61,14 @@ ApplicationWindow {
             MenuItem { text: qsTr("Delete"); onTriggered: app.deleteSelected() }
         }
         Menu {
+            title: qsTr("Account")
+            MenuItem { text: qsTr("Sign in with secret key…"); onTriggered: nsecDialog.open() }
+            MenuItem { text: qsTr("Sign in with bunker…"); onTriggered: bunkerDialog.open() }
+            MenuItem { text: qsTr("Sign in with Amber"); onTriggered: app.loginWithAmber() }
+            MenuSeparator {}
+            MenuItem { text: qsTr("Sign out"); enabled: app.signedIn; onTriggered: app.logout() }
+        }
+        Menu {
             title: qsTr("View")
             MenuItem { text: qsTr("Fit all"); onTriggered: viewport.frameAll() }
             MenuItem { text: qsTr("Top"); onTriggered: viewport.setStandardView("top") }
@@ -143,6 +151,13 @@ ApplicationWindow {
             anchors.fill: parent
             anchors.leftMargin: 12
             anchors.rightMargin: 12
+            Label {
+                text: app.signedIn ? app.accountNpub : qsTr("Not signed in")
+                textFormat: Text.PlainText
+                color: Theme.muted
+                elide: Text.ElideMiddle
+                Layout.maximumWidth: 280
+            }
             Label {
                 text: app.status
                 textFormat: Text.PlainText
@@ -234,6 +249,64 @@ ApplicationWindow {
         defaultSuffix: "svg"
         nameFilters: [qsTr("Front view wire (*.svg)")]
         onAccepted: app.exportDrawing(selectedFile, kind)
+    }
+    Dialog {
+        id: nsecDialog
+        title: qsTr("Sign in with a secret key")
+        modal: true
+        anchors.centerIn: parent
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        ColumnLayout {
+            width: 380
+            Label {
+                text: qsTr("The key stays in memory for this session. It is not saved and it is not sent to a relay.")
+                textFormat: Text.PlainText
+                color: Theme.text
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            TextField {
+                id: nsecField
+                echoMode: TextInput.Password
+                inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText
+                placeholderText: "nsec1…"
+                Layout.fillWidth: true
+            }
+        }
+        onAccepted: {
+            app.loginWithNsec(nsecField.text)
+            nsecField.text = ""
+        }
+        onRejected: nsecField.text = ""
+    }
+    Dialog {
+        id: bunkerDialog
+        title: qsTr("Sign in with a bunker")
+        modal: true
+        anchors.centerIn: parent
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        ColumnLayout {
+            width: 380
+            Label {
+                text: qsTr("Paste a bunker:// link. Its secret is not saved. Sign-in finishes only after the bunker returns your public key.")
+                textFormat: Text.PlainText
+                color: Theme.text
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+            TextField {
+                id: bunkerField
+                echoMode: TextInput.Password
+                inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText
+                placeholderText: "bunker://"
+                Layout.fillWidth: true
+            }
+        }
+        onAccepted: {
+            app.loginWithBunker(bunkerField.text)
+            bunkerField.text = ""
+        }
+        onRejected: bunkerField.text = ""
     }
     Dialog {
         id: confirmRestore

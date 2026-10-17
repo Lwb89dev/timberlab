@@ -1,9 +1,12 @@
 #include "DocumentController.hpp"
 
+#include "AmberBridge.hpp"
 #include "timberlab/core/manufacturing.hpp"
 #include "timberlab/core/transform.hpp"
 #include "timberlab/platform/paths.hpp"
 #include "timberlab/storage/archive.hpp"
+
+#include <openssl/crypto.h>
 
 #include <QFile>
 #include <QLocale>
@@ -14,6 +17,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <ctime>
 #include <exception>
 #include <limits>
 #include <filesystem>
@@ -138,7 +142,15 @@ void ComponentListModel::refresh() {
   endResetModel();
 }
 
-DocumentController::DocumentController(QObject* parent) : QObject(parent), components_(this) {}
+DocumentController::DocumentController(QObject* parent)
+    : QObject(parent), components_(this), relay_(this), bunkerTimer_(this) {
+  bunkerTimer_.setSingleShot(true);
+  connect(&bunkerTimer_, &QTimer::timeout, this, [this] { openNextBunker(); });
+  connect(&relay_, &RelaySocket::connected, this, &DocumentController::onBunkerConnected);
+  connect(&relay_, &RelaySocket::textMessage, this, &DocumentController::onBunkerText);
+  connect(&relay_, &RelaySocket::failed, this, [this](const QString&) { onBunkerSocketFailed(); });
+  connect(&relay_, &RelaySocket::disconnected, this, [this] { onBunkerSocketFailed(); });
+}
 
 void DocumentController::initialise() {
   std::string error;
@@ -1252,7 +1264,246 @@ QString DocumentController::messageFor(const QString& code) const {
   if (code == "parameter.range") return tr("That value makes a part size invalid.");
   if (code == "parameter.unknown") return tr("That field is not driven.");
   if (code == "assembly.unknown") return tr("That assembly is not available.");
+  if (code == "signer.nsec") return tr("That secret key is not a valid nsec.");
+  if (code == "signer.bunker") return tr("That bunker link is not valid.");
+  if (code == "signer.amber") return tr("Amber signs on Android. On this computer, sign in with a secret key or a bunker.");
+  if (code == "signer.relay") return tr("The relay did not accept the bunker connection.");
+  if (code == "signer.timeout") return tr("The bunker did not answer.");
+  if (code == "signer.rejected") return tr("The bunker rejected the connection.");
+  if (code == "signer.crypto") return tr("The bunker response could not be decrypted.");
+  if (code == "signer.state") return tr("The sign-in session is no longer valid.");
   return tr("Something went wrong.");
+}
+
+namespace {
+
+void wipeBytes(QByteArray& bytes, std::string& text) {
+  if (!text.empty()) OPENSSL_cleanse(text.data(), text.size());
+  text.clear();
+  if (!bytes.isEmpty()) OPENSSL_cleanse(bytes.data(), static_cast<std::size_t>(bytes.size()));
+  bytes.fill('\0');
+  bytes.clear();
+}
+
+}  // namespace
+
+void DocumentController::abortBunker() {
+  bunkerActive_ = false;
+  bunkerTimer_.stop();
+  relay_.close();
+  bunkerRelays_.clear();
+  bunkerRelayIndex_ = -1;
+  bunkerHelloSent_ = false;
+}
+
+void DocumentController::openNextBunker() {
+  if (!bunkerActive_) return;
+  bunkerTimer_.stop();
+  ++bunkerRelayIndex_;
+  if (bunkerRelayIndex_ < 0 || bunkerRelayIndex_ >= bunkerRelays_.size()) {
+    finishBunker(bunkerConnectedOnce_ ? "signer.timeout" : "signer.relay");
+    return;
+  }
+  bunkerHelloSent_ = false;
+  bunkerRelayUrl_ = bunkerRelays_.at(bunkerRelayIndex_);
+  relay_.open(bunkerRelayUrl_);
+}
+
+void DocumentController::sendBunkerHello() {
+  std::string error;
+  std::string sub;
+  if (!storage::randomHex(8, sub, error)) {
+    finishBunker("signer.crypto");
+    return;
+  }
+  bunkerSub_ = QString::fromStdString(sub);
+  storage::Event event;
+  if (!signer_.pendingEvent(event)) {
+    finishBunker("signer.state");
+    return;
+  }
+  const auto now = std::time(nullptr);
+  const std::int64_t since = now > 600 ? static_cast<std::int64_t>(now) - 600 : 0;
+  relay_.sendText(QString::fromStdString(storage::relayReqMessage(sub, event.pubkey, since)));
+  relay_.sendText(QString::fromStdString(storage::relayEventMessage(event)));
+  bunkerHelloSent_ = true;
+  bunkerTimer_.start(20000);
+}
+
+void DocumentController::onBunkerConnected() {
+  if (!bunkerActive_) return;
+  bunkerConnectedOnce_ = true;
+  sendBunkerHello();
+}
+
+void DocumentController::onBunkerSocketFailed() {
+  if (!bunkerActive_) return;
+  openNextBunker();
+}
+
+void DocumentController::onBunkerText(const QString& text) {
+  if (!bunkerActive_) return;
+  storage::RelayMessage message;
+  std::string error;
+  if (!storage::parseRelayMessage(text.toStdString(), message, error)) return;
+  if (message.type == "AUTH") {
+    storage::Event auth;
+    const auto now = static_cast<std::int64_t>(std::time(nullptr));
+    if (!signer_.signAuth(bunkerRelayUrl_.toStdString(), message.text, now, auth, error)) return;
+    relay_.sendText(QString::fromStdString(storage::relayAuthMessage(auth)));
+    storage::Event pending;
+    if (bunkerHelloSent_ && signer_.pendingEvent(pending)) {
+      relay_.sendText(QString::fromStdString(storage::relayEventMessage(pending)));
+    }
+    bunkerTimer_.start(20000);
+    return;
+  }
+  if (message.type == "OK" && !message.accepted) {
+    const QString detail = QString::fromStdString(message.text).left(180);
+    finishBunker("signer.rejected");
+    if (!detail.isEmpty()) {
+      status_ = tr("The bunker rejected the connection.") + QStringLiteral(" ") + detail;
+      emit statusChanged();
+    }
+    return;
+  }
+  if (message.type == "CLOSED") {
+    finishBunker("signer.relay");
+    return;
+  }
+  if (message.type != "EVENT") return;
+  if (message.sub != bunkerSub_.toStdString()) return;
+  const auto now = static_cast<std::int64_t>(std::time(nullptr));
+  const auto result = signer_.acceptRemoteEvent(message.event, now, error);
+  if (result == storage::RemoteResult::Ignored) return;
+  if (result == storage::RemoteResult::AuthRequired) {
+    status_ = tr("The bunker asked to open this page: %1").arg(QString::fromStdString(signer_.detail()));
+    emit statusChanged();
+    bunkerTimer_.start(20000);
+    return;
+  }
+  if (result == storage::RemoteResult::Continue) {
+    storage::Event pending;
+    if (!signer_.pendingEvent(pending)) {
+      finishBunker("signer.state");
+      return;
+    }
+    relay_.sendText(QString::fromStdString(storage::relayEventMessage(pending)));
+    bunkerTimer_.start(20000);
+    return;
+  }
+  if (result == storage::RemoteResult::SignedIn) {
+    bunkerActive_ = false;
+    bunkerTimer_.stop();
+    relay_.close();
+    status_ = tr("Signed in as %1").arg(QString::fromStdString(signer_.npub()));
+    emit statusChanged();
+    emit accountChanged();
+    return;
+  }
+  const QString detail = QString::fromStdString(signer_.detail()).left(180);
+  finishBunker(error.empty() ? std::string("signer.rejected") : error);
+  if (!detail.isEmpty()) {
+    status_ = messageFor(QStringLiteral("signer.rejected")) + QStringLiteral(" ") + detail;
+    emit statusChanged();
+  }
+}
+
+void DocumentController::finishBunker(const std::string& code) {
+  bunkerActive_ = false;
+  bunkerTimer_.stop();
+  relay_.close();
+  if (!signer_.signedIn()) signer_.logout();
+  report(code, false);
+  emit accountChanged();
+}
+
+bool DocumentController::loginWithNsec(const QString& nsec) {
+  abortBunker();
+  QByteArray bytes = nsec.toUtf8();
+  std::string text(bytes.constData(), static_cast<std::size_t>(bytes.size()));
+  std::string error;
+  const bool ok = signer_.loginWithNsec(text, error);
+  wipeBytes(bytes, text);
+  emit accountChanged();
+  if (!ok) {
+    report(error.empty() ? "signer.nsec" : error, false);
+    return false;
+  }
+  status_ = tr("Signed in as %1").arg(QString::fromStdString(signer_.npub()));
+  emit statusChanged();
+  return true;
+}
+
+bool DocumentController::loginWithBunker(const QString& uri) {
+  abortBunker();
+  signer_.logout();
+  QByteArray bytes = uri.toUtf8();
+  std::string text(bytes.constData(), static_cast<std::size_t>(bytes.size()));
+  const auto now = std::time(nullptr);
+  std::string error;
+  const bool ok = now >= 0 && signer_.beginBunker(text, static_cast<std::int64_t>(now), error);
+  wipeBytes(bytes, text);
+  if (!ok) {
+    report(error.empty() ? "signer.bunker" : error, false);
+    emit accountChanged();
+    return false;
+  }
+  bunkerRelays_.clear();
+  for (const std::string& relay : signer_.relays()) {
+    if (bunkerRelays_.size() >= 4) break;
+    bunkerRelays_.push_back(QString::fromStdString(relay));
+  }
+  bunkerRelayIndex_ = -1;
+  bunkerConnectedOnce_ = false;
+  bunkerActive_ = true;
+  status_ = tr("Waiting for the bunker to approve.");
+  emit statusChanged();
+  emit accountChanged();
+  openNextBunker();
+  return true;
+}
+
+bool DocumentController::loginWithAmber() {
+  if (!amberSignerAvailable()) {
+    report("signer.amber", false);
+    return false;
+  }
+  abortBunker();
+  signer_.logout();
+  emit accountChanged();
+  status_ = tr("Waiting for Amber to approve.");
+  emit statusChanged();
+  if (!requestAmberPublicKey(this)) {
+    report("signer.amber", false);
+    return false;
+  }
+  return true;
+}
+
+void DocumentController::completeAmberLogin(const QString& pubkeyHex, const QString& errorCode) {
+  if (!errorCode.isEmpty()) {
+    report(errorCode.toStdString(), false);
+    emit accountChanged();
+    return;
+  }
+  std::string error;
+  if (!signer_.loginWithPublicKey(pubkeyHex.toStdString(), storage::SignerMethod::Amber, error)) {
+    report(error.empty() ? "signer.rejected" : error, false);
+    emit accountChanged();
+    return;
+  }
+  status_ = tr("Signed in as %1").arg(QString::fromStdString(signer_.npub()));
+  emit statusChanged();
+  emit accountChanged();
+}
+
+void DocumentController::logout() {
+  abortBunker();
+  signer_.logout();
+  status_ = tr("Signed out. The key was cleared from memory.");
+  emit statusChanged();
+  emit accountChanged();
 }
 
 }  // namespace timberlab::ui

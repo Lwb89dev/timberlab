@@ -30,7 +30,7 @@ if(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
   endif()
 endif()
 
-find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick OpenGL QuickControls2 LinguistTools)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick OpenGL QuickControls2 Network LinguistTools)
 qt_standard_project_setup()
 find_package(OpenCASCADE REQUIRED)
 find_package(OpenSSL REQUIRED)
@@ -44,6 +44,7 @@ set(TIMBERLAB_MODEL_SOURCES
   src/core/assembly.cpp
   src/core/manufacturing.cpp
   src/storage/sync.cpp
+  src/storage/nostr.cpp
   src/constraints/dependency_graph.cpp
   src/constraints/binding.cpp
   src/geometry/solids.cpp
@@ -92,6 +93,8 @@ qt_add_executable(timberlab
   apps/timberlab/accept.cpp
   src/ui/DocumentController.cpp
   src/ui/ViewportItem.cpp
+  src/ui/RelaySocket.cpp
+  src/ui/AmberBridge.cpp
 )
 qt_add_resources(TIMBERLAB_RCC resources/timberlab.qrc)
 target_sources(timberlab PRIVATE ${TIMBERLAB_RCC})
@@ -111,6 +114,7 @@ target_link_libraries(timberlab PRIVATE
   Qt6::Quick
   Qt6::OpenGL
   Qt6::QuickControls2
+  Qt6::Network
 )
 target_compile_options(timberlab PRIVATE -Wall -Wextra -Wpedantic)
 # DT_RPATH, not DT_RUNPATH, and only for the GNU ld Linux build. OCCT's own
@@ -149,6 +153,7 @@ if(BUILD_TESTING)
     tests/test_hierarchy.cpp
     tests/test_manufacturing.cpp
     tests/test_sync.cpp
+    tests/test_nostr.cpp
   )
   target_link_libraries(timberlab-tests PRIVATE timberlab-model Catch2::Catch2WithMain)
   target_compile_definitions(timberlab-tests PRIVATE

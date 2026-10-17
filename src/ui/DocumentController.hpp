@@ -4,10 +4,15 @@
 #include "timberlab/geometry/solids.hpp"
 #include "timberlab/materials/catalog.hpp"
 #include "timberlab/storage/library.hpp"
+#include "timberlab/storage/nostr.hpp"
 #include "timberlab/storage/preferences.hpp"
 #include "timberlab/units/units.hpp"
 
+#include "RelaySocket.hpp"
+
 #include <QAbstractListModel>
+#include <QStringList>
+#include <QTimer>
 #include <QMatrix4x4>
 #include <QObject>
 #include <QUrl>
@@ -71,6 +76,8 @@ class DocumentController : public QObject {
   Q_PROPERTY(QVariantList driveFields READ driveFields CONSTANT)
   Q_PROPERTY(int revision READ revision NOTIFY documentChanged)
   Q_PROPERTY(QString meshQuality READ meshQuality WRITE setMeshQuality NOTIFY documentChanged)
+  Q_PROPERTY(bool signedIn READ signedIn NOTIFY accountChanged)
+  Q_PROPERTY(QString accountNpub READ accountNpub NOTIFY accountChanged)
 
  public:
   explicit DocumentController(QObject* parent = nullptr);
@@ -100,6 +107,8 @@ class DocumentController : public QObject {
   int revision() const { return revision_; }
   QString meshQuality() const;
   void setMeshQuality(const QString& quality);
+  bool signedIn() const { return signer_.signedIn(); }
+  QString accountNpub() const { return QString::fromStdString(signer_.npub()); }
 
   const Document& document() const { return document_; }
   std::vector<ScenePart> copyScene() const;
@@ -146,16 +155,29 @@ class DocumentController : public QObject {
   Q_INVOKABLE bool addJoint(const QString& typeKey, const QString& selectedId, const QString& mateId);
   Q_INVOKABLE bool setJointFromText(const QString& id, const QString& key, const QString& text);
   Q_INVOKABLE void removeJoint(const QString& id);
+  Q_INVOKABLE bool loginWithNsec(const QString& nsec);
+  Q_INVOKABLE bool loginWithBunker(const QString& uri);
+  Q_INVOKABLE bool loginWithAmber();
+  Q_INVOKABLE void logout();
+  void completeAmberLogin(const QString& pubkeyHex, const QString& errorCode);
 
  signals:
   void documentChanged();
   void statusChanged();
+  void accountChanged();
   void errorRaised(const QString& message);
   void requestFrameAll();
 
  private:
   void touch(bool frame = false);
   void report(const std::string& code, bool dialog);
+  void abortBunker();
+  void openNextBunker();
+  void sendBunkerHello();
+  void onBunkerConnected();
+  void onBunkerText(const QString& text);
+  void onBunkerSocketFailed();
+  void finishBunker(const std::string& code);
   QString messageFor(const QString& code) const;
   QString fieldLabel(const std::string& field) const;
   QString parameterLabel(const constraints::Parameter& parameter) const;
@@ -182,6 +204,16 @@ class DocumentController : public QObject {
   QString status_;
   int revision_ = 0;
   geometry::MeshQuality quality_ = geometry::MeshQuality::Standard;
+  storage::SignerSession signer_;
+  RelaySocket relay_;
+  QTimer bunkerTimer_;
+  QStringList bunkerRelays_;
+  int bunkerRelayIndex_ = -1;
+  bool bunkerActive_ = false;
+  bool bunkerConnectedOnce_ = false;
+  bool bunkerHelloSent_ = false;
+  QString bunkerRelayUrl_;
+  QString bunkerSub_;
   mutable std::mutex sceneMutex_;
   std::vector<ScenePart> scene_;
 };

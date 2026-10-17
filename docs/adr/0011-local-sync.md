@@ -18,6 +18,6 @@ The user library and the project file already round-trip on disk. A sync bug mus
 
 ## Consequences
 
-- Milestone 6 is not finished. There is no relay, no event kind, and no key written to disk.
+- Milestone 6 is not finished. There is no CAD event kind. A bunker sign-in socket exists and does not import, save, or load a project. An nsec is not written to disk. Amber has not been executed on Android.
 - NIP-44 is still the cipher to evaluate when a payload is published. This AES-GCM layout is the local record format, not a claim that a relay will store it.
 - A conflict leaves both records with the caller. The function does not merge geometry, and it does not replace a `.timberlab` file.

@@ -17,14 +17,14 @@ Milestone 0 and the first slice of milestone 1:
 - A parent link (`setParent`) and a role token on each part.
 - Cut list and bill of materials. CSV and JSON. An allowance separates rough stock from the finished size. The menu export uses allowance zero. See `docs/adr/0010-cut-list.md`.
 - Front, top, and right SVG wires, one sheet, a DXF R12 of those edges, and a PDF of the same edges. They are tessellation wires. See `docs/adr/0010-cut-list.md`.
-- Local AES-256-GCM, a revision compare, and a sealed library-row envelope. A remote win updates the library row. The project file is not part of that path. No socket and no stored key. See `docs/adr/0011-local-sync.md`.
+- Local AES-256-GCM, a revision compare, and a sealed library-row envelope. A remote win updates the library row. The project file is not part of that path. That envelope code opens no socket and stores no key. See `docs/adr/0011-local-sync.md`.
 - An explicit restore from `.bak`, after the backup loads. Load does not call it.
 - Length conversion uses a portable 128-bit multiply and divide. On this GCC build that result is checked against `__int128`.
 
 ## Next
 
 1. **Drawings.** The wires above are the tessellation. A dimensioned drawing and hidden-line projection are not implemented. TKHLR is linked and unused.
-2. **Sync.** The local cipher, the conflict rule, and a library-row envelope exist. A relay, a key, and a published event do not. See `NOSTR_SYNC.md`. No CRDT. Milestone 6 is not finished.
+2. **Sync.** The local cipher, the conflict rule, and a library-row envelope exist. Desktop sign-in can hold an nsec in memory or start a bunker session over a WebSocket. That socket does not read or write the project. Amber is an Android request; this Linux build returns an error and does not talk to a phone. A CAD event kind is not assigned, and nothing publishes a project. See `NOSTR_SYNC.md`. No CRDT. Milestone 6 is not finished.
 3. **Other platforms**, only after each one has been built and used. Android is required by the product. The renderer can select an OpenGL ES 3.00 shader path, and the desktop Qt/OCCT prefixes are not injected into an Android configure. The length math no longer requires `__int128`. No tablet, Windows, or macOS build has been run on this machine.
 4. **The remaining joints** in the product list (half-blind dovetail, finger, dowel, biscuit, and the rest), species data with citations, and manufacturing checks.
 5. **Hardening.** A successful save copies the previous file to `.bak`. Restore is a separate call and refuses a backup that does not load. `-DTIMBERLAB_SANITIZE=ON` builds the model tests with AddressSanitizer and UndefinedBehaviorSanitizer. That suite was run on this machine with leak detection off, and it passed. A GitHub workflow is not in this tree: Qt and OCCT are not in the git checkout, and no runner has executed a build. Measured frame rate and save time are not published.

@@ -23,14 +23,15 @@ TimberLab is a parametric woodworking CAD. This repository is the first running 
 - A parent link and a role token on each part. Assemblies fill the role and leave the parent empty.
 - A cut list and a bill of materials. CSV is the cut list. JSON holds the cut list and the bill of materials. The File menu exports them with a zero allowance, so the rough size equals the finished size. The allowance argument can make those columns differ.
 - Front, top, and right SVG wires of the selected part, plus one sheet that places those three views. A DXF R12 file and a PDF hold the same edges, in millimetres. Each file says it is a tessellation wire. None of them is a dimensioned drawing, and hidden-line removal is not used.
-- Local AES-256-GCM for a library row, and a revision compare. Importing a sealed material or preset writes that library row only when the remote revision wins. A conflict writes nothing. The project file is left byte for byte. The key is passed in and is not written to disk. There is no relay.
+- Local AES-256-GCM for a library row, and a revision compare. Importing a sealed material or preset writes that library row only when the remote revision wins. A conflict writes nothing. The project file is left byte for byte. The key is passed in and is not written to disk.
+- Desktop sign-in with an nsec kept in memory for the session, or with a bunker link. The nsec is not saved and is not sent to a relay. Bunker sign-in finishes only after the remote signer returns a public key. On this Linux build, Amber reports that it is an Android signer and does not contact a phone. Signing in does not publish the project.
 - Restore from the `.bak` of the current project. The backup is loaded first. A missing or invalid backup leaves the project file as it is. Opening a damaged project does not restore it on its own.
 
 A demo table is nine boards (four legs, four aprons, one top). Nine project parameters drive their sizes and positions: width, depth, leg, inset, leg height, top thickness, apron height, apron thickness, and apron drop. Changing the width updates the top, the aprons that span that width, and the legs on the far side. Undo restores the previous sizes in one step. The Assembly menu inserts a table, a cabinet carcass, a drawer box, a frame, shelving, or a bedside table into the current project. Each one is ordinary boards plus its own parameters and bindings, so the parts stay editable. A later change does not move the other assemblies. The recipe is not stored, and it does not cut joints.
 
 ## What is not implemented
 
-Dimensioned drawings, hidden-line views, STEP, and STL. A Nostr relay, key generation, and any socket. CNC. Android, Windows, and macOS packages. Automatic crash recovery: a failed open does not replace the project with the backup. Those targets are described in `ROADMAP.md`. Do not treat this build as supporting them.
+Dimensioned drawings, hidden-line views, STEP, and STL. A published CAD event, and any relay that stores a project. CNC. Android, Windows, and macOS packages. A live Amber session has not been run. Automatic crash recovery: a failed open does not replace the project with the backup. Those targets are described in `ROADMAP.md`. Do not treat this build as supporting them.
 
 ## Run it
 

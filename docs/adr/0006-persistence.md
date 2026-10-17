@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. A relay is not implemented. Local sealing and revision compare are a later decision (`docs/adr/0011-local-sync.md`).
+Accepted. A CAD relay is not implemented. Local sealing and revision compare are a later decision (`docs/adr/0011-local-sync.md`). Sign-in is described in `NOSTR_SYNC.md`.
 
 ## Context
 
@@ -23,4 +23,4 @@ Nostr is blocked until that library exists and has been round-tripped locally. T
 - `timberlab --accept` saves and reopens a real archive through the editor controller. Catch2 covers the archive format without Qt.
 - A failed rename does not delete the previous archive. The loader refuses a file over 32 MiB, a model over 2000 components, or duplicate component ids. Project files and the preferences database are owner-read/write only.
 - Moving the model itself into SQLite is not this decision. Replacing a checksummed file with an unproven database would be the failure mode this ADR is avoiding.
-- See `NOSTR_SYNC.md`. The relay described there is still not code.
+- A signer socket may open for bunker sign-in. It must not call save, load, restore, or library import. An nsec stays in memory and is not sent to a relay. Publishing a project is still not implemented. See `NOSTR_SYNC.md`.
