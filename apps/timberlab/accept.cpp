@@ -89,6 +89,9 @@ int runAccept() {
   ui::DocumentController editor;
   editor.initialise();
   if (editor.materialChoices().isEmpty()) return failStatus("catalog", editor);
+  // A previous run may have stored inches. The metric checks below need millimetres.
+  editor.setDisplayUnit("mm");
+  if (editor.displayUnit() != "mm") return failStatus("unit", editor);
   editor.setProjectName("Exact boards");
 
   editor.addBoard();
@@ -168,7 +171,89 @@ int runAccept() {
   if (edited->widthNm != 800 * kNmPerMm) return fail("edited width drifted");
   if (!meshMatches(checked, shelf, 800.f, 19.05f, 400.f)) return fail("edited mesh");
 
-  std::cout << "accept ok: shelf 800 x 18 x 400 mm, rail 609.6 x 19.05 x 304.8 mm, reloaded "
+  checked.select(rail);
+  if (!checked.addJoint("joint.mortise_tenon", rail, shelf)) return failStatus("joint", checked);
+  if (checked.document().joints().size() != 1) return fail("joint count");
+  const std::string jointId = checked.document().joints().front().id;
+  const auto lengthBefore = checked.document().joints().front().lengthNm;
+  const Component* joinedShelf = requirePart(checked, shelf);
+  const Component* joinedRail = requirePart(checked, rail);
+  if (joinedShelf == nullptr || joinedRail == nullptr) return fail("joined parts");
+  const auto shelfCut = geometry::probeSolid(*joinedShelf, checked.document().joints(), checked.document().components());
+  const auto railCut = geometry::probeSolid(*joinedRail, checked.document().joints(), checked.document().components());
+  const double shelfPlain = 800.0 * 19.05 * 400.0;
+  const double railPlain = 609.6 * 19.05 * 304.8;
+  if (!shelfCut.ok || !(shelfCut.volumeMm3 < shelfPlain - 1.0)) return fail("mortise volume");
+  if (!railCut.ok || !(railCut.volumeMm3 < railPlain - 1.0)) return fail("tenon volume");
+
+  if (!checked.setJointFromText(QString::fromStdString(jointId), "length", "20 mm")) {
+    return failStatus("joint length", checked);
+  }
+  const Component* shorterRail = requirePart(checked, rail);
+  const Component* sameShelf = requirePart(checked, shelf);
+  const auto railShorter =
+      geometry::probeSolid(*shorterRail, checked.document().joints(), checked.document().components());
+  const auto shelfSame = geometry::probeSolid(*sameShelf, checked.document().joints(), checked.document().components());
+  if (!railShorter.ok || !(railShorter.volumeMm3 > railCut.volumeMm3 + 1.0)) return fail("tenon length");
+  if (!shelfSame.ok || std::abs(shelfSame.volumeMm3 - shelfCut.volumeMm3) > 1.0) return fail("mortise depth drifted");
+
+  checked.undo();
+  if (checked.document().joints().size() != 1) return fail("undo dropped joint");
+  if (checked.document().joints().front().lengthNm != lengthBefore) return fail("undo length");
+  const auto railRestored =
+      geometry::probeSolid(*requirePart(checked, rail), checked.document().joints(), checked.document().components());
+  if (!railRestored.ok || std::abs(railRestored.volumeMm3 - railCut.volumeMm3) > 1.0) return fail("undo tenon");
+
+  if (!checked.saveCurrent()) return failStatus("save joint", checked);
+  ui::DocumentController joined;
+  joined.initialise();
+  if (!joined.loadProject(url)) return failStatus("reopen joint", joined);
+  if (joined.document().joints().size() != 1) return fail("reopen joint count");
+  const auto reloadedShelf =
+      geometry::probeSolid(*requirePart(joined, shelf), joined.document().joints(), joined.document().components());
+  const auto reloadedRail =
+      geometry::probeSolid(*requirePart(joined, rail), joined.document().joints(), joined.document().components());
+  if (!reloadedShelf.ok || !(reloadedShelf.volumeMm3 < shelfPlain - 1.0)) return fail("reopen mortise");
+  if (!reloadedRail.ok || !(reloadedRail.volumeMm3 < railPlain - 1.0)) return fail("reopen tenon");
+
+  while (!joined.userMaterials().isEmpty()) {
+    const QString id = joined.userMaterials().front().toMap().value("id").toString();
+    if (!joined.removeUserMaterial(id)) return failStatus("library clear", joined);
+  }
+  while (!joined.userPresets().isEmpty()) {
+    const QString id = joined.userPresets().front().toMap().value("id").toString();
+    if (!joined.removeUserPreset(id)) return failStatus("library clear", joined);
+  }
+  if (!joined.addUserMaterial("Shop oak", "#A67C52")) return failStatus("library material", joined);
+  if (joined.userMaterials().size() != 1) return fail("library count");
+  const QString materialId = joined.userMaterials().front().toMap().value("id").toString();
+  if (!materialId.startsWith("user_")) return fail("library id");
+  bool listed = false;
+  for (const QVariant& choice : joined.materialChoices()) {
+    if (choice.toMap().value("id").toString() == materialId) listed = true;
+  }
+  if (!listed) return fail("library choice");
+  joined.setMaterial(shelf, materialId);
+  if (requirePart(joined, shelf) == nullptr || requirePart(joined, shelf)->materialId != materialId.toStdString()) {
+    return fail("library assign");
+  }
+  const std::int64_t thicknessBefore = requirePart(joined, shelf)->thicknessNm;
+  if (!joined.addUserPreset("18 mm")) return failStatus("library preset", joined);
+  if (joined.userPresets().size() != 1 || joined.userPresets().front().toMap().value("label").toString() != "18 mm") {
+    return fail("library preset row");
+  }
+  if (requirePart(joined, shelf)->thicknessNm != thicknessBefore) return fail("library preset resized the part");
+  if (!joined.saveCurrent()) return failStatus("save library material", joined);
+  ui::DocumentController reloaded;
+  reloaded.initialise();
+  if (!reloaded.loadProject(url)) return failStatus("reopen library material", reloaded);
+  if (requirePart(reloaded, shelf) == nullptr || requirePart(reloaded, shelf)->materialId != materialId.toStdString()) {
+    return fail("project kept material");
+  }
+  if (reloaded.userMaterials().size() != 1) return fail("library reopen");
+  if (reloaded.document().joints().size() != 1) return fail("library edit dropped joint");
+
+  std::cout << "accept ok: shelf 800 x 19.05 x 400 mm with a mortise, rail 609.6 x 19.05 x 304.8 mm with a tenon, reloaded "
             << projectPath.string() << "\n";
   return 0;
 }

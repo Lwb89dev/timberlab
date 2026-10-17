@@ -1,6 +1,7 @@
 #pragma once
 
 #include "timberlab/core/component.hpp"
+#include "timberlab/core/joint.hpp"
 
 #include <cstdint>
 #include <string>
@@ -24,12 +25,27 @@ struct SolidMesh {
   std::vector<std::uint32_t> indices;
 };
 
+enum class PointSide { In, Out, On, Unknown };
+
+struct SolidProbe {
+  bool ok = false;
+  std::string error;
+  double volumeMm3 = 0;
+};
+
 // OCCT is the solid authority. The returned mesh is only a display tessellation.
-// A joint has to change this shape with a boolean and keep the parameters that
-// rebuild it. A mesh edited in the viewport is not a joint.
-// Calls are not thread-safe: OCCT is used from the thread that calls these functions.
+// meshFor(component, quality) builds the plain part. The overload cuts every joint
+// that removes material from that part and rebuilds the solid from stored sizes.
+// A dado, groove, or rabbet cuts partA only. probeSolid and classifyLocal use the
+// same solid and do not tessellate it. classifyLocal is in the part's local frame,
+// in millimetres. Calls are not thread-safe: OCCT is used from the calling thread.
 SolidMesh makeBoxMesh(double widthMm, double thicknessMm, double heightMm, MeshQuality quality);
 SolidMesh makeCylinderMesh(double radiusMm, double heightMm, MeshQuality quality);
 SolidMesh meshFor(const Component& component, MeshQuality quality);
+SolidMesh meshFor(const Component& component, const std::vector<Joint>& joints, const std::vector<Component>& parts,
+                  MeshQuality quality);
+SolidProbe probeSolid(const Component& component, const std::vector<Joint>& joints, const std::vector<Component>& parts);
+PointSide classifyLocal(const Component& component, const std::vector<Joint>& joints, const std::vector<Component>& parts,
+                        double xMm, double yMm, double zMm);
 
 }  // namespace timberlab::geometry

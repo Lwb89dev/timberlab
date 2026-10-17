@@ -5,6 +5,7 @@ import TimberLab
 
 Rectangle {
     color: Theme.panel
+    signal demoRequested()
     function typeName(key) {
         if (key === "board") return qsTr("Board")
         if (key === "box") return qsTr("Box")
@@ -45,6 +46,10 @@ Rectangle {
                 color: partId === app.selectedId ? "#3a3128" : Theme.panelRaised
                 border.color: partId === app.selectedId ? Theme.accent : Theme.border
                 border.width: 1
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: app.select(partId)
+                }
                 RowLayout {
                     anchors.fill: parent
                     anchors.leftMargin: 10
@@ -52,25 +57,31 @@ Rectangle {
                     ColumnLayout {
                         Layout.fillWidth: true
                         spacing: 0
-                        Label { text: name; color: Theme.text; elide: Text.ElideRight; Layout.fillWidth: true }
-                        Label { text: typeName(partType); color: Theme.muted; font.pixelSize: 11 }
+                        Label {
+                            text: name
+                            textFormat: Text.PlainText
+                            color: Theme.text
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+                        Label {
+                            text: typeName(partType)
+                            textFormat: Text.PlainText
+                            color: Theme.muted
+                            font.pixelSize: 11
+                        }
                     }
                     ToolButton {
                         text: shown ? qsTr("Hide") : qsTr("Show")
                         onClicked: app.setVisible(partId, !shown)
                     }
                 }
-                MouseArea {
-                    anchors.fill: parent
-                    anchors.rightMargin: 72
-                    onClicked: app.select(partId)
-                }
             }
         }
         Button {
             text: qsTr("Demo table")
             Layout.fillWidth: true
-            onClicked: app.makeDemo()
+            onClicked: demoRequested()
         }
     }
 }

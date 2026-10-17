@@ -83,6 +83,66 @@
         <source>A board is a real solid: X width, Y thickness, Z height. Z is up.</source>
         <translation>Una tavola è un solido vero: X larghezza, Y spessore, Z altezza. Z è verso l&apos;alto.</translation>
     </message>
+    <message>
+        <location filename="../qml/Inspector.qml" line="90"/>
+        <source>Parameters</source>
+        <translation>Parametri</translation>
+    </message>
+    <message>
+        <location filename="../qml/Inspector.qml" line="100"/>
+        <source>Changing a parameter updates the parts that depend on it.</source>
+        <translation>Modificare un parametro aggiorna i pezzi che dipendono da esso.</translation>
+    </message>
+    <message>
+        <location filename="../qml/Inspector.qml" line="175"/>
+        <source>Release</source>
+        <translation>Libera</translation>
+    </message>
+    <message>
+        <location filename="../qml/Inspector.qml" line="185"/>
+        <source>Drive</source>
+        <translation>Vincola</translation>
+    </message>
+    <message>
+        <source>Library</source>
+        <translation>Libreria</translation>
+    </message>
+    <message>
+        <source>Custom materials and stock thicknesses are saved on this computer. They are not the project.</source>
+        <translation>I materiali e gli spessori personalizzati restano su questo computer. Non sono il progetto.</translation>
+    </message>
+    <message>
+        <source>Material</source>
+        <translation>Materiale</translation>
+    </message>
+    <message>
+        <source>Shop oak</source>
+        <translation>Rovere di bottega</translation>
+    </message>
+    <message>
+        <source>Color</source>
+        <translation>Colore</translation>
+    </message>
+    <message>
+        <source>Add material</source>
+        <translation>Aggiungi materiale</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Rimuovi</translation>
+    </message>
+    <message>
+        <source>Thickness</source>
+        <translation>Spessore</translation>
+    </message>
+    <message>
+        <source>18 mm</source>
+        <translation>18 mm</translation>
+    </message>
+    <message>
+        <source>Add preset</source>
+        <translation>Aggiungi spessore</translation>
+    </message>
 </context>
 <context>
     <name>Main</name>
@@ -284,6 +344,11 @@
         <translation>Nuovo progetto</translation>
     </message>
     <message>
+        <location filename="../qml/Main.qml" line="176"/>
+        <source>Unsaved changes</source>
+        <translation>Modifiche non salvate</translation>
+    </message>
+    <message>
         <location filename="../qml/Main.qml" line="181"/>
         <source>Discard unsaved changes?</source>
         <translation>Scartare le modifiche non salvate?</translation>
@@ -351,8 +416,8 @@
     </message>
     <message>
         <location filename="../src/ui/DocumentController.cpp" line="249"/>
-        <source>Demo table placed as separate boards</source>
-        <translation>Tavolo di prova inserito come tavole separate</translation>
+        <source>Demo table placed. Its stock sizes are parameters.</source>
+        <translation>Tavolo di prova inserito. Le misure di stock sono parametri.</translation>
     </message>
     <message>
         <location filename="../src/ui/DocumentController.cpp" line="255"/>
@@ -476,6 +541,21 @@
     </message>
     <message>
         <location filename="../src/ui/DocumentController.cpp" line="581"/>
+        <source>That name is too long.</source>
+        <translation>Quel nome è troppo lungo.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="582"/>
+        <source>Those notes are too long.</source>
+        <translation>Quelle note sono troppo lunghe.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="583"/>
+        <source>That text is too long.</source>
+        <translation>Quel testo è troppo lungo.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="581"/>
         <source>Could not read or write the project file.</source>
         <translation>Impossibile leggere o scrivere il file di progetto.</translation>
     </message>
@@ -500,6 +580,21 @@
         <translation>Questo progetto usa una versione di file più recente.</translation>
     </message>
     <message>
+        <location filename="../src/ui/DocumentController.cpp" line="592"/>
+        <source>That project file is too large.</source>
+        <translation>Quel file di progetto è troppo grande.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="593"/>
+        <source>That project has too many entries.</source>
+        <translation>Quel progetto ha troppe voci.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="594"/>
+        <source>That project contains a duplicate id.</source>
+        <translation>Quel progetto contiene un identificatore duplicato.</translation>
+    </message>
+    <message>
         <location filename="../src/ui/DocumentController.cpp" line="586"/>
         <source>Could not read that angle.</source>
         <translation>Impossibile leggere quell&apos;angolo.</translation>
@@ -513,6 +608,278 @@
         <location filename="../src/ui/DocumentController.cpp" line="591"/>
         <source>Preferences could not be opened. The project still works.</source>
         <translation>Impossibile aprire le preferenze. Il progetto funziona comunque.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="600"/>
+        <source>Something went wrong.</source>
+        <translation>Qualcosa è andato storto.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="505"/>
+        <source>Joint added</source>
+        <translation>Giunto aggiunto</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="521"/>
+        <source>Joint updated</source>
+        <translation>Giunto aggiornato</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="531"/>
+        <source>Joint removed</source>
+        <translation>Giunto rimosso</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="640"/>
+        <source>A joint needs two different parts.</source>
+        <translation>Un giunto richiede due pezzi diversi.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="641"/>
+        <source>Joints cut boards and boxes, not cylinders.</source>
+        <translation>Gli incastri tagliano tavole e scatole, non i cilindri.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="642"/>
+        <source>That joint does not fit these parts.</source>
+        <translation>Quel giunto non entra in questi pezzi.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="643"/>
+        <source>That joint does not change the solid.</source>
+        <translation>Quel giunto non modifica il solido.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="644"/>
+        <source>That joint is no longer in the project.</source>
+        <translation>Quel giunto non è più nel progetto.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="470"/>
+        <source>Parameter updated</source>
+        <translation>Parametro aggiornato</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="482"/>
+        <source>Field driven</source>
+        <translation>Campo guidato</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="492"/>
+        <source>Field released</source>
+        <translation>Campo liberato</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="700"/>
+        <source>That parameter is not in the project.</source>
+        <translation>Quel parametro non è nel progetto.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="701"/>
+        <source>That dimension follows a parameter. Release it to type a number.</source>
+        <translation>Quella misura segue un parametro. Liberala per scrivere un numero.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="702"/>
+        <source>Those dimensions depend on each other.</source>
+        <translation>Quelle misure dipendono l&apos;una dall&apos;altra.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="703"/>
+        <source>That value makes a part size invalid.</source>
+        <translation>Quel valore rende invalida la misura di un pezzo.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="704"/>
+        <source>That field is not driven.</source>
+        <translation>Quel campo non è guidato.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="330"/>
+        <source>Width</source>
+        <translation>Larghezza</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="331"/>
+        <source>Thickness</source>
+        <translation>Spessore</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="332"/>
+        <source>Height</source>
+        <translation>Altezza</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="333"/>
+        <source>Radius</source>
+        <translation>Raggio</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="345"/>
+        <source>Depth</source>
+        <translation>Profondità</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="346"/>
+        <source>Leg</source>
+        <translation>Gamba</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="347"/>
+        <source>Inset</source>
+        <translation>Rientro</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="348"/>
+        <source>Leg height</source>
+        <translation>Altezza gamba</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="349"/>
+        <source>Top thickness</source>
+        <translation>Spessore piano</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="350"/>
+        <source>Apron height</source>
+        <translation>Altezza fascia</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="351"/>
+        <source>Apron thickness</source>
+        <translation>Spessore fascia</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="352"/>
+        <source>Apron drop</source>
+        <translation>Calo fascia</translation>
+    </message>
+    <message>
+        <source>Material added to the library.</source>
+        <translation>Materiale aggiunto alla libreria.</translation>
+    </message>
+    <message>
+        <source>Preset added to the library.</source>
+        <translation>Spessore aggiunto alla libreria.</translation>
+    </message>
+    <message>
+        <source>Material removed from the library.</source>
+        <translation>Materiale rimosso dalla libreria.</translation>
+    </message>
+    <message>
+        <source>Preset removed from the library.</source>
+        <translation>Spessore rimosso dalla libreria.</translation>
+    </message>
+    <message>
+        <source>The library could not be opened. The project still works.</source>
+        <translation>La libreria non si è aperta. Il progetto funziona comunque.</translation>
+    </message>
+    <message>
+        <source>The library database could not be read.</source>
+        <translation>Impossibile leggere il database della libreria.</translation>
+    </message>
+    <message>
+        <source>This library uses a newer database version.</source>
+        <translation>Questa libreria usa una versione di database più recente.</translation>
+    </message>
+    <message>
+        <source>That library entry already exists.</source>
+        <translation>Quella voce è già nella libreria.</translation>
+    </message>
+    <message>
+        <source>That library entry is no longer there.</source>
+        <translation>Quella voce non è più nella libreria.</translation>
+    </message>
+    <message>
+        <source>That library is full.</source>
+        <translation>La libreria è piena.</translation>
+    </message>
+    <message>
+        <source>That library value is not valid.</source>
+        <translation>Quel valore non è valido per la libreria.</translation>
+    </message>
+</context>
+<context>
+    <name>JointSection</name>
+    <message>
+        <location filename="../qml/JointSection.qml" line="22"/>
+        <source>Mortise and tenon</source>
+        <translation>Tenone e mortasa</translation>
+    </message>
+    <message>
+        <location filename="../qml/JointSection.qml" line="23"/>
+        <source>Half lap</source>
+        <translation>Mezzo legno</translation>
+    </message>
+    <message>
+        <location filename="../qml/JointSection.qml" line="24"/>
+        <source>Dado</source>
+        <translation>Canale</translation>
+    </message>
+    <message>
+        <location filename="../qml/JointSection.qml" line="25"/>
+        <source>Groove</source>
+        <translation>Scanalatura</translation>
+    </message>
+    <message>
+        <location filename="../qml/JointSection.qml" line="26"/>
+        <source>Rabbet</source>
+        <translation>Battuta</translation>
+    </message>
+    <message>
+        <location filename="../qml/JointSection.qml" line="78"/>
+        <source>Joinery</source>
+        <translation>Incastri</translation>
+    </message>
+    <message>
+        <location filename="../qml/JointSection.qml" line="90"/>
+        <source>Mate</source>
+        <translation>Pezzo accoppiato</translation>
+    </message>
+    <message>
+        <location filename="../qml/JointSection.qml" line="98"/>
+        <source>Starting sizes are not a structural rating.</source>
+        <translation>Le misure iniziali non sono una valutazione strutturale.</translation>
+    </message>
+    <message>
+        <location filename="../qml/JointSection.qml" line="104"/>
+        <source>Add joint</source>
+        <translation>Aggiungi giunto</translation>
+    </message>
+    <message>
+        <location filename="../qml/JointSection.qml" line="128"/>
+        <source>Length</source>
+        <translation>Lunghezza</translation>
+    </message>
+    <message>
+        <location filename="../qml/JointSection.qml" line="135"/>
+        <source>Width</source>
+        <translation>Larghezza</translation>
+    </message>
+    <message>
+        <location filename="../qml/JointSection.qml" line="142"/>
+        <source>Thickness</source>
+        <translation>Spessore</translation>
+    </message>
+    <message>
+        <location filename="../qml/JointSection.qml" line="149"/>
+        <source>Depth</source>
+        <translation>Profondità</translation>
+    </message>
+    <message>
+        <location filename="../qml/JointSection.qml" line="156"/>
+        <source>Offset</source>
+        <translation>Scostamento</translation>
+    </message>
+    <message>
+        <location filename="../qml/JointSection.qml" line="163"/>
+        <source>Second offset</source>
+        <translation>Secondo scostamento</translation>
+    </message>
+    <message>
+        <location filename="../qml/JointSection.qml" line="170"/>
+        <source>Remove joint</source>
+        <translation>Rimuovi giunto</translation>
     </message>
 </context>
 </TS>

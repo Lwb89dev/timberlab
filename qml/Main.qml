@@ -26,12 +26,19 @@ ApplicationWindow {
 
     property bool showParts: true
     property bool showInspector: true
+    property bool allowDirtyQuit: false
+    property string pendingAction: ""
+    property bool editingText: {
+        const item = window.activeFocusItem
+        if (!item) return false
+        return item instanceof TextInput || item instanceof TextEdit || item instanceof ComboBox
+    }
 
     menuBar: MenuBar {
         Menu {
             title: qsTr("File")
             MenuItem { text: qsTr("New"); onTriggered: askNew() }
-            MenuItem { text: qsTr("Open…"); onTriggered: openDialog.open() }
+            MenuItem { text: qsTr("Open…"); onTriggered: confirmIfDirty("open") }
             MenuItem { text: qsTr("Save"); onTriggered: saveOrAsk() }
             MenuItem { text: qsTr("Save as…"); onTriggered: saveDialog.open() }
         }
@@ -62,7 +69,7 @@ ApplicationWindow {
             anchors.fill: parent
             spacing: 6
             Button { text: qsTr("New"); onClicked: askNew() }
-            Button { text: qsTr("Open"); onClicked: openDialog.open() }
+            Button { text: qsTr("Open"); onClicked: confirmIfDirty("open") }
             Button { text: qsTr("Save"); onClicked: saveOrAsk() }
             ToolSeparator {}
             Button { text: qsTr("Undo"); enabled: app.canUndo; onClicked: app.undo() }
@@ -86,6 +93,7 @@ ApplicationWindow {
             visible: window.showParts
             Layout.preferredWidth: 280
             Layout.fillHeight: true
+            onDemoRequested: window.confirmIfDirty("demo")
         }
         Rectangle { visible: window.showParts; width: 1; color: Theme.border; Layout.fillHeight: true }
         Viewport {
@@ -109,7 +117,13 @@ ApplicationWindow {
             anchors.fill: parent
             anchors.leftMargin: 12
             anchors.rightMargin: 12
-            Label { text: app.status; color: Theme.muted; elide: Text.ElideRight; Layout.fillWidth: true }
+            Label {
+                text: app.status
+                textFormat: Text.PlainText
+                color: Theme.muted
+                elide: Text.ElideRight
+                Layout.fillWidth: true
+            }
             ComboBox {
                 id: unitBox
                 implicitHeight: 28
@@ -172,16 +186,18 @@ ApplicationWindow {
     }
 
     Dialog {
-        id: confirmNew
-        title: qsTr("New project")
+        id: confirmDirty
+        title: qsTr("Unsaved changes")
         modal: true
         anchors.centerIn: parent
         standardButtons: Dialog.Discard | Dialog.Cancel
         Label {
             text: qsTr("Discard unsaved changes?")
+            textFormat: Text.PlainText
             color: Theme.text
         }
-        onDiscarded: app.newProject()
+        onDiscarded: runPending()
+        onRejected: pendingAction = ""
     }
     Dialog {
         id: errorDialog
@@ -190,28 +206,62 @@ ApplicationWindow {
         anchors.centerIn: parent
         standardButtons: Dialog.Ok
         property string body: ""
-        Label { text: errorDialog.body; color: Theme.text; wrapMode: Text.WordWrap; width: 360 }
+        Label {
+            text: errorDialog.body
+            textFormat: Text.PlainText
+            color: Theme.text
+            wrapMode: Text.WordWrap
+            width: 360
+        }
     }
 
-    function askNew() {
-        if (app.dirty) confirmNew.open()
-        else app.newProject()
+    function askNew() { confirmIfDirty("new") }
+    function confirmIfDirty(action) {
+        if (!app.dirty) {
+            pendingAction = action
+            runPending()
+            return
+        }
+        pendingAction = action
+        confirmDirty.open()
+    }
+    function runPending() {
+        const action = pendingAction
+        pendingAction = ""
+        if (action === "new") app.newProject()
+        else if (action === "open") openDialog.open()
+        else if (action === "demo") app.makeDemo()
+        else if (action === "quit") {
+            allowDirtyQuit = true
+            window.close()
+        }
     }
     function saveOrAsk() {
+        viewport.forceActiveFocus()
         if (app.projectPath.length === 0) saveDialog.open()
         else app.saveCurrent()
     }
+    function syncFooter() {
+        const unitIndex = unitBox.indexOfValue(app.displayUnit)
+        if (unitIndex >= 0 && unitIndex !== unitBox.currentIndex) unitBox.currentIndex = unitIndex
+        const fractionIndex = fractionBox.indexOfValue(app.fractionPrecision)
+        if (fractionIndex >= 0 && fractionIndex !== fractionBox.currentIndex) fractionBox.currentIndex = fractionIndex
+        const qualityIndex = qualityBox.indexOfValue(app.meshQuality)
+        if (qualityIndex >= 0 && qualityIndex !== qualityBox.currentIndex) qualityBox.currentIndex = qualityIndex
+    }
+
+    onClosing: function (close) {
+        if (allowDirtyQuit || !app.dirty) return
+        close.accepted = false
+        pendingAction = "quit"
+        confirmDirty.open()
+    }
+
+    Component.onCompleted: syncFooter()
 
     Connections {
         target: app
-        function onDocumentChanged() {
-            const unitIndex = unitBox.indexOfValue(app.displayUnit)
-            if (unitIndex >= 0 && unitIndex !== unitBox.currentIndex) unitBox.currentIndex = unitIndex
-            const fractionIndex = fractionBox.indexOfValue(app.fractionPrecision)
-            if (fractionIndex >= 0 && fractionIndex !== fractionBox.currentIndex) fractionBox.currentIndex = fractionIndex
-            const qualityIndex = qualityBox.indexOfValue(app.meshQuality)
-            if (qualityIndex >= 0 && qualityIndex !== qualityBox.currentIndex) qualityBox.currentIndex = qualityIndex
-        }
+        function onDocumentChanged() { syncFooter() }
         function onErrorRaised(message) {
             errorDialog.body = message
             errorDialog.open()
@@ -220,11 +270,11 @@ ApplicationWindow {
     }
 
     Shortcut { sequences: [StandardKey.New]; onActivated: askNew() }
-    Shortcut { sequences: [StandardKey.Open]; onActivated: openDialog.open() }
+    Shortcut { sequences: [StandardKey.Open]; onActivated: confirmIfDirty("open") }
     Shortcut { sequences: [StandardKey.Save]; onActivated: saveOrAsk() }
-    Shortcut { sequences: [StandardKey.Undo]; onActivated: app.undo() }
-    Shortcut { sequences: [StandardKey.Redo]; onActivated: app.redo() }
-    Shortcut { sequences: ["Ctrl+D"]; onActivated: app.duplicateSelected() }
-    Shortcut { sequences: [StandardKey.Delete]; onActivated: app.deleteSelected() }
-    Shortcut { sequences: ["F"]; onActivated: viewport.frameAll() }
+    Shortcut { sequences: [StandardKey.Undo]; enabled: !editingText; onActivated: app.undo() }
+    Shortcut { sequences: [StandardKey.Redo]; enabled: !editingText; onActivated: app.redo() }
+    Shortcut { sequences: ["Ctrl+D"]; enabled: !editingText; onActivated: app.duplicateSelected() }
+    Shortcut { sequences: [StandardKey.Delete]; enabled: !editingText; onActivated: app.deleteSelected() }
+    Shortcut { sequences: ["F"]; enabled: !editingText; onActivated: viewport.frameAll() }
 }

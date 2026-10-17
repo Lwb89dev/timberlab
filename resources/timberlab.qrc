@@ -7,6 +7,7 @@
         <file alias="Main.qml">../qml/Main.qml</file>
         <file alias="PartsPanel.qml">../qml/PartsPanel.qml</file>
         <file alias="Inspector.qml">../qml/Inspector.qml</file>
+        <file alias="JointSection.qml">../qml/JointSection.qml</file>
     </qresource>
     <qresource prefix="/data">
         <file alias="materials.json">data/materials.json</file>

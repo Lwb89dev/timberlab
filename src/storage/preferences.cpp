@@ -5,16 +5,32 @@
 #include <filesystem>
 
 namespace timberlab::storage {
+namespace {
+
+void ownerOnly(const std::filesystem::path& path) {
+  std::error_code ec;
+  std::filesystem::permissions(path, std::filesystem::perms::owner_read | std::filesystem::perms::owner_write,
+                               std::filesystem::perm_options::replace, ec);
+}
+
+void protectPreferenceFiles(const std::string& path) {
+  ownerOnly(path);
+  ownerOnly(path + "-wal");
+  ownerOnly(path + "-shm");
+}
+
+}  // namespace
 
 struct Preferences::Sqlite {
   sqlite3* handle = nullptr;
 };
 
-Preferences::Preferences(const std::string& path) : db_(new Sqlite) {
+Preferences::Preferences(const std::string& path) : db_(new Sqlite), path_(path) {
   const std::filesystem::path file(path);
   std::error_code ec;
   if (file.has_parent_path()) std::filesystem::create_directories(file.parent_path(), ec);
-  if (sqlite3_open(path.c_str(), &db_->handle) != SQLITE_OK) {
+  const int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX;
+  if (sqlite3_open_v2(path.c_str(), &db_->handle, flags, nullptr) != SQLITE_OK) {
     error_ = "preferences.open";
     return;
   }
@@ -25,14 +41,16 @@ Preferences::Preferences(const std::string& path) : db_(new Sqlite) {
       "CREATE TABLE IF NOT EXISTS schema_meta(version INTEGER NOT NULL);"
       "CREATE TABLE IF NOT EXISTS user_preference(key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);";
   if (sqlite3_exec(db_->handle, sql, nullptr, nullptr, &message) != SQLITE_OK) {
-    error_ = message != nullptr ? message : "preferences.schema";
     sqlite3_free(message);
+    error_ = "preferences.schema";
+    protectPreferenceFiles(path_);
     return;
   }
 
   sqlite3_stmt* statement = nullptr;
   if (sqlite3_prepare_v2(db_->handle, "SELECT version FROM schema_meta LIMIT 1", -1, &statement, nullptr) != SQLITE_OK) {
     error_ = "preferences.schema";
+    protectPreferenceFiles(path_);
     return;
   }
   int version = 0;
@@ -42,18 +60,21 @@ Preferences::Preferences(const std::string& path) : db_(new Sqlite) {
   if (version == 0) {
     if (sqlite3_exec(db_->handle, "INSERT INTO schema_meta(version) VALUES (1);", nullptr, nullptr, &message) !=
         SQLITE_OK) {
-      error_ = message != nullptr ? message : "preferences.schema";
       sqlite3_free(message);
+      error_ = "preferences.schema";
+      protectPreferenceFiles(path_);
       return;
     }
     version = 1;
   }
   if (version > 1) {
     error_ = "preferences.version";
+    protectPreferenceFiles(path_);
     return;
   }
   schemaVersion_ = version;
   ok_ = true;
+  protectPreferenceFiles(path_);
 }
 
 Preferences::~Preferences() {
@@ -72,6 +93,7 @@ bool Preferences::set(const std::string& key, const std::string& value) {
   sqlite3_bind_text(statement, 2, value.c_str(), -1, SQLITE_TRANSIENT);
   const bool stored = sqlite3_step(statement) == SQLITE_DONE;
   sqlite3_finalize(statement);
+  protectPreferenceFiles(path_);
   return stored;
 }
 

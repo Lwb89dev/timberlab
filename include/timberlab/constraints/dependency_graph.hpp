@@ -7,8 +7,8 @@
 namespace timberlab::constraints {
 
 // Directed edge "from -> to" means changing `from` affects `to`.
-// The graph is the seed of later parametric propagation. It does not
-// recompute furniture geometry yet.
+// topologicalOrder is the order in which bindings are evaluated.
+// An empty result means the graph is empty or it contains a cycle.
 class DependencyGraph {
  public:
   void clear();
@@ -17,6 +17,7 @@ class DependencyGraph {
 
   bool hasCycle() const;
   std::vector<std::string> affectedBy(const std::string& changed) const;
+  std::vector<std::string> topologicalOrder() const;
 
  private:
   std::unordered_map<std::string, std::vector<std::string>> outgoing_;

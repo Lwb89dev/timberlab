@@ -118,6 +118,7 @@ struct DrawPart {
 class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOpenGLExtraFunctions {
  public:
   ViewportRenderer() { initializeOpenGLFunctions(); }
+  ~ViewportRenderer() override { destroyPickTarget(); }
 
   void synchronize(QQuickFramebufferObject* item) override {
     auto* view = static_cast<ViewportItem*>(item);
@@ -163,9 +164,9 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
 
     if (pick_) {
       pick_ = false;
-      const int id = readPickId();
+      const QString picked = readPickId();
       if (controller_ != nullptr) {
-        QMetaObject::invokeMethod(controller_, "deliverPick", Qt::QueuedConnection, Q_ARG(int, id));
+        QMetaObject::invokeMethod(controller_, "deliverPick", Qt::QueuedConnection, Q_ARG(QString, picked));
       }
       framebufferObject()->bind();
     }
@@ -173,9 +174,11 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
 
  private:
   void ensurePrograms() {
-    if (meshProgram_.isLinked()) return;
+    if (shaderAttempted_) return;
     const QOpenGLContext* context = QOpenGLContext::currentContext();
-    const bool es = context != nullptr && context->isOpenGLES();
+    if (context == nullptr) return;
+    shaderAttempted_ = true;
+    const bool es = context->isOpenGLES();
     linkProgram(meshProgram_, es, kMeshVertexBody, kMeshFragmentBody);
     linkProgram(pickProgram_, es, kPickVertexBody, kPickFragmentBody);
     linkProgram(lineProgram_, es, kLineVertexBody, kLineFragmentBody);
@@ -301,14 +304,14 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
     pickFbo_ = pickColor_ = pickDepth_ = 0;
   }
 
-  int readPickId() {
+  QString readPickId() {
     const QSize size = framebufferObject()->size();
-    if (size.width() < 1 || size.height() < 1) return 0;
+    if (size.width() < 1 || size.height() < 1) return {};
     ensurePickTarget(size.width(), size.height());
     glBindFramebuffer(GL_FRAMEBUFFER, pickFbo_);
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
       framebufferObject()->bind();
-      return 0;
+      return {};
     }
     glViewport(0, 0, size.width(), size.height());
     glEnable(GL_DEPTH_TEST);
@@ -323,9 +326,9 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
     glReadPixels(x, y, 1, 1, GL_RED_INTEGER, GL_INT, &pixel);
     framebufferObject()->bind();
     glViewport(0, 0, size.width(), size.height());
-    if (pixel < 0 || pixel >= int(pickIds_.size())) return 0;
+    if (pixel <= 0 || pixel >= int(pickIds_.size())) return {};
     pickedId_ = pickIds_[static_cast<std::size_t>(pixel)];
-    return pixel;
+    return pickedId_;
   }
 
   QQuickFramebufferObject* controller_ = nullptr;
@@ -345,6 +348,7 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
   QOpenGLShaderProgram meshProgram_;
   QOpenGLShaderProgram pickProgram_;
   QOpenGLShaderProgram lineProgram_;
+  bool shaderAttempted_ = false;
   QOpenGLVertexArrayObject gridVao_;
   QOpenGLBuffer gridVbo_{QOpenGLBuffer::VertexBuffer};
   int gridCount_ = 0;
@@ -465,23 +469,16 @@ void ViewportItem::setStandardView(const QString& name) {
   fit(false);
 }
 
-void ViewportItem::deliverPick(int id) {
+void ViewportItem::deliverPick(const QString& id) {
   if (controller_ == nullptr) return;
-  if (id <= 0) {
+  if (id.isEmpty()) {
     controller_->select(QString());
     return;
   }
-  // The renderer encodes ids, but the queued call only has the integer.
-  // A second copy of the id list is not available here, so the renderer
-  // stores the id by calling this with the integer and the controller
-  // resolves it through the visible scene order.
   const auto scene = controller_->copyScene();
-  int visible = 0;
   for (const ScenePart& part : scene) {
-    if (!part.visible || part.indices.empty()) continue;
-    ++visible;
-    if (visible == id) {
-      controller_->select(part.id);
+    if (part.id == id) {
+      controller_->select(id);
       return;
     }
   }

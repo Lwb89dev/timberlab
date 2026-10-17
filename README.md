@@ -16,14 +16,16 @@ TimberLab is a parametric woodworking CAD. This repository is the first running 
 - Undo and redo.
 - Save and reopen a `.timberlab` project (a zip with a checksum). A raw model JSON file also loads.
 - SQLite preferences, separate from the project.
+- A user library of custom materials and thickness presets in its own SQLite file. The project still stores only a material id.
 - Italian interface when the system language is Italian. English is the source language.
-- Automated tests for units, documents, solids, storage, the catalog, and a dependency graph.
+- Automated tests for units, documents, solids, storage, the user library, the catalog, joinery, and parameter propagation.
+- Mortise and tenon, half-lap, dado, groove, and rabbet. The cuts are booleans on the solids. Each joint keeps its own sizes.
 
-A demo table is nine separate boards (four legs, four aprons, one top). It is not a parametric assembly: changing the top width does not move the aprons.
+A demo table is nine boards (four legs, four aprons, one top). Nine project parameters drive their sizes and positions: width, depth, leg, inset, leg height, top thickness, apron height, apron thickness, and apron drop. Changing the width updates the top, the aprons that span that width, and the legs on the far side. Undo restores the previous sizes in one step. Smart assemblies, where a recipe creates a cabinet or a drawer, are still later.
 
 ## What is not implemented
 
-Joinery, smart assemblies, cut lists, drawings, STEP/STL/DXF/SVG/PDF export, Nostr sync, CNC, and Android, Windows, and macOS packages. Those targets are described in `ROADMAP.md`. Do not treat this build as supporting them.
+Cut lists, drawings, STEP/STL/DXF/SVG/PDF export, Nostr sync, CNC, and Android, Windows, and macOS packages. Those targets are described in `ROADMAP.md`. Do not treat this build as supporting them.
 
 ## Run it
 

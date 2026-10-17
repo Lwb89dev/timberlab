@@ -8,6 +8,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <filesystem>
 #include <fstream>
 
 TEST_CASE("a project archive round trips") {
@@ -25,6 +26,46 @@ TEST_CASE("a project archive round trips") {
   REQUIRE(loaded.name() == "Stored");
   REQUIRE(loaded.components().size() == 2);
   REQUIRE(loaded.components().front().widthNm == document.components().front().widthNm);
+}
+
+bool ownerOnly(const std::filesystem::path& path) {
+  const auto foreign = std::filesystem::perms::group_all | std::filesystem::perms::others_all;
+  const auto mode = std::filesystem::status(path).permissions();
+  return (mode & foreign) == std::filesystem::perms::none &&
+         (mode & std::filesystem::perms::owner_read) != std::filesystem::perms::none;
+}
+
+TEST_CASE("a second save keeps the new project and the previous backup") {
+  timberlab::Document document;
+  document.addBoard();
+  std::string error;
+  REQUIRE(document.setProjectName("First", error));
+  const auto path = testDirectory() / "twice.timberlab";
+  REQUIRE(timberlab::storage::saveProject(path.string(), document).ok);
+  REQUIRE(document.setProjectName("Second", error));
+  REQUIRE(timberlab::storage::saveProject(path.string(), document).ok);
+  REQUIRE(ownerOnly(path));
+  REQUIRE(ownerOnly(path.string() + ".bak"));
+
+  timberlab::Document loaded;
+  REQUIRE(timberlab::storage::loadProject(path.string(), loaded).ok);
+  REQUIRE(loaded.name() == "Second");
+  timberlab::Document backup;
+  REQUIRE(timberlab::storage::loadProject(path.string() + ".bak", backup).ok);
+  REQUIRE(backup.name() == "First");
+}
+
+TEST_CASE("an oversized project file is rejected") {
+  const auto path = testDirectory() / "huge.timberlab";
+  {
+    std::ofstream output(path, std::ios::binary);
+    output << "x";
+  }
+  std::filesystem::resize_file(path, timberlab::storage::kMaxProjectBytes + 1);
+  timberlab::Document rejected;
+  const auto opened = timberlab::storage::loadProject(path.string(), rejected);
+  REQUIRE_FALSE(opened.ok);
+  REQUIRE(opened.error == "storage.too_large");
 }
 
 TEST_CASE("garbage and a bad checksum are rejected") {
@@ -80,8 +121,17 @@ TEST_CASE("preferences survive reopening the database") {
   REQUIRE(preferences.ok());
   REQUIRE(preferences.schemaVersion() == 1);
   REQUIRE(preferences.set("display_unit", "in"));
+  REQUIRE(ownerOnly(path));
   timberlab::storage::Preferences again(path.string());
   const auto stored = again.get("display_unit");
   REQUIRE(stored.has_value());
   REQUIRE(*stored == "in");
+}
+
+TEST_CASE("a preferences path that cannot be opened stays a stable code") {
+  const auto dir = testDirectory() / "not-a-database";
+  std::filesystem::create_directories(dir);
+  timberlab::storage::Preferences preferences(dir.string());
+  REQUIRE_FALSE(preferences.ok());
+  REQUIRE(preferences.error() == "preferences.open");
 }

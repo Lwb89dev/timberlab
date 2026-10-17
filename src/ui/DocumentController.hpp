@@ -3,6 +3,7 @@
 #include "timberlab/core/document.hpp"
 #include "timberlab/geometry/solids.hpp"
 #include "timberlab/materials/catalog.hpp"
+#include "timberlab/storage/library.hpp"
 #include "timberlab/storage/preferences.hpp"
 #include "timberlab/units/units.hpp"
 
@@ -60,7 +61,13 @@ class DocumentController : public QObject {
   Q_PROPERTY(ComponentListModel* components READ components CONSTANT)
   Q_PROPERTY(QVariantList materialChoices READ materialChoices NOTIFY documentChanged)
   Q_PROPERTY(QVariantList thicknessPresets READ thicknessPresets NOTIFY documentChanged)
+  Q_PROPERTY(QVariantList userMaterials READ userMaterials NOTIFY documentChanged)
+  Q_PROPERTY(QVariantList userPresets READ userPresets NOTIFY documentChanged)
   Q_PROPERTY(QVariantMap selection READ selection NOTIFY documentChanged)
+  Q_PROPERTY(QVariantList partChoices READ partChoices NOTIFY documentChanged)
+  Q_PROPERTY(QVariantList joints READ joints NOTIFY documentChanged)
+  Q_PROPERTY(QVariantList parameters READ parameters NOTIFY documentChanged)
+  Q_PROPERTY(QVariantList driveFields READ driveFields CONSTANT)
   Q_PROPERTY(int revision READ revision NOTIFY documentChanged)
   Q_PROPERTY(QString meshQuality READ meshQuality WRITE setMeshQuality NOTIFY documentChanged)
 
@@ -81,7 +88,13 @@ class DocumentController : public QObject {
   ComponentListModel* components() { return &components_; }
   QVariantList materialChoices() const;
   QVariantList thicknessPresets() const;
+  QVariantList userMaterials() const;
+  QVariantList userPresets() const;
   QVariantMap selection() const;
+  QVariantList partChoices() const;
+  QVariantList joints() const;
+  QVariantList parameters() const;
+  QVariantList driveFields() const;
   int revision() const { return revision_; }
   QString meshQuality() const;
   void setMeshQuality(const QString& quality);
@@ -104,6 +117,9 @@ class DocumentController : public QObject {
   Q_INVOKABLE bool saveCurrent();
   Q_INVOKABLE bool loadProject(const QUrl& url);
   Q_INVOKABLE bool setParameterFromText(const QString& id, const QString& key, const QString& text);
+  Q_INVOKABLE bool setDriverFromText(const QString& parameterId, const QString& text);
+  Q_INVOKABLE bool drivePartField(const QString& partId, const QString& field, const QString& parameterId);
+  Q_INVOKABLE bool releasePartField(const QString& partId, const QString& field);
   Q_INVOKABLE bool setTranslationFromText(const QString& id, const QString& axis, const QString& text);
   Q_INVOKABLE bool setRotationFromText(const QString& id, const QString& axis, const QString& text);
   Q_INVOKABLE void setPartName(const QString& id, const QString& name);
@@ -114,6 +130,13 @@ class DocumentController : public QObject {
   Q_INVOKABLE void setDisplayUnit(const QString& unitKey);
   Q_INVOKABLE void setFractionPrecision(int denom);
   Q_INVOKABLE void applyThicknessPreset(const QString& presetId);
+  Q_INVOKABLE bool addUserMaterial(const QString& name, const QString& visualHex);
+  Q_INVOKABLE bool addUserPreset(const QString& thicknessText);
+  Q_INVOKABLE bool removeUserMaterial(const QString& id);
+  Q_INVOKABLE bool removeUserPreset(const QString& id);
+  Q_INVOKABLE bool addJoint(const QString& typeKey, const QString& selectedId, const QString& mateId);
+  Q_INVOKABLE bool setJointFromText(const QString& id, const QString& key, const QString& text);
+  Q_INVOKABLE void removeJoint(const QString& id);
 
  signals:
   void documentChanged();
@@ -125,15 +148,24 @@ class DocumentController : public QObject {
   void touch(bool frame = false);
   void report(const std::string& code, bool dialog);
   QString messageFor(const QString& code) const;
+  QString fieldLabel(const std::string& field) const;
+  QString parameterLabel(const constraints::Parameter& parameter) const;
+  QString termSource(const constraints::Term& term) const;
+  QString formulaFor(const constraints::Binding& binding) const;
   units::LengthUnit currentUnit() const;
   void rebuildScene();
   void rememberPreference(const QString& key, const QString& value);
+  void reloadLibrary();
   QString languageName(const materials::CatalogEntry& entry) const;
+  QVector3D colorForMaterial(const std::string& id) const;
 
   Document document_;
   materials::Catalog catalog_;
   std::vector<materials::ThicknessPreset> thicknesses_;
+  std::vector<storage::UserMaterial> userMaterials_;
+  std::vector<storage::UserPreset> userPresets_;
   std::unique_ptr<storage::Preferences> preferences_;
+  std::unique_ptr<storage::Library> library_;
   ComponentListModel components_;
   QString selectedId_;
   QString projectPath_;

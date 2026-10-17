@@ -1,6 +1,8 @@
 #pragma once
 
+#include "timberlab/constraints/binding.hpp"
 #include "timberlab/core/component.hpp"
+#include "timberlab/core/joint.hpp"
 
 #include <cstddef>
 #include <string>
@@ -15,6 +17,10 @@ namespace timberlab {
 class Document {
  public:
   static constexpr int kSchemaVersion = 1;
+  static constexpr std::size_t kMaxComponents = 2000;
+  static constexpr std::size_t kMaxNameBytes = 200;
+  static constexpr std::size_t kMaxNotesBytes = 8000;
+  static constexpr std::size_t kMaxIdBytes = 64;
 
   Document();
 
@@ -23,6 +29,9 @@ class Document {
   const std::string& displayUnit() const { return displayUnit_; }
   int fractionPrecision() const { return fractionPrecision_; }
   const std::vector<Component>& components() const { return components_; }
+  const std::vector<Joint>& joints() const { return joints_; }
+  const std::vector<constraints::Parameter>& parameters() const { return parameters_; }
+  const std::vector<constraints::Binding>& bindings() const { return bindings_; }
 
   bool dirty() const { return !savedValid_ || savedIndex_ != historyIndex_; }
   bool canUndo() const { return historyIndex_ > 0; }
@@ -49,6 +58,22 @@ class Document {
   bool setDisplayUnit(const std::string& unitKey, std::string& error);
   bool setFractionPrecision(int denom, std::string& error);
 
+  // selected is the tenon, the first lap, or the host. mate is the other part.
+  // Starting sizes come from defaultJoint and are not a structural rating.
+  std::string addJoint(std::string_view typeKey, const std::string& selectedId, const std::string& mateId,
+                       std::string& error);
+  bool removeJoint(const std::string& id, std::string& error);
+  bool setJointParameter(const std::string& id, std::string_view key, std::int64_t nm, std::string& error);
+
+  // A parameter is a project length. Bindings recompute part fields from parameters
+  // and from other part fields. A bound field rejects a typed number.
+  bool addParameter(const std::string& id, const std::string& name, std::int64_t valueNm, std::string& error);
+  bool setParameter(const std::string& id, std::int64_t valueNm, std::string& error);
+  bool setBinding(const constraints::Binding& binding, std::string& error);
+  bool bindField(const std::string& partId, const std::string& field, const std::string& parameterId,
+                 std::string& error);
+  bool unbindField(const std::string& partId, const std::string& field, std::string& error);
+
   const Component* find(const std::string& id) const;
 
   bool undo(std::string& error);
@@ -57,7 +82,7 @@ class Document {
   std::string toJson() const;
   static bool fromJson(const std::string& json, Document& out, std::string& error);
 
-  // Freeform sample: four legs, four aprons, one top. Not a parametric assembly.
+  // Four legs, four aprons, one top. Sizes and positions follow project parameters.
   void makeDemoTable();
 
  private:
@@ -66,6 +91,9 @@ class Document {
   std::string displayUnit_ = "mm";
   int fractionPrecision_ = 16;
   std::vector<Component> components_;
+  std::vector<Joint> joints_;
+  std::vector<constraints::Parameter> parameters_;
+  std::vector<constraints::Binding> bindings_;
   std::vector<std::string> history_;
   std::size_t historyIndex_ = 0;
   std::size_t savedIndex_ = 0;
@@ -75,9 +103,13 @@ class Document {
   void pushHistory();
   bool restoreCurrent(std::string& error);
   Component* findMutable(const std::string& id);
+  Joint* findJointMutable(const std::string& id);
+  const constraints::Binding* findBinding(const std::string& partId, std::string_view field) const;
   bool editable(const Component& component, std::string& error) const;
+  bool commitComponents(std::vector<Component> next, std::string& error);
   std::string addComponent(Component component, bool autoPlace);
   static bool parseInto(const std::string& json, Document& out, std::string& error);
+  static bool readModel(const std::string& json, Document& out, std::string& error);
 };
 
 }  // namespace timberlab

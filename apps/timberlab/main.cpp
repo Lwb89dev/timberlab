@@ -86,7 +86,10 @@ int main(int argc, char* argv[]) {
   if (!screenshot.isEmpty()) {
     QTimer::singleShot(1500, &app, [&engine, screenshot]() {
       auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().value(0));
-      if (window != nullptr) window->grabWindow().save(screenshot);
+      if (window != nullptr) {
+        window->setProperty("allowDirtyQuit", true);
+        window->grabWindow().save(screenshot);
+      }
       QCoreApplication::quit();
     });
   }

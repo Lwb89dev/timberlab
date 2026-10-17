@@ -8,15 +8,15 @@ TimberLab keeps the parametric model independent of Qt. QML reads and writes the
 |---|---|---|
 | Units | `include/timberlab/units` | Parse and format lengths. Storage is nanometres. |
 | Document | `include/timberlab/core` | Parts, placement, history, JSON. |
-| Constraints | `include/timberlab/constraints` | Dependency graph only. It does not resize furniture yet. |
+| Constraints | `include/timberlab/constraints` | Dependency graph and linear bindings. A project parameter recomputes the part fields that name it. |
 | Geometry | `include/timberlab/geometry` | OCCT box and cylinder, volume, bounds, display mesh. |
 | Materials | `include/timberlab/materials` | Catalog and preset JSON. |
-| Storage | `include/timberlab/storage` | `.timberlab` zip, SHA-256, SQLite preferences. |
+| Storage | `include/timberlab/storage` | `.timberlab` zip, SHA-256, SQLite preferences, SQLite user library. |
 | Platform | `include/timberlab/platform` | User data directory. |
 | UI | `src/ui`, `qml/` | Controller, OpenGL viewport, workspace. |
 | App | `apps/timberlab` | Process entry and the headless self-check. |
 
-Planned modules (joinery, assemblies, sync, manufacturing export) have no code yet. The document model leaves room for a parent id, notes, and a material id on every part.
+Planned modules (assemblies, sync, manufacturing export) have no code yet. The document model leaves room for a parent id, notes, and a material id on every part.
 
 ## Boundaries
 
@@ -24,7 +24,7 @@ Planned modules (joinery, assemblies, sync, manufacturing export) have no code y
 - QML does not compute solids or write the project file itself.
 - OCCT calls are made on the thread that asks for a mesh. The kernel is not treated as thread-safe.
 - History is a stack of model JSON snapshots, capped at 100. Identical states are not stored. Undo restores a snapshot and does not discard the rest of the stack.
-- A locked part rejects dimension, placement, material, name, and delete. Visibility still changes. A duplicate of a locked part is unlocked.
+- A locked part rejects a direct edit of dimension, placement, material, name, delete, and of driving or releasing a field. Visibility still changes. A project parameter can still move a locked part that is already bound. A duplicate of a locked part is unlocked and keeps the current size without the binding.
 
 ## Viewport
 
@@ -38,6 +38,6 @@ See `docs/adr/0002-units.md`. One inch is 25 400 000 nm, so binary fractions dow
 
 ## Persistence
 
-The project model lives in the versioned `.timberlab` archive, with a checksum. SQLite today stores preferences only (schema version 1). A user library of custom materials and presets is not implemented. Nostr stays out until that library exists as its own versioned database, and it must not become the only copy of a solid. See `DATA_FORMAT.md` and `docs/adr/0006-persistence.md`.
+The project model lives in the versioned `.timberlab` archive, with a checksum. SQLite preferences are schema version 1. The user library is a second database, schema version 2, for custom materials and thickness presets. Nostr is still not implemented. The library must not become the only copy of a solid. See `DATA_FORMAT.md`, `docs/adr/0006-persistence.md`, and `docs/adr/0008-user-library.md`.
 
-The dependency graph is covered by tests so later propagation has a cycle check. Nothing in the editor calls it yet.
+Propagation evaluates linear bindings in topological order. A cycle, or a result outside the part and placement limits, rejects the whole edit. Joint sizes stay numbers on the joint. See `docs/adr/0007-propagation.md`.

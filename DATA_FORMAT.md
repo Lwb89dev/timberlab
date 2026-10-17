@@ -29,13 +29,41 @@ Each component:
 
 A board or box must have positive width, height, and thickness. A cylinder must have positive radius and height. Zero and negative values are rejected. The maximum part edge is 100 m (`kMaxPartNm`).
 
+`joints` is optional. A model with no joints omits the array, so an older file still loads. Schema version stays 1. Each joint:
+
+- `id`, `type` (`joint.mortise_tenon`, `joint.half_lap`, `joint.dado`, `joint.groove`, `joint.rabbet`)
+- `partA`, `partB`, `faceA`, `faceB` (`x0`, `x1`, `y0`, `y1`, `z0`, `z1`)
+- `edge` for a rabbet (`u0`, `u1`, `v0`, `v1`)
+- `length`, `width`, `thickness`, `depth`, `offset`, `offset2` in nanometres
+- `removeMinA`, `removeMinB` for a half-lap; a missing flag means false
+
+On load, bindings are applied before joints are checked, so a joint is judged against the recomputed parts. A joint that does not fit is rejected (`joint.parameter`). A missing part is `component.missing`. Duplicate joint ids are `storage.duplicate`. More than 2000 joints is `storage.too_many`. The cuts are not stored; they are rebuilt from these fields and the current part sizes. Joint sizes are not formulas.
+
+Root `parameters` and `bindings` are optional. A model with none omits both arrays, so an older file still loads. Schema version stays 1. These are not the per-component `parameters` object above.
+
+Each parameter is `id`, optional `name` (the id when omitted), and `value` in nanometres. Zero is allowed. A negative value or a value above 100 m is `parameter.range`. Duplicate parameter ids are `storage.duplicate`. More than 2000 parameters is `storage.too_many`.
+
+Each binding is `part`, `field` (`width`, `height`, `thickness`, `radius`, `x`, `y`, or `z`), optional `constant` in nanometres (omitted means 0), and `terms`. A term is either `{ "parameter", "coefficient" }` or `{ "part", "field", "coefficient" }`. The coefficient is a required non-zero integer. The field becomes `constant + sum(coefficient × source)`.
+
+A cycle is `parameter.cycle`. A result that is not a legal size or placement is `parameter.range`. An unknown field is `parameter.unknown`. A missing parameter or part is `parameter.missing` or `component.missing`. Duplicate targets are `storage.duplicate`. When load fails, the document being read into is left unchanged. A typed edit of a bound field is `parameter.driven` and does not change the number.
+
 ## Writes
 
-The save path is `path.tmp`, then rename. If the destination already exists it is copied to `path.bak` first. If that backup copy fails, the save fails and the previous file stays. A checksum mismatch on load is an error. The loader also accepts a raw JSON object that starts with `{` and uses the model schema, so a single component file can be inspected without unzipping.
+The save path is `path.tmp`, then rename onto the destination. If that rename fails, the temporary file is removed and the existing project is left in place. If the destination already exists it is copied to `path.bak` first. If that backup copy fails, the save fails and the previous file stays. The new project file and the backup are owner-read/write only. A file larger than 32 MiB is rejected before it is parsed (`storage.too_large`). A model with more than 2000 components is rejected (`storage.too_many`). Duplicate component ids are rejected (`storage.duplicate`). Names are at most 200 bytes, notes at most 8000 bytes, ids at most 64 bytes, and a rotation whose absolute value is above one million degrees is rejected. A checksum mismatch on load is an error. The loader also accepts a raw JSON object that starts with `{` and uses the model schema, so a single component file can be inspected without unzipping. That path is still size-capped and still parsed by the model checks. It does not verify the zip checksum.
 
 ## Preferences
 
-SQLite, schema version 1, tables `schema_meta(version)` and `user_preference(key, value)`. A database whose version is newer than 1 is refused. Keys used now: `display_unit`, `fraction_precision`, `mesh_quality`. The file is `$TIMBERLAB_DATA_DIR/timberlab.sqlite`, or `$XDG_DATA_HOME/timberlab/`, or `~/.local/share/timberlab/`. This database is not the project. A user material library is not in it. See `docs/adr/0006-persistence.md`.
+SQLite, schema version 1, tables `schema_meta(version)` and `user_preference(key, value)`. A database whose version is newer than 1 is refused. Keys used now: `display_unit`, `fraction_precision`, `mesh_quality`. The file is `$TIMBERLAB_DATA_DIR/timberlab.sqlite`, or `$XDG_DATA_HOME/timberlab/`, or `~/.local/share/timberlab/`. The database file, its `-wal` file, and its `-shm` file are owner-read/write only. Open and schema failures stay stable codes (`preferences.open`, `preferences.schema`, `preferences.version`) and do not include the filesystem path. This database is not the project. The user library is a second file, `library.sqlite`, in the same directory. See `docs/adr/0008-user-library.md`.
+
+## User library
+
+SQLite, current schema version 2. A file at version 1 is migrated on open. A file newer than 2 is refused and left as it is. Tables:
+
+- `schema_meta(version)`
+- `user_material(id, name, visual_hex, notes)`. Version 1 had no `notes`.
+- `user_preset(id, label, thickness_nm, group_name)`. Version 1 had no `group_name`.
+
+`id` is a token of at most 64 bytes. `name` and `label` are at most 200 bytes. `notes` is at most 8000 bytes. `visual_hex` is `#` plus six hex digits. `thickness_nm` is a positive nanometre count up to the same maximum as a part. Each table stops at 2000 rows. The file, its `-wal` file, and its `-shm` file are owner-read/write only. Open and schema failures stay stable codes (`library.open`, `library.schema`, `library.version`) and do not include the filesystem path. A project still stores only the material id.
 
 ## Catalog files
 

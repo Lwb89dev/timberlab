@@ -6,9 +6,11 @@
 #include "timberlab/geometry/solids.hpp"
 #include "timberlab/materials/catalog.hpp"
 #include "timberlab/storage/archive.hpp"
+#include "timberlab/storage/library.hpp"
 #include "timberlab/storage/preferences.hpp"
 #include "timberlab/units/units.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <filesystem>
@@ -125,11 +127,41 @@ int runSelfCheck() {
 
   document.makeDemoTable();
   if (document.components().size() != 9) return fail("demo count");
+  if (document.parameters().size() != 9) return fail("demo drivers");
   for (std::size_t i = 0; i < document.components().size(); ++i) {
     for (std::size_t j = i + 1; j < document.components().size(); ++j) {
       if (overlaps(document.components()[i], document.components()[j])) return fail("demo overlap");
     }
   }
+  if (!document.setParameter("table.width", 1500 * units::kNmPerMm, error)) return fail("propagate " + error);
+  const Component* top = nullptr;
+  const Component* apron = nullptr;
+  const Component* leg = nullptr;
+  for (const Component& component : document.components()) {
+    if (component.name == "Top") top = &component;
+    if (component.name == "Front apron") apron = &component;
+    if (component.name == "Leg 2") leg = &component;
+  }
+  if (top == nullptr || top->widthNm != 1500 * units::kNmPerMm) return fail("propagated top");
+  if (apron == nullptr || apron->widthNm != 1300 * units::kNmPerMm) return fail("propagated apron");
+  if (leg == nullptr || leg->placement.xNm != 1400 * units::kNmPerMm) return fail("propagated leg");
+  for (std::size_t i = 0; i < document.components().size(); ++i) {
+    for (std::size_t j = i + 1; j < document.components().size(); ++j) {
+      if (overlaps(document.components()[i], document.components()[j])) return fail("propagated overlap");
+    }
+  }
+  if (!document.undo(error)) return fail("undo width");
+  top = nullptr;
+  apron = nullptr;
+  leg = nullptr;
+  for (const Component& component : document.components()) {
+    if (component.name == "Top") top = &component;
+    if (component.name == "Front apron") apron = &component;
+    if (component.name == "Leg 2") leg = &component;
+  }
+  if (top == nullptr || top->widthNm != 1200 * units::kNmPerMm) return fail("undo top");
+  if (apron == nullptr || apron->widthNm != 1000 * units::kNmPerMm) return fail("undo apron");
+  if (leg == nullptr || leg->placement.xNm != 1100 * units::kNmPerMm) return fail("undo leg");
 
   const char* dataDir = std::getenv("TIMBERLAB_DATA_DIR");
   const std::filesystem::path root = dataDir != nullptr ? dataDir : std::filesystem::path("build/self-check");
@@ -142,6 +174,7 @@ int runSelfCheck() {
   if (!opened.ok) return fail(opened.error);
   if (loaded.components().size() != document.components().size()) return fail("reload count");
   if (loaded.components().front().widthNm != document.components().front().widthNm) return fail("reload size");
+  if (loaded.parameters().size() != document.parameters().size()) return fail("reload drivers");
 
   std::ofstream garbage(root / "garbage.timberlab", std::ios::binary);
   garbage << "this is not a project";
@@ -156,6 +189,32 @@ int runSelfCheck() {
   storage::Preferences again((root / "prefs.sqlite").string());
   const auto stored = again.get("display_unit");
   if (!stored || *stored != "in") return fail("preference read");
+
+  const auto libraryPath = root / "library.sqlite";
+  std::filesystem::remove(libraryPath);
+  std::filesystem::remove(std::filesystem::path(libraryPath.string() + "-wal"));
+  std::filesystem::remove(std::filesystem::path(libraryPath.string() + "-shm"));
+  {
+    storage::Library library(libraryPath.string());
+    if (!library.ok() || library.schemaVersion() != storage::Library::kSchemaVersion) return fail("library");
+    storage::UserMaterial material;
+    material.id = "user_selfcheck";
+    material.name = "Shop oak";
+    material.visualHex = "#A67C52";
+    std::string libraryError;
+    if (!library.addMaterial(material, libraryError)) return fail(libraryError);
+    storage::UserPreset preset;
+    preset.id = "user_self18";
+    preset.label = "18 mm";
+    preset.group = "user";
+    preset.thicknessNm = 18 * units::kNmPerMm;
+    if (!library.addPreset(preset, libraryError)) return fail(libraryError);
+  }
+  storage::Library reopened(libraryPath.string());
+  const auto libraryMaterials = reopened.materials();
+  const auto libraryPresets = reopened.presets();
+  if (!reopened.ok() || libraryMaterials.size() != 1 || libraryMaterials[0].name != "Shop oak") return fail("library read");
+  if (libraryPresets.size() != 1 || libraryPresets[0].thicknessNm != 18 * units::kNmPerMm) return fail("library preset");
 
   const char* source = std::getenv("TIMBERLAB_SOURCE_DIR");
   if (source != nullptr) {
@@ -182,8 +241,14 @@ int runSelfCheck() {
   graph.addEdge("width", "leg");
   if (graph.hasCycle()) return fail("false cycle");
   if (graph.affectedBy("width").size() != 3) return fail("affected");
+  const std::vector<std::string> order = graph.topologicalOrder();
+  if (order.size() != 4) return fail("topo size");
+  const auto at = [&](const char* id) {
+    return static_cast<int>(std::find(order.begin(), order.end(), id) - order.begin());
+  };
+  if (!(at("width") < at("apron") && at("apron") < at("tenon") && at("width") < at("leg"))) return fail("topo order");
   graph.addEdge("tenon", "width");
-  if (!graph.hasCycle()) return fail("missed cycle");
+  if (!graph.hasCycle() || !graph.topologicalOrder().empty()) return fail("missed cycle");
 
   std::cout << "self-check ok\n";
   return 0;

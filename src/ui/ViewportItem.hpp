@@ -40,7 +40,7 @@ class ViewportItem : public QQuickFramebufferObject {
   Q_INVOKABLE void setStandardView(const QString& name);
 
  public slots:
-  void deliverPick(int id);
+  void deliverPick(const QString& id);
 
  signals:
   void controllerChanged();

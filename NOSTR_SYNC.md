@@ -2,7 +2,7 @@
 
 Synchronization is not implemented, and it stays that way until local persistence is in place. See `docs/adr/0006-persistence.md`. The application does not open a socket, does not generate a key, and does not publish an event.
 
-What exists now is the versioned `.timberlab` archive (format 1, checksum, atomic rename). SQLite schema 1 is preferences only. A versioned user library of custom materials and presets does not exist yet. Nostr does not start before that library can be saved and reopened on its own, with no network. A sync bug must not be able to replace the only copy of a solid.
+What exists now is the versioned `.timberlab` archive (format 1, checksum, atomic rename) and a separate user library (`library.sqlite`, schema version 2, migrated from version 1) of custom materials and thickness presets. Preferences stay in their own SQLite schema 1 file. The library round-trips with no network. Nostr is still not implemented: this program does not open a socket, generate a key, or publish an event. A sync bug must not be able to replace the only copy of a solid.
 
 ## Intent, when it is built
 

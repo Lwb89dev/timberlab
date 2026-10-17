@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted as a constraint. No joint is implemented.
+Accepted. The first set is implemented and covered by `tests/test_joinery.cpp` and the `--accept` mortise-and-tenon phase.
 
 ## Context
 
@@ -12,7 +12,7 @@ A furniture configurator can draw a mortise as a texture or as a separate mesh a
 
 A joint modifies the OCCT solids of the parts it connects. The operation is a boolean (or an equivalent OCCT feature) driven by parameters kept in the document: type, the two parts, position, and the sizes needed to regenerate the cut. The viewport mesh is only a tessellation of the resulting shape. Editing that mesh is not a joint.
 
-The first set, when it is built, is mortise and tenon, half-lap, dado, groove, and rabbet/rebate. Identifiers are reserved in `JOINERY_ENGINE.md` and are not written by the editor yet.
+The first set is mortise and tenon, half-lap, dado, groove, and rabbet/rebate. Identifiers and the stored fields are in `JOINERY_ENGINE.md`. The editor writes them. A dado, groove, or rabbet cuts the host only and still stores the mate. Mortise and tenon, and half-lap, cut both solids.
 
 Joinery does not start until creating a board, typing an exact size, saving, and reopening that project is a tested path. A joint on top of a simulated editor would be a simulation.
 

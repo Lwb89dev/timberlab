@@ -7,15 +7,28 @@
 #include <QFile>
 #include <QLocale>
 #include <QMatrix4x4>
+#include <QStringList>
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
+#include <cstdio>
 #include <exception>
+#include <limits>
 #include <filesystem>
+#include <random>
 #include <string>
 
 namespace timberlab::ui {
 namespace {
+
+std::string makeLibraryId() {
+  thread_local std::mt19937_64 rng{std::random_device{}()};
+  std::uniform_int_distribution<std::uint64_t> dist;
+  char buffer[24];
+  std::snprintf(buffer, sizeof(buffer), "user_%016llx", static_cast<unsigned long long>(dist(rng)));
+  return buffer;
+}
 
 QVector3D colorFromHex(const std::string& hex) {
   if (hex.size() != 7 || hex[0] != '#') return {0.72f, 0.58f, 0.40f};
@@ -31,6 +44,24 @@ QVector3D colorFromHex(const std::string& hex) {
     return static_cast<float>(value) / 255.f;
   };
   return {channel(1), channel(3), channel(5)};
+}
+
+QString signedTerm(std::int64_t coefficient, const QString& source, bool first) {
+  if (coefficient == 1) {
+    if (first) return source;
+    return QStringLiteral("+ ") + source;
+  }
+  if (coefficient == -1) return QStringLiteral("− ") + source;
+  if (coefficient > 0) {
+    const QString body = QString::number(static_cast<qlonglong>(coefficient)) + QStringLiteral(" × ") + source;
+    if (first) return body;
+    return QStringLiteral("+ ") + body;
+  }
+  if (coefficient == std::numeric_limits<std::int64_t>::min()) {
+    return QString::number(static_cast<qlonglong>(coefficient)) + QStringLiteral(" × ") + source;
+  }
+  const QString body = QString::number(static_cast<qlonglong>(-coefficient)) + QStringLiteral(" × ") + source;
+  return QStringLiteral("− ") + body;
 }
 
 QMatrix4x4 matrixFrom(const Placement& placement) {
@@ -121,6 +152,8 @@ void DocumentController::initialise() {
   std::filesystem::create_directories(dir);
   preferences_ = std::make_unique<storage::Preferences>(dir + "/timberlab.sqlite");
   if (!preferences_->ok()) report("preferences.open", false);
+  library_ = std::make_unique<storage::Library>(dir + "/library.sqlite");
+  reloadLibrary();
 
   QString unit = "mm";
   int precision = 16;
@@ -137,6 +170,7 @@ void DocumentController::initialise() {
   }
   document_.newProject(unit.toStdString(), precision);
   status_ = tr("Ready");
+  if (library_ && !library_->ok()) report(library_->error(), false);
   touch(false);
 }
 
@@ -194,12 +228,42 @@ QVariantList DocumentController::materialChoices() const {
                                {"name", languageName(entry)},
                                {"category", QString::fromStdString(entry.category)}});
   }
+  for (const storage::UserMaterial& material : userMaterials_) {
+    list.push_back(QVariantMap{{"id", QString::fromStdString(material.id)},
+                               {"name", QString::fromStdString(material.name)},
+                               {"category", QStringLiteral("user")}});
+  }
+  return list;
+}
+
+QVariantList DocumentController::userMaterials() const {
+  QVariantList list;
+  for (const storage::UserMaterial& material : userMaterials_) {
+    list.push_back(QVariantMap{{"id", QString::fromStdString(material.id)},
+                               {"name", QString::fromStdString(material.name)},
+                               {"visualHex", QString::fromStdString(material.visualHex)}});
+  }
+  return list;
+}
+
+QVariantList DocumentController::userPresets() const {
+  QVariantList list;
+  for (const storage::UserPreset& preset : userPresets_) {
+    list.push_back(QVariantMap{{"id", QString::fromStdString(preset.id)},
+                               {"label", QString::fromStdString(preset.label)},
+                               {"group", QString::fromStdString(preset.group)}});
+  }
   return list;
 }
 
 QVariantList DocumentController::thicknessPresets() const {
   QVariantList list;
   for (const auto& preset : thicknesses_) {
+    list.push_back(QVariantMap{{"id", QString::fromStdString(preset.id)},
+                               {"label", QString::fromStdString(preset.label)},
+                               {"group", QString::fromStdString(preset.group)}});
+  }
+  for (const storage::UserPreset& preset : userPresets_) {
     list.push_back(QVariantMap{{"id", QString::fromStdString(preset.id)},
                                {"label", QString::fromStdString(preset.label)},
                                {"group", QString::fromStdString(preset.group)}});
@@ -231,7 +295,132 @@ QVariantMap DocumentController::selection() const {
   map.insert(QStringLiteral("visible"), component->visible);
   map.insert(QStringLiteral("locked"), component->locked);
   map.insert(QStringLiteral("notes"), QString::fromStdString(component->notes));
+  QVariantList drives;
+  for (const constraints::Binding& binding : document_.bindings()) {
+    if (binding.partId != component->id) continue;
+    QVariantMap drive;
+    drive.insert(QStringLiteral("field"), QString::fromStdString(binding.field));
+    drive.insert(QStringLiteral("label"), fieldLabel(binding.field));
+    drive.insert(QStringLiteral("formula"), formulaFor(binding));
+    drives.push_back(std::move(drive));
+  }
+  map.insert(QStringLiteral("drives"), drives);
   return map;
+}
+
+QVariantList DocumentController::partChoices() const {
+  QVariantList list;
+  for (const Component& component : document_.components()) {
+    if (QString::fromStdString(component.id) == selectedId_) continue;
+    list.push_back(QVariantMap{{"id", QString::fromStdString(component.id)},
+                               {"name", QString::fromStdString(component.name)}});
+  }
+  return list;
+}
+
+QVariantList DocumentController::joints() const {
+  QVariantList list;
+  const std::string selected = selectedId_.toStdString();
+  if (selected.empty()) return list;
+  const units::LengthUnit unit = currentUnit();
+  const int denom = document_.fractionPrecision();
+  auto text = [&](std::int64_t nm) { return QString::fromStdString(units::formatLength(nm, unit, denom)); };
+  for (const Joint& joint : document_.joints()) {
+    if (joint.partA != selected && joint.partB != selected) continue;
+    const std::string mateId = joint.partA == selected ? joint.partB : joint.partA;
+    const Component* mate = document_.find(mateId);
+    QVariantMap map;
+    map.insert(QStringLiteral("id"), QString::fromStdString(joint.id));
+    map.insert(QStringLiteral("type"), QString::fromLatin1(jointTypeKey(joint.type)));
+    map.insert(QStringLiteral("mateId"), QString::fromStdString(mateId));
+    map.insert(QStringLiteral("mateName"), mate == nullptr ? QString() : QString::fromStdString(mate->name));
+    map.insert(QStringLiteral("length"), text(joint.lengthNm));
+    map.insert(QStringLiteral("width"), text(joint.widthNm));
+    map.insert(QStringLiteral("thickness"), text(joint.thicknessNm));
+    map.insert(QStringLiteral("depth"), text(joint.depthNm));
+    map.insert(QStringLiteral("offset"), text(joint.offsetNm));
+    map.insert(QStringLiteral("offset2"), text(joint.offset2Nm));
+    list.push_back(map);
+  }
+  return list;
+}
+
+QVariantList DocumentController::parameters() const {
+  QVariantList list;
+  const units::LengthUnit unit = currentUnit();
+  const int denom = document_.fractionPrecision();
+  for (const constraints::Parameter& parameter : document_.parameters()) {
+    list.push_back(QVariantMap{{"id", QString::fromStdString(parameter.id)},
+                               {"label", parameterLabel(parameter)},
+                               {"value", QString::fromStdString(units::formatLength(parameter.valueNm, unit, denom))}});
+  }
+  return list;
+}
+
+QVariantList DocumentController::driveFields() const {
+  const auto row = [](const char* id, const QString& label) {
+    return QVariantMap{{"id", QString::fromLatin1(id)}, {"label", label}};
+  };
+  QVariantList fields;
+  fields.push_back(row("width", tr("Width")));
+  fields.push_back(row("thickness", tr("Thickness")));
+  fields.push_back(row("height", tr("Height")));
+  fields.push_back(row("radius", tr("Radius")));
+  fields.push_back(row("x", QStringLiteral("X")));
+  fields.push_back(row("y", QStringLiteral("Y")));
+  fields.push_back(row("z", QStringLiteral("Z")));
+  return fields;
+}
+
+QString DocumentController::fieldLabel(const std::string& field) const {
+  if (field == "width") return tr("Width");
+  if (field == "thickness") return tr("Thickness");
+  if (field == "height") return tr("Height");
+  if (field == "radius") return tr("Radius");
+  if (field == "x") return QStringLiteral("X");
+  if (field == "y") return QStringLiteral("Y");
+  if (field == "z") return QStringLiteral("Z");
+  return QString::fromStdString(field);
+}
+
+QString DocumentController::parameterLabel(const constraints::Parameter& parameter) const {
+  if (parameter.id == "table.width") return tr("Width");
+  if (parameter.id == "table.depth") return tr("Depth");
+  if (parameter.id == "table.leg") return tr("Leg");
+  if (parameter.id == "table.inset") return tr("Inset");
+  if (parameter.id == "table.legHeight") return tr("Leg height");
+  if (parameter.id == "table.topThickness") return tr("Top thickness");
+  if (parameter.id == "table.apronHeight") return tr("Apron height");
+  if (parameter.id == "table.apronThickness") return tr("Apron thickness");
+  if (parameter.id == "table.apronDrop") return tr("Apron drop");
+  return QString::fromStdString(parameter.name);
+}
+
+QString DocumentController::termSource(const constraints::Term& term) const {
+  if (!term.parameterId.empty()) {
+    for (const constraints::Parameter& parameter : document_.parameters()) {
+      if (parameter.id == term.parameterId) return parameterLabel(parameter);
+    }
+    return QString::fromStdString(term.parameterId);
+  }
+  const Component* part = document_.find(term.partId);
+  const QString name = part == nullptr ? QString::fromStdString(term.partId) : QString::fromStdString(part->name);
+  return name + QStringLiteral(" ") + fieldLabel(term.field);
+}
+
+QString DocumentController::formulaFor(const constraints::Binding& binding) const {
+  QStringList pieces;
+  if (binding.constantNm != 0) {
+    const QString constant =
+        QString::fromStdString(units::formatLength(binding.constantNm, currentUnit(), document_.fractionPrecision()));
+    pieces.push_back(constant);
+  }
+  for (const constraints::Term& term : binding.terms) {
+    const bool first = pieces.isEmpty();
+    pieces.push_back(signedTerm(term.coefficient, termSource(term), first));
+  }
+  if (pieces.isEmpty()) return QStringLiteral("0");
+  return pieces.join(QStringLiteral(" "));
 }
 
 void DocumentController::newProject() {
@@ -246,24 +435,39 @@ void DocumentController::makeDemo() {
   document_.makeDemoTable();
   selectedId_.clear();
   projectPath_.clear();
-  status_ = tr("Demo table placed as separate boards");
+  status_ = tr("Demo table placed. Its stock sizes are parameters.");
   touch(true);
 }
 
 void DocumentController::addBoard() {
-  selectedId_ = QString::fromStdString(document_.addBoard());
+  const std::string id = document_.addBoard();
+  if (id.empty()) {
+    report("storage.too_many", false);
+    return;
+  }
+  selectedId_ = QString::fromStdString(id);
   status_ = tr("Board added");
   touch(false);
 }
 
 void DocumentController::addBox() {
-  selectedId_ = QString::fromStdString(document_.addBox());
+  const std::string id = document_.addBox();
+  if (id.empty()) {
+    report("storage.too_many", false);
+    return;
+  }
+  selectedId_ = QString::fromStdString(id);
   status_ = tr("Box added");
   touch(false);
 }
 
 void DocumentController::addCylinder() {
-  selectedId_ = QString::fromStdString(document_.addCylinder());
+  const std::string id = document_.addCylinder();
+  if (id.empty()) {
+    report("storage.too_many", false);
+    return;
+  }
+  selectedId_ = QString::fromStdString(id);
   status_ = tr("Cylinder added");
   touch(false);
 }
@@ -372,6 +576,44 @@ bool DocumentController::setParameterFromText(const QString& id, const QString& 
   return true;
 }
 
+bool DocumentController::setDriverFromText(const QString& parameterId, const QString& text) {
+  const auto parsed = units::parseLength(text.toStdString(), currentUnit());
+  if (!parsed.ok) {
+    report(parsed.error, false);
+    return false;
+  }
+  std::string error;
+  if (!document_.setParameter(parameterId.toStdString(), parsed.nm, error)) {
+    report(error, false);
+    return false;
+  }
+  status_ = tr("Parameter updated");
+  touch(false);
+  return true;
+}
+
+bool DocumentController::drivePartField(const QString& partId, const QString& field, const QString& parameterId) {
+  std::string error;
+  if (!document_.bindField(partId.toStdString(), field.toStdString(), parameterId.toStdString(), error)) {
+    report(error, false);
+    return false;
+  }
+  status_ = tr("Field driven");
+  touch(false);
+  return true;
+}
+
+bool DocumentController::releasePartField(const QString& partId, const QString& field) {
+  std::string error;
+  if (!document_.unbindField(partId.toStdString(), field.toStdString(), error)) {
+    report(error, false);
+    return false;
+  }
+  status_ = tr("Field released");
+  touch(false);
+  return true;
+}
+
 bool DocumentController::setTranslationFromText(const QString& id, const QString& axis, const QString& text) {
   const auto parsed = units::parseLength(text.toStdString(), currentUnit());
   if (!parsed.ok) {
@@ -473,19 +715,153 @@ void DocumentController::setFractionPrecision(int denom) {
 
 void DocumentController::applyThicknessPreset(const QString& presetId) {
   if (selectedId_.isEmpty()) return;
-  const auto found = std::find_if(thicknesses_.begin(), thicknesses_.end(), [&](const auto& preset) {
-    return QString::fromStdString(preset.id) == presetId;
-  });
-  if (found == thicknesses_.end()) return;
+  std::int64_t nm = 0;
+  bool known = false;
+  for (const auto& preset : thicknesses_) {
+    if (QString::fromStdString(preset.id) != presetId) continue;
+    nm = preset.thicknessNm;
+    known = true;
+  }
+  for (const storage::UserPreset& preset : userPresets_) {
+    if (QString::fromStdString(preset.id) != presetId) continue;
+    nm = preset.thicknessNm;
+    known = true;
+  }
+  if (!known) return;
   const Component* component = document_.find(selectedId_.toStdString());
   if (component == nullptr) return;
   const char* key = component->type == ComponentType::Cylinder ? "radius" : "thickness";
   std::string error;
-  if (!document_.setDimension(selectedId_.toStdString(), key, found->thicknessNm, error)) {
+  if (!document_.setDimension(selectedId_.toStdString(), key, nm, error)) {
     report(error, false);
     return;
   }
   status_ = tr("Preset applied");
+  touch(false);
+}
+
+bool DocumentController::addUserMaterial(const QString& name, const QString& visualHex) {
+  if (!library_ || !library_->ok()) {
+    report(library_ && !library_->error().empty() ? library_->error() : "library.open", false);
+    return false;
+  }
+  storage::UserMaterial material;
+  material.name = name.trimmed().toStdString();
+  const QString hex = visualHex.trimmed().isEmpty() ? QStringLiteral("#A67C52") : visualHex.trimmed();
+  material.visualHex = hex.toStdString();
+  std::string error;
+  for (int attempt = 0; attempt < 4; ++attempt) {
+    material.id = makeLibraryId();
+    if (library_->addMaterial(material, error)) {
+      reloadLibrary();
+      status_ = tr("Material added to the library.");
+      touch(false);
+      return true;
+    }
+    if (error != "library.duplicate") break;
+  }
+  report(error, false);
+  return false;
+}
+
+bool DocumentController::addUserPreset(const QString& thicknessText) {
+  if (!library_ || !library_->ok()) {
+    report(library_ && !library_->error().empty() ? library_->error() : "library.open", false);
+    return false;
+  }
+  const QString label = thicknessText.trimmed();
+  const auto parsed = units::parseLength(label.toStdString(), currentUnit());
+  if (!parsed.ok) {
+    report(parsed.error, false);
+    return false;
+  }
+  storage::UserPreset preset;
+  preset.label = label.toStdString();
+  preset.group = "user";
+  preset.thicknessNm = parsed.nm;
+  std::string error;
+  for (int attempt = 0; attempt < 4; ++attempt) {
+    preset.id = makeLibraryId();
+    if (library_->addPreset(preset, error)) {
+      reloadLibrary();
+      status_ = tr("Preset added to the library.");
+      touch(false);
+      return true;
+    }
+    if (error != "library.duplicate") break;
+  }
+  report(error, false);
+  return false;
+}
+
+bool DocumentController::removeUserMaterial(const QString& id) {
+  if (!library_ || !library_->ok()) {
+    report(library_ && !library_->error().empty() ? library_->error() : "library.open", false);
+    return false;
+  }
+  std::string error;
+  if (!library_->removeMaterial(id.toStdString(), error)) {
+    report(error, false);
+    return false;
+  }
+  reloadLibrary();
+  status_ = tr("Material removed from the library.");
+  touch(false);
+  return true;
+}
+
+bool DocumentController::removeUserPreset(const QString& id) {
+  if (!library_ || !library_->ok()) {
+    report(library_ && !library_->error().empty() ? library_->error() : "library.open", false);
+    return false;
+  }
+  std::string error;
+  if (!library_->removePreset(id.toStdString(), error)) {
+    report(error, false);
+    return false;
+  }
+  reloadLibrary();
+  status_ = tr("Preset removed from the library.");
+  touch(false);
+  return true;
+}
+
+bool DocumentController::addJoint(const QString& typeKey, const QString& selectedId, const QString& mateId) {
+  std::string error;
+  const std::string id =
+      document_.addJoint(typeKey.toStdString(), selectedId.toStdString(), mateId.toStdString(), error);
+  if (id.empty()) {
+    report(error, false);
+    return false;
+  }
+  status_ = tr("Joint added");
+  touch(false);
+  return true;
+}
+
+bool DocumentController::setJointFromText(const QString& id, const QString& key, const QString& text) {
+  const auto parsed = units::parseLength(text.toStdString(), currentUnit());
+  if (!parsed.ok) {
+    report(parsed.error, false);
+    return false;
+  }
+  std::string error;
+  if (!document_.setJointParameter(id.toStdString(), key.toStdString(), parsed.nm, error)) {
+    report(error, false);
+    return false;
+  }
+  status_ = tr("Joint updated");
+  touch(false);
+  return true;
+}
+
+void DocumentController::removeJoint(const QString& id) {
+  std::string error;
+  if (!document_.removeJoint(id.toStdString(), error)) {
+    report(error, false);
+    return;
+  }
+  status_ = tr("Joint removed");
   touch(false);
 }
 
@@ -545,11 +921,27 @@ void DocumentController::rememberPreference(const QString& key, const QString& v
   if (preferences_ && preferences_->ok()) preferences_->set(key.toStdString(), value.toStdString());
 }
 
+void DocumentController::reloadLibrary() {
+  userMaterials_.clear();
+  userPresets_.clear();
+  if (!library_ || !library_->ok()) return;
+  userMaterials_ = library_->materials();
+  userPresets_ = library_->presets();
+}
+
+QVector3D DocumentController::colorForMaterial(const std::string& id) const {
+  if (const materials::CatalogEntry* entry = catalog_.find(id)) return colorFromHex(entry->visualHex);
+  for (const storage::UserMaterial& material : userMaterials_) {
+    if (material.id == id) return colorFromHex(material.visualHex);
+  }
+  return {0.72f, 0.58f, 0.40f};
+}
+
 void DocumentController::rebuildScene() {
   std::vector<ScenePart> next;
   next.reserve(document_.components().size());
   for (const Component& component : document_.components()) {
-    geometry::SolidMesh mesh = geometry::meshFor(component, quality_);
+    geometry::SolidMesh mesh = geometry::meshFor(component, document_.joints(), document_.components(), quality_);
     if (!mesh.ok) {
       report(mesh.error, false);
       continue;
@@ -558,8 +950,7 @@ void DocumentController::rebuildScene() {
     part.id = QString::fromStdString(component.id);
     part.interleaved = std::move(mesh.interleaved);
     part.indices = std::move(mesh.indices);
-    const materials::CatalogEntry* entry = catalog_.find(component.materialId);
-    part.color = entry != nullptr ? colorFromHex(entry->visualHex) : QVector3D(0.72f, 0.58f, 0.40f);
+    part.color = colorForMaterial(component.materialId);
     part.model = matrixFrom(component.placement);
     part.visible = component.visible;
     next.push_back(std::move(part));
@@ -578,18 +969,41 @@ QString DocumentController::messageFor(const QString& code) const {
   if (code == "component.locked") return tr("Unlock the part before editing it.");
   if (code == "component.missing") return tr("That part is no longer in the project.");
   if (code == "name.empty") return tr("The name cannot be empty.");
+  if (code == "name.too_long") return tr("That name is too long.");
+  if (code == "notes.too_long") return tr("Those notes are too long.");
+  if (code == "text.too_long") return tr("That text is too long.");
   if (code == "storage.io") return tr("Could not read or write the project file.");
   if (code == "storage.backup") return tr("Could not update the project backup.");
   if (code == "storage.format" || code == "storage.json") return tr("This file is not a TimberLab project.");
   if (code == "storage.checksum") return tr("The project file failed its integrity check.");
   if (code == "storage.version") return tr("This project uses a newer file version.");
+  if (code == "storage.too_large") return tr("That project file is too large.");
+  if (code == "storage.too_many") return tr("That project has too many entries.");
+  if (code == "storage.duplicate") return tr("That project contains a duplicate id.");
   if (code == "angle.invalid" || code == "angle.trailing") return tr("Could not read that angle.");
   if (code == "geometry.invalid" || code == "geometry.empty" || code == "geometry.kernel" ||
       code == "geometry.degenerate") {
     return tr("The solid could not be built.");
   }
   if (code == "preferences.open") return tr("Preferences could not be opened. The project still works.");
-  return code;
+  if (code == "library.open") return tr("The library could not be opened. The project still works.");
+  if (code == "library.schema") return tr("The library database could not be read.");
+  if (code == "library.version") return tr("This library uses a newer database version.");
+  if (code == "library.duplicate") return tr("That library entry already exists.");
+  if (code == "library.missing") return tr("That library entry is no longer there.");
+  if (code == "library.too_many") return tr("That library is full.");
+  if (code == "library.range") return tr("That library value is not valid.");
+  if (code == "joint.same_part") return tr("A joint needs two different parts.");
+  if (code == "joint.not_box") return tr("Joints cut boards and boxes, not cylinders.");
+  if (code == "joint.parameter") return tr("That joint does not fit these parts.");
+  if (code == "joint.no_effect") return tr("That joint does not change the solid.");
+  if (code == "joint.missing") return tr("That joint is no longer in the project.");
+  if (code == "parameter.missing") return tr("That parameter is not in the project.");
+  if (code == "parameter.driven") return tr("That dimension follows a parameter. Release it to type a number.");
+  if (code == "parameter.cycle") return tr("Those dimensions depend on each other.");
+  if (code == "parameter.range") return tr("That value makes a part size invalid.");
+  if (code == "parameter.unknown") return tr("That field is not driven.");
+  return tr("Something went wrong.");
 }
 
 }  // namespace timberlab::ui

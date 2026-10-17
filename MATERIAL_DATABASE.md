@@ -40,4 +40,4 @@ Lumber rows keep three sizes:
 
 A 2×4 is nominal 2 inch thick and surfaced 1 1/2 by 3 1/2 inch. The nominal value is never copied into the part as if it were the finished size. The user still edits the actual dimension.
 
-User-authored species and supplier overrides are not in this baseline. The shipped file is the whole catalog.
+User-authored materials and thickness presets live in `library.sqlite`, not in this JSON. The shipped file stays the catalog. A user row has a name and a display color. It does not add a density or a hardness number. See `docs/adr/0008-user-library.md`.

@@ -2,9 +2,13 @@
 
 #include "timberlab/core/document.hpp"
 
+#include <cstdint>
 #include <string>
 
 namespace timberlab::storage {
+
+// A project larger than this is rejected before it is parsed.
+inline constexpr std::uintmax_t kMaxProjectBytes = 32u * 1024u * 1024u;
 
 struct IoResult {
   bool ok = false;

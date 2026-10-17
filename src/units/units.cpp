@@ -412,6 +412,7 @@ std::string formatInches(std::int64_t nm, int denom, bool withFeet) {
 }  // namespace
 
 ParseResult parseLength(std::string_view text, LengthUnit defaultUnit) {
+  if (text.size() > 64) return fail("units.invalid");
   const std::string lowered = asciiLower(text);
   Scan scan{lowered, 0};
   scan.skip();
@@ -494,6 +495,11 @@ bool validFractionDenom(int denom) {
 double toMillimetres(std::int64_t nm) { return static_cast<double>(nm) / static_cast<double>(kNmPerMm); }
 
 AngleParse parseAngle(std::string_view text) {
+  if (text.size() > 64) {
+    AngleParse result;
+    result.error = "angle.invalid";
+    return result;
+  }
   const std::string lowered = asciiLower(text);
   Scan scan{lowered, 0};
   Number number;
@@ -515,7 +521,7 @@ AngleParse parseAngle(std::string_view text) {
   double value = static_cast<double>(number.whole) +
                  (number.hasFrac ? static_cast<double>(number.frac) / scale : 0.0);
   if (number.negative) value = -value;
-  if (!std::isfinite(value)) {
+  if (!std::isfinite(value) || std::abs(value) > kMaxAbsDegrees) {
     AngleParse result;
     result.error = "angle.invalid";
     return result;

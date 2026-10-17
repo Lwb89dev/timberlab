@@ -18,6 +18,9 @@ inline constexpr std::int64_t kNmPerFoot = kNmPerInch * 12;
 // A single part larger than this is rejected. 100 m.
 inline constexpr std::int64_t kMaxPartNm = 100'000'000'000LL;
 
+// Rotations outside this range are rejected on input and on load.
+inline constexpr double kMaxAbsDegrees = 1.0e6;
+
 enum class LengthUnit { Millimetre, Centimetre, Metre, Inch, Foot };
 
 struct ParseResult {

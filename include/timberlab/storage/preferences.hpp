@@ -25,6 +25,7 @@ class Preferences {
  private:
   struct Sqlite;
   Sqlite* db_ = nullptr;
+  std::string path_;
   bool ok_ = false;
   std::string error_;
   int schemaVersion_ = 0;

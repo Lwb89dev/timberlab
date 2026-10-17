@@ -4,19 +4,46 @@ import QtQuick.Layouts
 import TimberLab
 
 Rectangle {
+    id: inspector
     color: Theme.panel
+    property string notesPartId: ""
+
+    function syncFlags() {
+        visibleBox.checked = app.selection.visible === true
+        lockedBox.checked = app.selection.locked === true
+    }
+    function syncNotes() {
+        const id = app.selectedId
+        if (notesBox.activeFocus && id === notesPartId) return
+        notesBox.text = app.selection.notes || ""
+        notesPartId = id
+    }
+
+    Component.onCompleted: {
+        syncFlags()
+        syncNotes()
+    }
+    Connections {
+        target: app
+        function onDocumentChanged() {
+            inspector.syncFlags()
+            inspector.syncNotes()
+        }
+    }
 
     component ValueField: RowLayout {
         id: field
         property string label: ""
         property string value: ""
         property string placeholder: ""
+        property int labelWidth: 108
         signal committed(string text)
         Layout.fillWidth: true
         Label {
             text: label
             color: Theme.muted
-            Layout.preferredWidth: 108
+            Layout.preferredWidth: labelWidth
+            elide: Text.ElideRight
         }
         TextField {
             Layout.fillWidth: true
@@ -30,10 +57,20 @@ Rectangle {
         }
     }
 
-    ColumnLayout {
+    Flickable {
+        id: scroller
         anchors.fill: parent
-        anchors.margins: 12
-        spacing: 8
+        contentWidth: width
+        contentHeight: column.implicitHeight + 24
+        clip: true
+        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+
+        ColumnLayout {
+            id: column
+            width: scroller.width - 24
+            x: 12
+            y: 12
+            spacing: 8
         Label {
             text: qsTr("Inspector")
             color: Theme.text
@@ -48,12 +85,142 @@ Rectangle {
             onCommitted: function (text) { app.projectName = text }
         }
 
+        ColumnLayout {
+            visible: app.parameters.length > 0
+            Layout.fillWidth: true
+            spacing: 8
+            Label { text: qsTr("Parameters"); color: Theme.muted }
+            Repeater {
+                model: app.parameters
+                delegate: ValueField {
+                    required property var modelData
+                    label: modelData.label
+                    value: modelData.value
+                    labelWidth: 132
+                    onCommitted: function (text) { app.setDriverFromText(modelData.id, text) }
+                }
+            }
+            Label {
+                text: qsTr("Changing a parameter updates the parts that depend on it.")
+                wrapMode: Text.WordWrap
+                color: Theme.muted
+                Layout.fillWidth: true
+            }
+        }
+
         Label {
             visible: app.selection.id === undefined
             text: qsTr("Select a part to edit its width, height and thickness. Display units do not change the stored size.")
             wrapMode: Text.WordWrap
             color: Theme.muted
             Layout.fillWidth: true
+        }
+
+        Label { text: qsTr("Library"); color: Theme.muted }
+        Label {
+            text: qsTr("Custom materials and stock thicknesses are saved on this computer. They are not the project.")
+            wrapMode: Text.WordWrap
+            color: Theme.muted
+            Layout.fillWidth: true
+            textFormat: Text.PlainText
+        }
+        RowLayout {
+            Layout.fillWidth: true
+            Label {
+                text: qsTr("Material")
+                color: Theme.muted
+                Layout.preferredWidth: 108
+                elide: Text.ElideRight
+            }
+            TextField {
+                id: libraryName
+                Layout.fillWidth: true
+                implicitHeight: Theme.controlHeight
+                placeholderText: qsTr("Shop oak")
+                selectByMouse: true
+            }
+        }
+        RowLayout {
+            Layout.fillWidth: true
+            Label {
+                text: qsTr("Color")
+                color: Theme.muted
+                Layout.preferredWidth: 108
+                elide: Text.ElideRight
+            }
+            TextField {
+                id: libraryColor
+                Layout.fillWidth: true
+                implicitHeight: Theme.controlHeight
+                placeholderText: "#A67C52"
+                selectByMouse: true
+            }
+        }
+        Button {
+            text: qsTr("Add material")
+            Layout.fillWidth: true
+            implicitHeight: Theme.controlHeight
+            onClicked: if (app.addUserMaterial(libraryName.text, libraryColor.text)) libraryName.text = ""
+        }
+        Repeater {
+            model: app.userMaterials
+            delegate: RowLayout {
+                required property var modelData
+                Layout.fillWidth: true
+                Label {
+                    text: modelData.name
+                    color: Theme.text
+                    Layout.fillWidth: true
+                    elide: Text.ElideRight
+                    textFormat: Text.PlainText
+                }
+                Button {
+                    text: qsTr("Remove")
+                    implicitHeight: Theme.controlHeight
+                    onClicked: app.removeUserMaterial(modelData.id)
+                }
+            }
+        }
+        RowLayout {
+            Layout.fillWidth: true
+            Label {
+                text: qsTr("Thickness")
+                color: Theme.muted
+                Layout.preferredWidth: 108
+                elide: Text.ElideRight
+            }
+            TextField {
+                id: libraryThickness
+                Layout.fillWidth: true
+                implicitHeight: Theme.controlHeight
+                placeholderText: qsTr("18 mm")
+                selectByMouse: true
+            }
+        }
+        Button {
+            text: qsTr("Add preset")
+            Layout.fillWidth: true
+            implicitHeight: Theme.controlHeight
+            onClicked: if (app.addUserPreset(libraryThickness.text)) libraryThickness.text = ""
+        }
+        Repeater {
+            model: app.userPresets
+            delegate: RowLayout {
+                required property var modelData
+                Layout.fillWidth: true
+                Label {
+                    text: modelData.label
+                    color: Theme.text
+                    Layout.fillWidth: true
+                    elide: Text.ElideRight
+                    textFormat: Text.PlainText
+                }
+                Button {
+                    text: qsTr("Remove")
+                    implicitHeight: Theme.controlHeight
+                    onClicked: app.removeUserPreset(modelData.id)
+                }
+            }
         }
 
         ColumnLayout {
@@ -115,6 +282,67 @@ Rectangle {
                 value: app.selection.height || ""
                 onCommitted: function (text) { app.setParameterFromText(app.selectedId, "height", text) }
             }
+            Repeater {
+                model: app.selection.drives || []
+                delegate: ColumnLayout {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    spacing: 4
+                    Label {
+                        text: modelData.label + " = " + modelData.formula
+                        color: Theme.text
+                        wrapMode: Text.WordWrap
+                        Layout.fillWidth: true
+                    }
+                    Button {
+                        text: qsTr("Release")
+                        Layout.fillWidth: true
+                        implicitHeight: Theme.controlHeight
+                        onClicked: app.releasePartField(app.selectedId, modelData.field)
+                    }
+                }
+            }
+            ColumnLayout {
+                visible: app.parameters.length > 0
+                Layout.fillWidth: true
+                spacing: 8
+                Label { text: qsTr("Drive"); color: Theme.muted }
+                ComboBox {
+                    id: driveField
+                    Layout.fillWidth: true
+                    implicitHeight: Theme.controlHeight
+                    textRole: "label"
+                    valueRole: "id"
+                    model: app.driveFields
+                    Component.onCompleted: syncIndex()
+                    function syncIndex() {
+                        if (count > 0 && currentIndex < 0) currentIndex = 0
+                    }
+                }
+                ComboBox {
+                    id: driveParameter
+                    Layout.fillWidth: true
+                    implicitHeight: Theme.controlHeight
+                    textRole: "label"
+                    valueRole: "id"
+                    model: app.parameters
+                    Component.onCompleted: syncIndex()
+                    function syncIndex() {
+                        if (count > 0 && currentIndex < 0) currentIndex = 0
+                    }
+                }
+                Connections {
+                    target: app
+                    function onDocumentChanged() { driveParameter.syncIndex() }
+                }
+                Button {
+                    text: qsTr("Drive")
+                    Layout.fillWidth: true
+                    implicitHeight: Theme.controlHeight
+                    enabled: driveParameter.count > 0
+                    onClicked: app.drivePartField(app.selectedId, driveField.currentValue, driveParameter.currentValue)
+                }
+            }
             Label { text: qsTr("Position"); color: Theme.muted }
             ValueField {
                 label: "X"
@@ -148,30 +376,31 @@ Rectangle {
                 onCommitted: function (text) { app.setRotationFromText(app.selectedId, "z", text) }
             }
             CheckBox {
+                id: visibleBox
                 text: qsTr("Visible")
-                checked: app.selection.visible === true
                 onClicked: app.setVisible(app.selectedId, checked)
             }
             CheckBox {
+                id: lockedBox
                 text: qsTr("Locked")
-                checked: app.selection.locked === true
                 onClicked: app.setLocked(app.selectedId, checked)
             }
+            JointSection { Layout.fillWidth: true }
             TextArea {
+                id: notesBox
                 Layout.fillWidth: true
                 implicitHeight: 72
                 placeholderText: qsTr("Notes")
-                text: app.selection.notes || ""
                 wrapMode: TextArea.Wrap
                 onEditingFinished: app.setNotes(app.selectedId, text)
             }
         }
-        Item { Layout.fillHeight: true }
         Label {
             text: qsTr("A board is a real solid: X width, Y thickness, Z height. Z is up.")
             color: Theme.muted
             wrapMode: Text.WordWrap
             Layout.fillWidth: true
+        }
         }
     }
 }

@@ -2,8 +2,11 @@
 
 #include "timberlab/units/units.hpp"
 
+#include <BRepAlgoAPI_Cut.hxx>
+#include <BRepAlgoAPI_Fuse.hxx>
 #include <BRepBndLib.hxx>
 #include <BRepCheck_Analyzer.hxx>
+#include <BRepClass3d_SolidClassifier.hxx>
 #include <BRepGProp.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <BRepPrimAPI_MakeBox.hxx>
@@ -13,14 +16,18 @@
 #include <GProp_GProps.hxx>
 #include <Poly_Triangulation.hxx>
 #include <Standard_Failure.hxx>
+#include <TopAbs_State.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopLoc_Location.hxx>
+#include <TopTools_ListOfShape.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Face.hxx>
 #include <gp.hxx>
 #include <gp_Ax2.hxx>
+#include <gp_Pnt.hxx>
 
 #include <utility>
+#include <vector>
 
 namespace timberlab::geometry {
 namespace {
@@ -105,6 +112,203 @@ SolidMesh meshShape(const TopoDS_Shape& shape, double deflection) {
   return mesh;
 }
 
+constexpr std::int64_t kBooleanOverlapNm = 200000;
+
+const Component* findPart(const std::vector<Component>& parts, const std::string& id) {
+  for (const Component& part : parts) {
+    if (part.id == id) return &part;
+  }
+  return nullptr;
+}
+
+void expandBoundary(LocalCut& cut, const Component& part) {
+  auto open = [](std::int64_t& low, std::int64_t& high, std::int64_t extent) {
+    if (low <= 0) low -= kBooleanOverlapNm;
+    if (high >= extent) high += kBooleanOverlapNm;
+  };
+  open(cut.x0, cut.x1, part.widthNm);
+  open(cut.y0, cut.y1, part.thicknessNm);
+  open(cut.z0, cut.z1, part.heightNm);
+}
+
+bool makeCutter(const LocalCut& cut, TopoDS_Shape& shape, std::string& error) {
+  double x0 = units::toMillimetres(cut.x0);
+  double y0 = units::toMillimetres(cut.y0);
+  double z0 = units::toMillimetres(cut.z0);
+  double x1 = units::toMillimetres(cut.x1);
+  double y1 = units::toMillimetres(cut.y1);
+  double z1 = units::toMillimetres(cut.z1);
+  if (x1 < x0) std::swap(x0, x1);
+  if (y1 < y0) std::swap(y0, y1);
+  if (z1 < z0) std::swap(z0, z1);
+  if (!(x1 > x0) || !(y1 > y0) || !(z1 > z0)) {
+    error = "joint.no_effect";
+    return false;
+  }
+  BRepPrimAPI_MakeBox box(gp_Pnt(x0, y0, z0), gp_Pnt(x1, y1, z1));
+  box.Build();
+  if (!box.IsDone()) {
+    error = "geometry.kernel";
+    return false;
+  }
+  shape = box.Shape();
+  return true;
+}
+
+double volumeOf(const TopoDS_Shape& shape) {
+  GProp_GProps props;
+  BRepGProp::VolumeProperties(shape, props);
+  return props.Mass();
+}
+
+TopoDS_Shape singleSolid(const TopoDS_Shape& shape) {
+  if (shape.ShapeType() == TopAbs_SOLID) return shape;
+  TopoDS_Shape found;
+  int count = 0;
+  for (TopExp_Explorer explorer(shape, TopAbs_SOLID); explorer.More(); explorer.Next()) {
+    found = explorer.Current();
+    ++count;
+  }
+  if (count == 1) return found;
+  return shape;
+}
+
+bool fuseTools(const TopoDS_Shape& left, const TopoDS_Shape& right, TopoDS_Shape& out, std::string& error) {
+  TopTools_ListOfShape arguments;
+  arguments.Append(left);
+  TopTools_ListOfShape tools;
+  tools.Append(right);
+  BRepAlgoAPI_Fuse operation;
+  operation.SetArguments(arguments);
+  operation.SetTools(tools);
+  operation.SetRunParallel(Standard_False);
+  operation.Build();
+  if (!operation.IsDone()) {
+    error = "geometry.kernel";
+    return false;
+  }
+  out = operation.Shape();
+  return true;
+}
+
+bool subtractTool(TopoDS_Shape& current, const TopoDS_Shape& tool, std::string& error) {
+  TopTools_ListOfShape arguments;
+  arguments.Append(current);
+  TopTools_ListOfShape tools;
+  tools.Append(tool);
+  BRepAlgoAPI_Cut operation;
+  operation.SetArguments(arguments);
+  operation.SetTools(tools);
+  operation.SetRunParallel(Standard_False);
+  operation.Build();
+  if (!operation.IsDone()) {
+    error = "joint.no_effect";
+    return false;
+  }
+  current = singleSolid(operation.Shape());
+  return true;
+}
+
+bool applyCuts(TopoDS_Shape& shape, const Component& part, const std::vector<LocalCut>& cuts, std::string& error) {
+  const double before = volumeOf(shape);
+  TopoDS_Shape tool;
+  bool haveTool = false;
+  for (LocalCut cut : cuts) {
+    expandBoundary(cut, part);
+    TopoDS_Shape box;
+    if (!makeCutter(cut, box, error)) return false;
+    if (!haveTool) {
+      tool = box;
+      haveTool = true;
+      continue;
+    }
+    TopoDS_Shape fused;
+    if (!fuseTools(tool, box, fused, error)) return false;
+    tool = fused;
+  }
+  if (!haveTool) {
+    error = "joint.no_effect";
+    return false;
+  }
+  if (!subtractTool(shape, tool, error)) return false;
+  const double after = volumeOf(shape);
+  if (!(after > 0.0)) {
+    error = "geometry.empty";
+    return false;
+  }
+  if (!(before - after > 0.5)) {
+    error = "joint.no_effect";
+    return false;
+  }
+  return true;
+}
+
+bool primitiveShape(const Component& component, TopoDS_Shape& shape, std::string& error) {
+  if (component.type == ComponentType::Cylinder) {
+    const double radius = units::toMillimetres(component.radiusNm);
+    const double height = units::toMillimetres(component.heightNm);
+    if (!(radius > 0.0) || !(height > 0.0)) {
+      error = "geometry.degenerate";
+      return false;
+    }
+    BRepPrimAPI_MakeCylinder cylinder(gp_Ax2(gp_Pnt(0, 0, 0), gp::DZ()), radius, height);
+    cylinder.Build();
+    if (!cylinder.IsDone()) {
+      error = "geometry.kernel";
+      return false;
+    }
+    shape = cylinder.Shape();
+    return true;
+  }
+  const double width = units::toMillimetres(component.widthNm);
+  const double thickness = units::toMillimetres(component.thicknessNm);
+  const double height = units::toMillimetres(component.heightNm);
+  if (!(width > 0.0) || !(thickness > 0.0) || !(height > 0.0)) {
+    error = "geometry.degenerate";
+    return false;
+  }
+  BRepPrimAPI_MakeBox box(width, thickness, height);
+  box.Build();
+  if (!box.IsDone()) {
+    error = "geometry.kernel";
+    return false;
+  }
+  shape = box.Shape();
+  return true;
+}
+
+bool collectCuts(const Component& component, const std::vector<Joint>& joints, const std::vector<Component>& parts,
+                 std::vector<LocalCut>& cuts, bool& touched, std::string& error) {
+  touched = false;
+  for (const Joint& joint : joints) {
+    if (!jointCutsPart(joint, component.id)) continue;
+    touched = true;
+    const Component* partA = findPart(parts, joint.partA);
+    const Component* partB = findPart(parts, joint.partB);
+    if (partA == nullptr || partB == nullptr) {
+      error = "component.missing";
+      return false;
+    }
+    if (!jointFits(joint, *partA, *partB, error)) return false;
+    if (!cutsForPart(joint, component, cuts, error)) return false;
+  }
+  return true;
+}
+
+bool buildSolid(const Component& component, const std::vector<Joint>& joints, const std::vector<Component>& parts,
+                TopoDS_Shape& shape, std::string& error) {
+  if (!primitiveShape(component, shape, error)) return false;
+  std::vector<LocalCut> cuts;
+  bool touched = false;
+  if (!collectCuts(component, joints, parts, cuts, touched, error)) return false;
+  if (!touched) return true;
+  if (cuts.empty()) {
+    error = "joint.no_effect";
+    return false;
+  }
+  return applyCuts(shape, component, cuts, error);
+}
+
 }  // namespace
 
 double deflectionMm(MeshQuality quality) {
@@ -171,6 +375,64 @@ SolidMesh meshFor(const Component& component, MeshQuality quality) {
   }
   return makeBoxMesh(units::toMillimetres(component.widthNm), units::toMillimetres(component.thicknessNm),
                      units::toMillimetres(component.heightNm), quality);
+}
+
+SolidMesh meshFor(const Component& component, const std::vector<Joint>& joints, const std::vector<Component>& parts,
+                  MeshQuality quality) {
+  TopoDS_Shape shape;
+  std::string error;
+  try {
+    if (!buildSolid(component, joints, parts, shape, error)) {
+      SolidMesh mesh;
+      mesh.error = error.empty() ? "geometry.kernel" : error;
+      return mesh;
+    }
+    return meshShape(shape, deflectionMm(quality));
+  } catch (const Standard_Failure&) {
+    SolidMesh mesh;
+    mesh.error = "geometry.kernel";
+    return mesh;
+  }
+}
+
+SolidProbe probeSolid(const Component& component, const std::vector<Joint>& joints,
+                      const std::vector<Component>& parts) {
+  SolidProbe probe;
+  TopoDS_Shape shape;
+  try {
+    if (!buildSolid(component, joints, parts, shape, probe.error)) {
+      if (probe.error.empty()) probe.error = "geometry.kernel";
+      return probe;
+    }
+    probe.volumeMm3 = volumeOf(shape);
+  } catch (const Standard_Failure&) {
+    probe.error = "geometry.kernel";
+    return probe;
+  }
+  if (!(probe.volumeMm3 > 0.0)) {
+    probe.error = "geometry.empty";
+    return probe;
+  }
+  probe.ok = true;
+  return probe;
+}
+
+PointSide classifyLocal(const Component& component, const std::vector<Joint>& joints,
+                        const std::vector<Component>& parts, double xMm, double yMm, double zMm) {
+  TopoDS_Shape shape;
+  std::string error;
+  try {
+    if (!buildSolid(component, joints, parts, shape, error)) return PointSide::Unknown;
+    BRepClass3d_SolidClassifier classifier(shape);
+    classifier.Perform(gp_Pnt(xMm, yMm, zMm), 1.0e-4);
+    const TopAbs_State state = classifier.State();
+    if (state == TopAbs_IN) return PointSide::In;
+    if (state == TopAbs_OUT) return PointSide::Out;
+    if (state == TopAbs_ON) return PointSide::On;
+  } catch (const Standard_Failure&) {
+    return PointSide::Unknown;
+  }
+  return PointSide::Unknown;
 }
 
 }  // namespace timberlab::geometry

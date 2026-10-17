@@ -18,5 +18,5 @@ The shader bodies are shared. The version line is chosen from the current contex
 
 - Face and edge picking are not implemented. Selection is the whole part.
 - Dimension annotations are not drawn in the viewport. Numbers live in the inspector.
-- Desktop GL 3.3 is verified on this machine's Mesa driver. The ES 3.00 sources are in the same binary and are selected only for an ES context. No Android package has been compiled or run, so the tablet path is unproven.
+- Desktop GL 3.3 is verified on this machine's Mesa driver. The ES 3.00 sources are in the same binary and are selected only for an ES context. A connected arm64 Android 16 device with an Adreno GPU reported OpenGL ES 3.2 (`ro.opengles.version` 196610) and a 1080×2400 display, which is above that ES 3.0 path. TimberLab was not compiled or installed on the device, so this is evidence about the GPU, not a run of the app.
 - Mesh quality changes the triangle count, not the solid.

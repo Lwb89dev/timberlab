@@ -61,6 +61,12 @@ TEST_CASE("display rounding is not applied to an inexact fraction") {
 TEST_CASE("empty and garbage lengths fail") {
   REQUIRE_FALSE(timberlab::units::parseLength("", LengthUnit::Millimetre).ok);
   REQUIRE_FALSE(timberlab::units::parseLength("oak", LengthUnit::Millimetre).ok);
+  const auto huge = timberlab::units::parseLength(std::string(65, '1'), LengthUnit::Millimetre);
+  REQUIRE_FALSE(huge.ok);
+  REQUIRE(huge.error == "units.invalid");
+  const auto wild = timberlab::units::parseAngle(std::string(65, '9'));
+  REQUIRE_FALSE(wild.ok);
+  REQUIRE(wild.error == "angle.invalid");
   REQUIRE(timberlab::units::validFractionDenom(16));
   REQUIRE_FALSE(timberlab::units::validFractionDenom(3));
 }

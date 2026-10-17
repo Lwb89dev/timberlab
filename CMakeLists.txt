@@ -39,13 +39,16 @@ find_package(SQLite3 REQUIRED)
 set(TIMBERLAB_MODEL_SOURCES
   src/units/units.cpp
   src/core/component.cpp
+  src/core/joint.cpp
   src/core/document.cpp
   src/constraints/dependency_graph.cpp
+  src/constraints/binding.cpp
   src/geometry/solids.cpp
   src/materials/catalog.cpp
   src/storage/sha256.cpp
   src/storage/archive.cpp
   src/storage/preferences.cpp
+  src/storage/library.cpp
   src/platform/paths.cpp
   third_party/miniz/miniz.c
   third_party/miniz/miniz_tdef.c
@@ -131,6 +134,9 @@ if(BUILD_TESTING)
     tests/test_storage.cpp
     tests/test_catalog.cpp
     tests/test_constraints.cpp
+    tests/test_joinery.cpp
+    tests/test_propagation.cpp
+    tests/test_library.cpp
   )
   target_link_libraries(timberlab-tests PRIVATE timberlab-model Catch2::Catch2WithMain)
   target_compile_definitions(timberlab-tests PRIVATE

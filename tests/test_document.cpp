@@ -3,7 +3,11 @@
 #include "timberlab/core/transform.hpp"
 #include "timberlab/units/units.hpp"
 
+#include <nlohmann/json.hpp>
+
 #include <catch2/catch_test_macros.hpp>
+
+#include <limits>
 
 using timberlab::Component;
 using timberlab::Document;
@@ -88,6 +92,50 @@ TEST_CASE("malformed model json is rejected") {
   std::string error;
   REQUIRE_FALSE(Document::fromJson("{", loaded, error));
   REQUIRE_FALSE(Document::fromJson("{\"schema\":\"other\"}", loaded, error));
+}
+
+TEST_CASE("names, notes, angles, duplicate ids, and part count are bounded") {
+  Document document;
+  const std::string id = document.addBoard();
+  std::string error;
+  REQUIRE_FALSE(document.setName(id, std::string(Document::kMaxNameBytes + 1, 'a'), error));
+  REQUIRE(error == "name.too_long");
+  REQUIRE(document.setName(id, std::string(Document::kMaxNameBytes, 'a'), error));
+  std::string copyId;
+  REQUIRE_FALSE(document.duplicate(id, copyId, error));
+  REQUIRE(error == "name.too_long");
+  REQUIRE_FALSE(document.setNotes(id, std::string(Document::kMaxNotesBytes + 1, 'n'), error));
+  REQUIRE(error == "notes.too_long");
+  REQUIRE(document.setNotes(id, std::string(Document::kMaxNotesBytes, 'n'), error));
+  REQUIRE_FALSE(document.setRotation(id, "z", std::numeric_limits<double>::infinity(), error));
+  REQUIRE(error == "angle.invalid");
+  REQUIRE_FALSE(document.setRotation(id, "z", timberlab::units::kMaxAbsDegrees + 1.0, error));
+  REQUIRE(error == "angle.invalid");
+  REQUIRE(document.setRotation(id, "z", 90.0, error));
+  REQUIRE_FALSE(document.setTranslation(id, "x", timberlab::units::kMaxPartNm * 10 + 1, error));
+  REQUIRE(error == "dimension.too_large");
+
+  nlohmann::json root = nlohmann::json::parse(document.toJson());
+  root["components"][0]["placement"]["rx"] = 1.0e7;
+  Document loaded;
+  REQUIRE_FALSE(Document::fromJson(root.dump(), loaded, error));
+  REQUIRE(error == "angle.invalid");
+
+  root = nlohmann::json::parse(document.toJson());
+  root["components"].push_back(root["components"][0]);
+  REQUIRE_FALSE(Document::fromJson(root.dump(), loaded, error));
+  REQUIRE(error == "storage.duplicate");
+
+  root = nlohmann::json::parse(document.toJson());
+  const auto one = root["components"][0];
+  root["components"] = nlohmann::json::array();
+  for (int i = 0; i < static_cast<int>(Document::kMaxComponents) + 1; ++i) {
+    auto item = one;
+    item["id"] = "tl_" + std::to_string(i);
+    root["components"].push_back(std::move(item));
+  }
+  REQUIRE_FALSE(Document::fromJson(root.dump(), loaded, error));
+  REQUIRE(error == "storage.too_many");
 }
 
 TEST_CASE("demo table parts touch without overlapping") {
