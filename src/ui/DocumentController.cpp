@@ -383,6 +383,39 @@ QString DocumentController::fieldLabel(const std::string& field) const {
   return QString::fromStdString(field);
 }
 
+QString DocumentController::instanceParameterLabel(const std::string& id, const std::string& role) const {
+  if (id.starts_with("table_")) {
+    if (role == "width") return tr("Table width");
+    if (role == "depth") return tr("Table depth");
+    if (role == "leg") return tr("Table leg");
+    if (role == "inset") return tr("Table inset");
+    if (role == "legHeight") return tr("Table leg height");
+    if (role == "topThickness") return tr("Table top thickness");
+    if (role == "apronHeight") return tr("Table apron height");
+    if (role == "apronThickness") return tr("Table apron thickness");
+    if (role == "apronDrop") return tr("Table apron drop");
+    return {};
+  }
+  if (id.starts_with("carcass_")) {
+    if (role == "width") return tr("Cabinet width");
+    if (role == "depth") return tr("Cabinet depth");
+    if (role == "height") return tr("Cabinet height");
+    if (role == "side") return tr("Cabinet side");
+    if (role == "panel") return tr("Cabinet panel");
+    if (role == "back") return tr("Cabinet back");
+    return {};
+  }
+  if (id.starts_with("drawer_")) {
+    if (role == "width") return tr("Drawer width");
+    if (role == "depth") return tr("Drawer depth");
+    if (role == "height") return tr("Drawer height");
+    if (role == "side") return tr("Drawer side");
+    if (role == "bottom") return tr("Drawer bottom");
+    return {};
+  }
+  return {};
+}
+
 QString DocumentController::parameterLabel(const constraints::Parameter& parameter) const {
   if (parameter.id == "table.width") return tr("Width");
   if (parameter.id == "table.depth") return tr("Depth");
@@ -393,6 +426,11 @@ QString DocumentController::parameterLabel(const constraints::Parameter& paramet
   if (parameter.id == "table.apronHeight") return tr("Apron height");
   if (parameter.id == "table.apronThickness") return tr("Apron thickness");
   if (parameter.id == "table.apronDrop") return tr("Apron drop");
+  const auto dot = parameter.id.rfind('.');
+  if (dot != std::string::npos) {
+    const QString composed = instanceParameterLabel(parameter.id, parameter.id.substr(dot + 1));
+    if (!composed.isNull()) return composed;
+  }
   return QString::fromStdString(parameter.name);
 }
 
@@ -470,6 +508,22 @@ void DocumentController::addCylinder() {
   selectedId_ = QString::fromStdString(id);
   status_ = tr("Cylinder added");
   touch(false);
+}
+
+void DocumentController::addAssembly(const QString& kind) {
+  const std::size_t before = document_.components().size();
+  std::string error;
+  if (!document_.addAssembly(kind.toStdString(), error)) {
+    report(error, false);
+    return;
+  }
+  if (before < document_.components().size()) {
+    selectedId_ = QString::fromStdString(document_.components()[before].id);
+  }
+  if (kind == QStringLiteral("table")) status_ = tr("Table added. Its sizes are parameters.");
+  else if (kind == QStringLiteral("carcass")) status_ = tr("Cabinet added. Its sizes are parameters.");
+  else if (kind == QStringLiteral("drawer")) status_ = tr("Drawer box added. Its sizes are parameters.");
+  touch(true);
 }
 
 void DocumentController::duplicateSelected() {
@@ -1003,6 +1057,7 @@ QString DocumentController::messageFor(const QString& code) const {
   if (code == "parameter.cycle") return tr("Those dimensions depend on each other.");
   if (code == "parameter.range") return tr("That value makes a part size invalid.");
   if (code == "parameter.unknown") return tr("That field is not driven.");
+  if (code == "assembly.unknown") return tr("That assembly is not available.");
   return tr("Something went wrong.");
 }
 

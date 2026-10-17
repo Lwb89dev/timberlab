@@ -163,6 +163,41 @@ int runSelfCheck() {
   if (apron == nullptr || apron->widthNm != 1000 * units::kNmPerMm) return fail("undo apron");
   if (leg == nullptr || leg->placement.xNm != 1100 * units::kNmPerMm) return fail("undo leg");
 
+  Document cabinet;
+  if (!cabinet.addAssembly("carcass", error)) return fail("carcass " + error);
+  if (cabinet.components().size() != 5) return fail("carcass count");
+  std::int64_t carcassRightX = 0;
+  bool sawCarcassRight = false;
+  for (const Component& component : cabinet.components()) {
+    if (component.name != "Carcass right") continue;
+    carcassRightX = component.placement.xNm;
+    sawCarcassRight = true;
+  }
+  if (!sawCarcassRight) return fail("carcass right");
+  std::string carcassWidth;
+  for (const constraints::Parameter& parameter : cabinet.parameters()) {
+    const std::string suffix = ".width";
+    if (parameter.id.size() >= suffix.size() &&
+        parameter.id.compare(parameter.id.size() - suffix.size(), suffix.size(), suffix) == 0) {
+      carcassWidth = parameter.id;
+    }
+  }
+  if (carcassWidth.empty()) return fail("carcass width");
+  if (!cabinet.setParameter(carcassWidth, 900 * units::kNmPerMm, error)) return fail("carcass edit " + error);
+  const Component* carcassRight = nullptr;
+  for (const Component& component : cabinet.components()) {
+    if (component.name == "Carcass right") carcassRight = &component;
+  }
+  if (carcassRight == nullptr || carcassRight->placement.xNm != carcassRightX + 300 * units::kNmPerMm) {
+    return fail("carcass move");
+  }
+  if (!cabinet.undo(error)) return fail("carcass undo");
+  carcassRight = nullptr;
+  for (const Component& component : cabinet.components()) {
+    if (component.name == "Carcass right") carcassRight = &component;
+  }
+  if (carcassRight == nullptr || carcassRight->placement.xNm != carcassRightX) return fail("carcass restored");
+
   const char* dataDir = std::getenv("TIMBERLAB_DATA_DIR");
   const std::filesystem::path root = dataDir != nullptr ? dataDir : std::filesystem::path("build/self-check");
   std::filesystem::create_directories(root);

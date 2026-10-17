@@ -61,6 +61,13 @@ ApplicationWindow {
         }
     }
 
+    Menu {
+        id: assemblyMenu
+        MenuItem { text: qsTr("Table"); onTriggered: app.addAssembly("table") }
+        MenuItem { text: qsTr("Cabinet"); onTriggered: app.addAssembly("carcass") }
+        MenuItem { text: qsTr("Drawer box"); onTriggered: app.addAssembly("drawer") }
+    }
+
     header: ToolBar {
         leftPadding: 8
         rightPadding: 8
@@ -78,6 +85,11 @@ ApplicationWindow {
             Button { text: qsTr("Board"); onClicked: app.addBoard() }
             Button { text: qsTr("Box"); onClicked: app.addBox() }
             Button { text: qsTr("Cylinder"); onClicked: app.addCylinder() }
+            Button {
+                id: assemblyButton
+                text: qsTr("Assembly")
+                onClicked: assemblyMenu.popup(assemblyButton, 0, assemblyButton.height)
+            }
             Button { text: qsTr("Duplicate"); onClicked: app.duplicateSelected() }
             Button { text: qsTr("Delete"); onClicked: app.deleteSelected() }
             ToolSeparator {}

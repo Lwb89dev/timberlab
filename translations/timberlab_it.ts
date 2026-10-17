@@ -273,6 +273,22 @@
         <translation>Cilindro</translation>
     </message>
     <message>
+        <source>Assembly</source>
+        <translation>Assieme</translation>
+    </message>
+    <message>
+        <source>Table</source>
+        <translation>Tavolo</translation>
+    </message>
+    <message>
+        <source>Cabinet</source>
+        <translation>Carcassa</translation>
+    </message>
+    <message>
+        <source>Drawer box</source>
+        <translation>Cassetto</translation>
+    </message>
+    <message>
         <location filename="../qml/Main.qml" line="77"/>
         <source>Fit</source>
         <translation>Inquadra</translation>
@@ -797,6 +813,102 @@
     <message>
         <source>That library value is not valid.</source>
         <translation>Quel valore non è valido per la libreria.</translation>
+    </message>
+    <message>
+        <source>Table added. Its sizes are parameters.</source>
+        <translation>Tavolo inserito. Le misure sono parametri.</translation>
+    </message>
+    <message>
+        <source>Cabinet added. Its sizes are parameters.</source>
+        <translation>Carcassa inserita. Le misure sono parametri.</translation>
+    </message>
+    <message>
+        <source>Drawer box added. Its sizes are parameters.</source>
+        <translation>Cassetto inserito. Le misure sono parametri.</translation>
+    </message>
+    <message>
+        <source>That assembly is not available.</source>
+        <translation>Quell&apos;assieme non è disponibile.</translation>
+    </message>
+    <message>
+        <source>Table width</source>
+        <translation>Larghezza tavolo</translation>
+    </message>
+    <message>
+        <source>Table depth</source>
+        <translation>Profondità tavolo</translation>
+    </message>
+    <message>
+        <source>Table leg</source>
+        <translation>Gamba tavolo</translation>
+    </message>
+    <message>
+        <source>Table inset</source>
+        <translation>Rientro tavolo</translation>
+    </message>
+    <message>
+        <source>Table leg height</source>
+        <translation>Altezza gamba tavolo</translation>
+    </message>
+    <message>
+        <source>Table top thickness</source>
+        <translation>Spessore piano tavolo</translation>
+    </message>
+    <message>
+        <source>Table apron height</source>
+        <translation>Altezza fascia tavolo</translation>
+    </message>
+    <message>
+        <source>Table apron thickness</source>
+        <translation>Spessore fascia tavolo</translation>
+    </message>
+    <message>
+        <source>Table apron drop</source>
+        <translation>Calo fascia tavolo</translation>
+    </message>
+    <message>
+        <source>Cabinet width</source>
+        <translation>Larghezza carcassa</translation>
+    </message>
+    <message>
+        <source>Cabinet depth</source>
+        <translation>Profondità carcassa</translation>
+    </message>
+    <message>
+        <source>Cabinet height</source>
+        <translation>Altezza carcassa</translation>
+    </message>
+    <message>
+        <source>Cabinet side</source>
+        <translation>Spessore fianco</translation>
+    </message>
+    <message>
+        <source>Cabinet panel</source>
+        <translation>Spessore piano</translation>
+    </message>
+    <message>
+        <source>Cabinet back</source>
+        <translation>Spessore schienale</translation>
+    </message>
+    <message>
+        <source>Drawer width</source>
+        <translation>Larghezza cassetto</translation>
+    </message>
+    <message>
+        <source>Drawer depth</source>
+        <translation>Profondità cassetto</translation>
+    </message>
+    <message>
+        <source>Drawer height</source>
+        <translation>Altezza cassetto</translation>
+    </message>
+    <message>
+        <source>Drawer side</source>
+        <translation>Spessore fianco cassetto</translation>
+    </message>
+    <message>
+        <source>Drawer bottom</source>
+        <translation>Spessore fondo</translation>
     </message>
 </context>
 <context>

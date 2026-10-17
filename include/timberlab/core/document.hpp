@@ -82,8 +82,13 @@ class Document {
   std::string toJson() const;
   static bool fromJson(const std::string& json, Document& out, std::string& error);
 
-  // Four legs, four aprons, one top. Sizes and positions follow project parameters.
+  // Four legs, four aprons, one top. Same numbers as an inserted table, with the
+  // short driver ids table.width and the rest, at the origin. Replaces the project.
   void makeDemoTable();
+
+  // Inserts a table, a cabinet carcass, or a drawer box as ordinary parts.
+  // Unknown kind is assembly.unknown. The recipe is not stored.
+  bool addAssembly(std::string_view kind, std::string& error);
 
  private:
   std::string id_;

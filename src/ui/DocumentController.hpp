@@ -108,6 +108,7 @@ class DocumentController : public QObject {
   Q_INVOKABLE void addBoard();
   Q_INVOKABLE void addBox();
   Q_INVOKABLE void addCylinder();
+  Q_INVOKABLE void addAssembly(const QString& kind);
   Q_INVOKABLE void duplicateSelected();
   Q_INVOKABLE void deleteSelected();
   Q_INVOKABLE void select(const QString& id);
@@ -150,6 +151,7 @@ class DocumentController : public QObject {
   QString messageFor(const QString& code) const;
   QString fieldLabel(const std::string& field) const;
   QString parameterLabel(const constraints::Parameter& parameter) const;
+  QString instanceParameterLabel(const std::string& id, const std::string& role) const;
   QString termSource(const constraints::Term& term) const;
   QString formulaFor(const constraints::Binding& binding) const;
   units::LengthUnit currentUnit() const;

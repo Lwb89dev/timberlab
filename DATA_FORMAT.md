@@ -47,6 +47,8 @@ Each binding is `part`, `field` (`width`, `height`, `thickness`, `radius`, `x`, 
 
 A cycle is `parameter.cycle`. A result that is not a legal size or placement is `parameter.range`. An unknown field is `parameter.unknown`. A missing parameter or part is `parameter.missing` or `component.missing`. Duplicate targets are `storage.duplicate`. When load fails, the document being read into is left unchanged. A typed edit of a bound field is `parameter.driven` and does not change the number.
 
+An assembly is not a stored object. Creating one writes rows into these `parameters` and `bindings` arrays, and ordinary components. Schema version stays 1. There is no `assemblies` array.
+
 ## Writes
 
 The save path is `path.tmp`, then rename onto the destination. If that rename fails, the temporary file is removed and the existing project is left in place. If the destination already exists it is copied to `path.bak` first. If that backup copy fails, the save fails and the previous file stays. The new project file and the backup are owner-read/write only. A file larger than 32 MiB is rejected before it is parsed (`storage.too_large`). A model with more than 2000 components is rejected (`storage.too_many`). Duplicate component ids are rejected (`storage.duplicate`). Names are at most 200 bytes, notes at most 8000 bytes, ids at most 64 bytes, and a rotation whose absolute value is above one million degrees is rejected. A checksum mismatch on load is an error. The loader also accepts a raw JSON object that starts with `{` and uses the model schema, so a single component file can be inspected without unzipping. That path is still size-capped and still parsed by the model checks. It does not verify the zip checksum.

@@ -18,10 +18,10 @@ A lock blocks that typed edit. It also blocks adding or releasing a binding. It 
 
 Joint sizes stay numbers on the joint. Changing a part size rebuilds the cut from those numbers and the new extents when the joint still fits. An edit that would make the joint not fit is rejected and does not change the document. Propagation does not turn a joint into a formula. Schema version stays 1. Empty parameter and binding arrays are omitted. On load, bindings run before the joint fit check.
 
-The demo table uses this mechanism: nine drivers, and bindings for the legs, aprons, and top. It is not an assembly recipe.
+The demo table uses this mechanism: nine drivers (`table.width` and the rest), and bindings for the legs, aprons, and top. An inserted assembly writes the same kind of rows under its own ids and then stops. It is not a live parent. See `docs/adr/0009-assemblies.md`.
 
 ## Consequences
 
-- There is no expression language and no cabinet generator in this step.
+- Assembly recipes for a table, a cabinet carcass, and a drawer box run once at creation. There is still no expression language and no live cabinet generator.
 - A failed propagation does not drop parts or joints, and it does not keep a partial update. An edit whose result makes a stored joint fail its fit check is rolled back with that joint error. The joint numbers stay as stored.
 - Display rounding still does not write back. The arithmetic is integer nanometres. An overflow is `parameter.range`.

@@ -20,7 +20,8 @@ Work stays inside this repository. `deps/` and `build/` are local. Do not commit
 - Core functions return stable error codes (`dimension.non_positive`, `storage.checksum`, …). The controller translates those codes. Do not put translated sentences in the model.
 - Do not write display rounding back into nanometres.
 - Do not invent density or hardness. Leave the field null.
-- Joints are booleans with stored sizes. A new assembly is a later milestone. Do not fake a joint with a decorative mesh.
+- Joints are booleans with stored sizes. Do not fake a joint with a decorative mesh.
+- An assembly is a recipe that writes ordinary parts, parameters, and bindings. It does not cut a joint, and it is not solved again when a part changes.
 - The user library is `library.sqlite`, schema version 2. Do not store a solid in it, and do not fold it into the preferences database.
 - OCCT stays on the calling thread.
 

@@ -18,10 +18,10 @@ TimberLab is a parametric woodworking CAD. This repository is the first running 
 - SQLite preferences, separate from the project.
 - A user library of custom materials and thickness presets in its own SQLite file. The project still stores only a material id.
 - Italian interface when the system language is Italian. English is the source language.
-- Automated tests for units, documents, solids, storage, the user library, the catalog, joinery, and parameter propagation.
+- Automated tests for units, documents, solids, storage, the user library, the catalog, joinery, parameter propagation, and assemblies.
 - Mortise and tenon, half-lap, dado, groove, and rabbet. The cuts are booleans on the solids. Each joint keeps its own sizes.
 
-A demo table is nine boards (four legs, four aprons, one top). Nine project parameters drive their sizes and positions: width, depth, leg, inset, leg height, top thickness, apron height, apron thickness, and apron drop. Changing the width updates the top, the aprons that span that width, and the legs on the far side. Undo restores the previous sizes in one step. Smart assemblies, where a recipe creates a cabinet or a drawer, are still later.
+A demo table is nine boards (four legs, four aprons, one top). Nine project parameters drive their sizes and positions: width, depth, leg, inset, leg height, top thickness, apron height, apron thickness, and apron drop. Changing the width updates the top, the aprons that span that width, and the legs on the far side. Undo restores the previous sizes in one step. The Assembly menu inserts a table, a cabinet carcass, or a drawer box into the current project. Each one is ordinary boards plus its own parameters and bindings, so the parts stay editable. A later change does not move the other assemblies. The recipe is not stored, and it does not cut joints.
 
 ## What is not implemented
 

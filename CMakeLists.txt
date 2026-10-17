@@ -41,6 +41,7 @@ set(TIMBERLAB_MODEL_SOURCES
   src/core/component.cpp
   src/core/joint.cpp
   src/core/document.cpp
+  src/core/assembly.cpp
   src/constraints/dependency_graph.cpp
   src/constraints/binding.cpp
   src/geometry/solids.cpp
@@ -136,6 +137,7 @@ if(BUILD_TESTING)
     tests/test_constraints.cpp
     tests/test_joinery.cpp
     tests/test_propagation.cpp
+    tests/test_assembly.cpp
     tests/test_library.cpp
   )
   target_link_libraries(timberlab-tests PRIVATE timberlab-model Catch2::Catch2WithMain)

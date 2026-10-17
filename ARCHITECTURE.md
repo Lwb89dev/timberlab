@@ -8,6 +8,7 @@ TimberLab keeps the parametric model independent of Qt. QML reads and writes the
 |---|---|---|
 | Units | `include/timberlab/units` | Parse and format lengths. Storage is nanometres. |
 | Document | `include/timberlab/core` | Parts, placement, history, JSON. |
+| Assemblies | `src/core/assembly.cpp` | Recipes that append boards, parameters, and bindings. Not a stored parent. |
 | Constraints | `include/timberlab/constraints` | Dependency graph and linear bindings. A project parameter recomputes the part fields that name it. |
 | Geometry | `include/timberlab/geometry` | OCCT box and cylinder, volume, bounds, display mesh. |
 | Materials | `include/timberlab/materials` | Catalog and preset JSON. |
@@ -16,7 +17,7 @@ TimberLab keeps the parametric model independent of Qt. QML reads and writes the
 | UI | `src/ui`, `qml/` | Controller, OpenGL viewport, workspace. |
 | App | `apps/timberlab` | Process entry and the headless self-check. |
 
-Planned modules (assemblies, sync, manufacturing export) have no code yet. The document model leaves room for a parent id, notes, and a material id on every part.
+Planned modules (sync, manufacturing export) have no code yet. The document model leaves room for a parent id, notes, and a material id on every part. `parentId` is still stored and still unused as a live parent. An assembly does not fill it.
 
 ## Boundaries
 

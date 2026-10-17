@@ -20,4 +20,4 @@ The shipped catalog stays the JSON resource. User rows are appended in the mater
 
 - A failed library open leaves the project usable.
 - Nostr can round-trip these records later. This step does not open a socket.
-- Smart assemblies are still a later milestone. A saved thickness is a number, not a cabinet rule.
+- A saved thickness is a number, not a cabinet rule. Assembly recipes write ordinary parts into the project and do not read this database.
