@@ -10,13 +10,13 @@ The solid has to be an OCCT shape. The screen needs selection, orbit, and a ligh
 
 ## Decision
 
-OCCT remains the solid. `BRepMesh_IncrementalMesh` produces the triangles. A `QQuickFramebufferObject` draws them with OpenGL 3.3 core, Lambert-style wrap lighting, and an amber selection mix. Picking renders integer part ids into an `GL_R32I` framebuffer and reads them back with `GL_RED_INTEGER`. Id 0 means the click missed.
+OCCT remains the solid. `BRepMesh_IncrementalMesh` produces the triangles. A `QQuickFramebufferObject` draws them with Lambert-style wrap lighting and an amber selection mix. Picking renders integer part ids into an `GL_R32I` framebuffer and reads them back with `GL_RED_INTEGER`. Id 0 means the click missed. `GL_R32I` and integer fragment outputs exist in OpenGL 3.3 and in OpenGL ES 3.0, so the picker does not depend on a desktop-only feature.
 
-The process calls `QQuickWindow::setGraphicsApi(OpenGL)` and sets a 3.3 core surface format before the application object exists. The framebuffer item does not render if Qt has already chosen Vulkan, Metal, or D3D.
+The shader bodies are shared. The version line is chosen from the current context: `#version 330 core` when the context is desktop GL, `#version 300 es` with `highp` precision when `QOpenGLContext::isOpenGLES()` is true. On Android the surface format is OpenGL ES 3.0 with no profile. On Linux it stays OpenGL 3.3 core. The process calls `QQuickWindow::setGraphicsApi(OpenGL)` and sets that format before the application object exists. The framebuffer item does not render if Qt has already chosen Vulkan, Metal, or D3D.
 
 ## Consequences
 
 - Face and edge picking are not implemented. Selection is the whole part.
 - Dimension annotations are not drawn in the viewport. Numbers live in the inspector.
-- Desktop GL 3.3 is verified on this machine's Mesa driver. An OpenGL ES shader path for Android is not written.
+- Desktop GL 3.3 is verified on this machine's Mesa driver. The ES 3.00 sources are in the same binary and are selected only for an ES context. No Android package has been compiled or run, so the tablet path is unproven.
 - Mesh quality changes the triangle count, not the solid.

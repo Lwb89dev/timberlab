@@ -35,7 +35,7 @@ The save path is `path.tmp`, then rename. If the destination already exists it i
 
 ## Preferences
 
-SQLite, schema version 1, tables `schema_meta(version)` and `user_preference(key, value)`. A database whose version is newer than 1 is refused. Keys used now: `display_unit`, `fraction_precision`, `mesh_quality`. The file is `$TIMBERLAB_DATA_DIR/timberlab.sqlite`, or `$XDG_DATA_HOME/timberlab/`, or `~/.local/share/timberlab/`.
+SQLite, schema version 1, tables `schema_meta(version)` and `user_preference(key, value)`. A database whose version is newer than 1 is refused. Keys used now: `display_unit`, `fraction_precision`, `mesh_quality`. The file is `$TIMBERLAB_DATA_DIR/timberlab.sqlite`, or `$XDG_DATA_HOME/timberlab/`, or `~/.local/share/timberlab/`. This database is not the project. A user material library is not in it. See `docs/adr/0006-persistence.md`.
 
 ## Catalog files
 

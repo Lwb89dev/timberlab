@@ -2,10 +2,11 @@
 
 Two runners cover the same foundation:
 
-- `build/timberlab-tests` — Catch2, 21 test cases
-- `build/timberlab --check` — the same checks linked into the application, without Qt
+- `build/timberlab-tests` — Catch2, 21 test cases. These do not construct the Qt controller.
+- `build/timberlab --check` — the same model checks linked into the application, without Qt
+- `build/timberlab --accept` — the editor controller, without a window. It creates two boards, types exact sizes, saves, reopens, edits again, and checks nanometres plus the rebuilt mesh.
 
-On the baseline that introduced this file, both passed: Catch2 reported 466 assertions, and `--check` printed `self-check ok`. Re-run them after you change units, documents, solids, or storage. A green result in a later edit is not implied by this paragraph.
+On the baseline that introduced this file, Catch2 reported 466 assertions and `--check` printed `self-check ok`. After the editor acceptance path and the box-mesh vertex check were added, Catch2 reported 472 assertions in 21 cases, `--check` printed `self-check ok`, and `--accept` printed `accept ok` for an 800 × 18 × 400 mm shelf and a 24 × 3/4 × 12 inch rail reloaded from `build/accept/boards.timberlab`. Re-run them after you change units, documents, solids, storage, or the controller. A green result in a later edit is not implied by this paragraph.
 
 `TIMBERLAB_TEST_DIR` for Catch2 is the build directory `testdata/`. `--check` writes under `TIMBERLAB_DATA_DIR` or, if that is unset, `build/self-check`. Set the variable so a test does not touch `~/.local/share`.
 

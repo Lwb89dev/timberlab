@@ -28,7 +28,7 @@ Planned modules (joinery, assemblies, sync, manufacturing export) have no code y
 
 ## Viewport
 
-See `docs/adr/0001-renderer.md`. Short version: OCCT builds the solid, `BRepMesh_IncrementalMesh` tessellates it, and a `QQuickFramebufferObject` draws the triangles with OpenGL 3.3. Picking uses an integer id buffer (`GL_R32I`), not an 8-bit color. The process asks Qt for OpenGL before any window exists, because this item does not render on the default Qt 6 Vulkan scene graph.
+See `docs/adr/0001-renderer.md`. Short version: OCCT builds the solid, `BRepMesh_IncrementalMesh` tessellates it, and a `QQuickFramebufferObject` draws the triangles. Desktop Linux uses OpenGL 3.3 core. The same shader bodies compile as OpenGL ES 3.00 when the context is ES, which is what an Android tablet will need. That ES path has not been run on a device. Picking uses an integer id buffer (`GL_R32I`), not an 8-bit color. The process asks Qt for OpenGL before any window exists, because this item does not render on the default Qt 6 Vulkan scene graph.
 
 Mesh deflection is 1.5 mm (draft), 0.4 mm (standard), or 0.1 mm (fine). The solid volume does not depend on that setting.
 
@@ -38,6 +38,6 @@ See `docs/adr/0002-units.md`. One inch is 25 400 000 nm, so binary fractions dow
 
 ## Persistence
 
-Preferences (display unit, fraction denominator, mesh quality) live in SQLite. The project file does not. See `DATA_FORMAT.md`.
+The project model lives in the versioned `.timberlab` archive, with a checksum. SQLite today stores preferences only (schema version 1). A user library of custom materials and presets is not implemented. Nostr stays out until that library exists as its own versioned database, and it must not become the only copy of a solid. See `DATA_FORMAT.md` and `docs/adr/0006-persistence.md`.
 
 The dependency graph is covered by tests so later propagation has a cycle check. Nothing in the editor calls it yet.

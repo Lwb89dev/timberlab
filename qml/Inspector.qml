@@ -7,6 +7,7 @@ Rectangle {
     color: Theme.panel
 
     component ValueField: RowLayout {
+        id: field
         property string label: ""
         property string value: ""
         property string placeholder: ""
@@ -20,12 +21,12 @@ Rectangle {
         TextField {
             Layout.fillWidth: true
             implicitHeight: Theme.controlHeight
-            property string committed: value
-            text: committed
+            property string committedValue: value
+            text: committedValue
             placeholderText: placeholder
             selectByMouse: true
-            onCommittedChanged: if (!activeFocus) text = committed
-            onEditingFinished: parent.committed(text)
+            onCommittedValueChanged: if (!activeFocus) text = committedValue
+            onEditingFinished: field.committed(text)
         }
     }
 
@@ -65,6 +66,7 @@ Rectangle {
                 onCommitted: function (text) { app.setPartName(app.selectedId, text) }
             }
             ComboBox {
+                id: materialBox
                 Layout.fillWidth: true
                 implicitHeight: Theme.controlHeight
                 textRole: "name"
@@ -78,7 +80,7 @@ Rectangle {
                 }
                 Connections {
                     target: app
-                    function onDocumentChanged() { parent.syncMaterial() }
+                    function onDocumentChanged() { materialBox.syncMaterial() }
                 }
             }
             ComboBox {

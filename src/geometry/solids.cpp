@@ -85,9 +85,11 @@ SolidMesh meshShape(const TopoDS_Shape& shape, double deflection) {
     if (triangulation.IsNull()) continue;
     const gp_Trsf transform = location.Transformation();
     const bool reversed = face.Orientation() == TopAbs_REVERSED;
+    const int nodeCount = triangulation->NbNodes();
     for (int index = 1; index <= triangulation->NbTriangles(); ++index) {
       int n1 = 0, n2 = 0, n3 = 0;
       triangulation->Triangle(index).Get(n1, n2, n3);
+      if (n1 < 1 || n2 < 1 || n3 < 1 || n1 > nodeCount || n2 > nodeCount || n3 > nodeCount) continue;
       if (reversed) std::swap(n2, n3);
       const gp_Pnt a = triangulation->Node(n1).Transformed(transform);
       const gp_Pnt b = triangulation->Node(n2).Transformed(transform);

@@ -2,8 +2,11 @@
 
 #include "DocumentController.hpp"
 
+#include <QByteArray>
+#include <QDebug>
 #include <QLineF>
 #include <QOpenGLBuffer>
+#include <QOpenGLContext>
 #include <QOpenGLExtraFunctions>
 #include <QOpenGLFramebufferObject>
 #include <QOpenGLShaderProgram>
@@ -22,7 +25,9 @@ namespace {
 
 constexpr float kFov = 40.f;
 
-const char* kMeshVertex = R"(#version 330 core
+// Bodies are shared. The version line is chosen when the context is created:
+// #version 330 core on desktop GL, #version 300 es on OpenGL ES 3.0.
+const char* kMeshVertexBody = R"(
 layout(location = 0) in vec3 aPos;
 layout(location = 1) in vec3 aNormal;
 uniform mat4 uMvp;
@@ -34,7 +39,7 @@ void main() {
 }
 )";
 
-const char* kMeshFragment = R"(#version 330 core
+const char* kMeshFragmentBody = R"(
 in vec3 vNormal;
 out vec4 fragColor;
 uniform vec3 uColor;
@@ -50,19 +55,19 @@ void main() {
 }
 )";
 
-const char* kPickVertex = R"(#version 330 core
+const char* kPickVertexBody = R"(
 layout(location = 0) in vec3 aPos;
 uniform mat4 uMvp;
 void main() { gl_Position = uMvp * vec4(aPos, 1.0); }
 )";
 
-const char* kPickFragment = R"(#version 330 core
+const char* kPickFragmentBody = R"(
 layout(location = 0) out int fragId;
 uniform int uId;
 void main() { fragId = uId; }
 )";
 
-const char* kLineVertex = R"(#version 330 core
+const char* kLineVertexBody = R"(
 layout(location = 0) in vec3 aPos;
 layout(location = 1) in vec3 aColor;
 uniform mat4 uViewProj;
@@ -73,11 +78,32 @@ void main() {
 }
 )";
 
-const char* kLineFragment = R"(#version 330 core
+const char* kLineFragmentBody = R"(
 in vec3 vColor;
 out vec4 fragColor;
 void main() { fragColor = vec4(vColor, 1.0); }
 )";
+
+QByteArray shaderSource(bool es, bool fragment, const char* body) {
+  QByteArray source = es ? QByteArray("#version 300 es\n") : QByteArray("#version 330 core\n");
+  if (es && fragment) source += "precision highp float;\nprecision highp int;\n";
+  source += body;
+  return source;
+}
+
+bool compileShader(QOpenGLShaderProgram& program, QOpenGLShader::ShaderType type, const QByteArray& source) {
+  if (program.addShaderFromSourceCode(type, source)) return true;
+  qWarning("TimberLab shader compile failed: %s", qPrintable(program.log()));
+  return false;
+}
+
+bool linkProgram(QOpenGLShaderProgram& program, bool es, const char* vertex, const char* fragment) {
+  if (!compileShader(program, QOpenGLShader::Vertex, shaderSource(es, false, vertex))) return false;
+  if (!compileShader(program, QOpenGLShader::Fragment, shaderSource(es, true, fragment))) return false;
+  if (program.link()) return true;
+  qWarning("TimberLab shader link failed: %s", qPrintable(program.log()));
+  return false;
+}
 
 struct DrawPart {
   QString id;
@@ -148,15 +174,11 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
  private:
   void ensurePrograms() {
     if (meshProgram_.isLinked()) return;
-    meshProgram_.addShaderFromSourceCode(QOpenGLShader::Vertex, kMeshVertex);
-    meshProgram_.addShaderFromSourceCode(QOpenGLShader::Fragment, kMeshFragment);
-    meshProgram_.link();
-    pickProgram_.addShaderFromSourceCode(QOpenGLShader::Vertex, kPickVertex);
-    pickProgram_.addShaderFromSourceCode(QOpenGLShader::Fragment, kPickFragment);
-    pickProgram_.link();
-    lineProgram_.addShaderFromSourceCode(QOpenGLShader::Vertex, kLineVertex);
-    lineProgram_.addShaderFromSourceCode(QOpenGLShader::Fragment, kLineFragment);
-    lineProgram_.link();
+    const QOpenGLContext* context = QOpenGLContext::currentContext();
+    const bool es = context != nullptr && context->isOpenGLES();
+    linkProgram(meshProgram_, es, kMeshVertexBody, kMeshFragmentBody);
+    linkProgram(pickProgram_, es, kPickVertexBody, kPickFragmentBody);
+    linkProgram(lineProgram_, es, kLineVertexBody, kLineFragmentBody);
   }
 
   void ensureGrid() {

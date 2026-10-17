@@ -38,6 +38,7 @@ The executables record an RPATH to the OCCT and Qt library directories. The link
 ```bash
 ./build/timberlab-tests
 TIMBERLAB_DATA_DIR="$PWD/build/self-check" TIMBERLAB_SOURCE_DIR="$PWD" ./build/timberlab --check
+TIMBERLAB_DATA_DIR="$PWD/build/accept" ./build/timberlab --accept
 ```
 
 Both were run successfully on this baseline. See `TESTING.md`.
@@ -58,6 +59,6 @@ Modeling only: Foundation, ModelingData, ModelingAlgorithms. Application framewo
 
 These notes are not build scripts and have not been tried.
 
-- **Windows.** MSVC needs a 128-bit integer path. The current length code uses `__int128` and stops the compile on a compiler that does not provide it. Qt and OCCT would come from their Windows packages. The viewport assumes OpenGL 3.3.
+- **Windows.** MSVC needs a 128-bit integer path. The current length code uses `__int128` and stops the compile on a compiler that does not provide it. Qt and OCCT would come from their Windows packages. The viewport uses OpenGL 3.3 on desktop.
 - **macOS.** Qt would be the macOS package, and the window must request OpenGL before show because the framebuffer item does not run on Metal. OCCT would be built the same way, without the visualization toolkit. Apple Silicon and Intel are both untested.
-- **Android arm64.** There is no NDK setup in this tree. OCCT would be a cross build. The viewport would need an OpenGL ES path; the desktop shaders are GLSL 3.30. Qt Quick 3D stays out of the plan because that module is GPL-only and is a poor fit for integer picking. Do not mark Android supported until an arm64 package has been installed and used on a tablet.
+- **Android arm64.** There is no NDK setup in this tree, and no tablet has been built. The shader bodies already have an OpenGL ES 3.00 variant, selected when the context is ES, and `Q_OS_ANDROID` requests an ES 3.0 surface instead of a desktop core profile. CMake does not append the Linux `deps/qt/6.8.3/gcc_64` or `deps/occt-install` prefixes when `CMAKE_SYSTEM_NAME` is Android, and it does not pass `--disable-new-dtags` except on Linux. An Android configure still needs its own Qt and OCCT prefixes. Qt Quick 3D stays out: it is not in this install, and Qt lists it as GPL rather than LGPL. Do not mark Android supported until an arm64 package has been installed and used on a tablet.

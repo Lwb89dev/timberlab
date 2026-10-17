@@ -25,6 +25,8 @@ struct SolidMesh {
 };
 
 // OCCT is the solid authority. The returned mesh is only a display tessellation.
+// A joint has to change this shape with a boolean and keep the parameters that
+// rebuild it. A mesh edited in the viewport is not a joint.
 // Calls are not thread-safe: OCCT is used from the thread that calls these functions.
 SolidMesh makeBoxMesh(double widthMm, double thicknessMm, double heightMm, MeshQuality quality);
 SolidMesh makeCylinderMesh(double radiusMm, double heightMm, MeshQuality quality);

@@ -31,12 +31,16 @@ From a configured build tree (see `BUILDING.md`):
 
 ```bash
 ./build/timberlab
+./build/timberlab progetto.timberlab
 ./build/timberlab --demo
 ./build/timberlab --check
+./build/timberlab --accept
 ./build/timberlab-tests
 ```
 
-`--check` is headless. It does not open a window. Set `TIMBERLAB_DATA_DIR` to a directory inside this repository if you do not want preferences written under `~/.local/share/timberlab`. Set `TIMBERLAB_SOURCE_DIR` to the repository root so `--check` also reads the shipped catalog.
+`--check` and `--accept` are headless. They do not open a window. Set `TIMBERLAB_DATA_DIR` to a directory inside this repository if you do not want preferences written under `~/.local/share/timberlab`. Set `TIMBERLAB_SOURCE_DIR` to the repository root so `--check` also reads the shipped catalog.
+
+`--accept` drives the editor controller: two boards, exact millimetre and inch text, a locked edit that must fail, undo, save, reopen, then one more edit saved back to the same file. It checks the stored nanometres and the tessellation rebuilt from the OCCT solid. It does not click the QML fields.
 
 ## Axes
 

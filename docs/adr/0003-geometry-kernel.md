@@ -13,6 +13,6 @@ The vendored build is 7.9.2 with modeling libraries only. The API used (`BRepMes
 ## Consequences
 
 - Calls stay on one thread.
-- Boolean joinery can be added later on the same shapes without a second kernel.
+- Joinery, when it is added, has to be a boolean on these shapes. The parameters that rebuild the boolean stay in the document. The display mesh is not a joint.
 - The visualization toolkit is not a dependency.
 - Exact STEP export is a later data-exchange build of OCCT, not something the current libraries do.

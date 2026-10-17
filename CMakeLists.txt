@@ -18,11 +18,16 @@ endif()
 # only when they pass -D; here we append the vendored prefixes when present.
 set(_TIMBERLAB_QT "${CMAKE_CURRENT_SOURCE_DIR}/deps/qt/6.8.3/gcc_64")
 set(_TIMBERLAB_OCCT "${CMAKE_CURRENT_SOURCE_DIR}/deps/occt-install")
-if(EXISTS "${_TIMBERLAB_QT}/lib/cmake/Qt6/Qt6Config.cmake")
-  list(APPEND CMAKE_PREFIX_PATH "${_TIMBERLAB_QT}")
-endif()
-if(EXISTS "${_TIMBERLAB_OCCT}/lib/cmake/opencascade/OpenCASCADEConfig.cmake")
-  list(APPEND CMAKE_PREFIX_PATH "${_TIMBERLAB_OCCT}")
+# The vendored prefixes are the Linux desktop build. An Android (or other)
+# configure must pass its own CMAKE_PREFIX_PATH. Linking gcc_64 into a
+# tablet toolchain would succeed at configure time and fail on the device.
+if(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
+  if(EXISTS "${_TIMBERLAB_QT}/lib/cmake/Qt6/Qt6Config.cmake")
+    list(APPEND CMAKE_PREFIX_PATH "${_TIMBERLAB_QT}")
+  endif()
+  if(EXISTS "${_TIMBERLAB_OCCT}/lib/cmake/opencascade/OpenCASCADEConfig.cmake")
+    list(APPEND CMAKE_PREFIX_PATH "${_TIMBERLAB_OCCT}")
+  endif()
 endif()
 
 find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick OpenGL QuickControls2 LinguistTools)
@@ -73,6 +78,7 @@ target_compile_options(timberlab-model PRIVATE
 qt_add_executable(timberlab
   apps/timberlab/main.cpp
   apps/timberlab/self_check.cpp
+  apps/timberlab/accept.cpp
   src/ui/DocumentController.cpp
   src/ui/ViewportItem.cpp
 )
@@ -96,12 +102,15 @@ target_link_libraries(timberlab PRIVATE
   Qt6::QuickControls2
 )
 target_compile_options(timberlab PRIVATE -Wall -Wextra -Wpedantic)
-set_target_properties(timberlab PROPERTIES
-  BUILD_RPATH "${OpenCASCADE_LIBRARY_DIR};${_TIMBERLAB_QT}/lib"
-)
-# DT_RPATH, not DT_RUNPATH. OCCT's own libraries do not carry a run path,
-# and RUNPATH is not used when resolving their dependencies.
-target_link_options(timberlab PRIVATE LINKER:--disable-new-dtags)
+# DT_RPATH, not DT_RUNPATH, and only for the GNU ld Linux build. OCCT's own
+# libraries do not carry a run path, and RUNPATH is not used when resolving
+# their dependencies. Android's lld does not take this flag.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set_target_properties(timberlab PROPERTIES
+    BUILD_RPATH "${OpenCASCADE_LIBRARY_DIR};${_TIMBERLAB_QT}/lib"
+  )
+  target_link_options(timberlab PRIVATE LINKER:--disable-new-dtags)
+endif()
 
 include(CTest)
 if(BUILD_TESTING)
@@ -129,10 +138,12 @@ if(BUILD_TESTING)
     TIMBERLAB_TEST_DIR="${CMAKE_BINARY_DIR}/testdata"
   )
   target_compile_options(timberlab-tests PRIVATE -Wall -Wextra -Wpedantic)
-  target_link_options(timberlab-tests PRIVATE LINKER:--disable-new-dtags)
-  set_target_properties(timberlab-tests PROPERTIES
-    BUILD_RPATH "${OpenCASCADE_LIBRARY_DIR}"
-  )
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_options(timberlab-tests PRIVATE LINKER:--disable-new-dtags)
+    set_target_properties(timberlab-tests PROPERTIES
+      BUILD_RPATH "${OpenCASCADE_LIBRARY_DIR}"
+    )
+  endif()
   include(Catch)
   catch_discover_tests(timberlab-tests)
 endif()

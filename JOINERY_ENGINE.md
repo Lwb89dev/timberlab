@@ -1,8 +1,8 @@
 # Joinery
 
-No joint is implemented.
+No joint is implemented. The rule is in `docs/adr/0005-joinery.md`.
 
-The product will cut real solids. A mortise will be a boolean on the receiving part, driven by stored parameters, and rebuilt when that part changes. A decorative mesh is not a joint.
+A mortise and tenon will modify both solids with an OCCT boolean. The joint record keeps the parameters needed to regenerate those cuts when either part changes. A decorative mesh, a texture, or a second shape drawn on top of an untouched board is not a joint. A failed boolean is an error.
 
 The first set, when it is built, is mortise and tenon, half-lap, dado, groove, and rabbet/rebate. Dovetails and the other joints in the specification come after those have regression tests.
 
