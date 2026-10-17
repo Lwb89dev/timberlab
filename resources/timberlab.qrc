@@ -13,4 +13,7 @@
         <file alias="materials.json">data/materials.json</file>
         <file alias="presets.json">data/presets.json</file>
     </qresource>
+    <qresource prefix="/icons">
+        <file alias="icon.png">../assets/icons/icon.png</file>
+    </qresource>
 </RCC>

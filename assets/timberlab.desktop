@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=TimberLab
+Comment=Parametric woodworking CAD
+Comment[it]=CAD parametrico per il legno
+Exec=timberlab
+Icon=timberlab
+Terminal=false
+Categories=Graphics;Engineering;
+StartupWMClass=timberlab

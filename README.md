@@ -6,7 +6,7 @@ TimberLab is a parametric woodworking CAD. This repository is the first running 
 
 ## What works now
 
-- Qt 6 workspace with a dark graphite theme, a parts list, a property inspector, and a 3D viewport.
+- Qt 6 workspace with a dark graphite theme, a parts list, a property inspector, and a 3D viewport. The window icon is `assets/icons/icon.png`. The Wayland app id is `timberlab`, the same base name as `assets/timberlab.desktop`.
 - Open CASCADE solids for a board, a box, and a cylinder. The picture on screen is a mesh generated from that solid.
 - Orbit, pan, zoom, and standard views (top, front, right, isometric) from the View menu. Fit frames the model.
 - Click a part to select it. Edit width, thickness, height, radius, position, and rotation as numbers.

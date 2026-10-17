@@ -51,6 +51,10 @@ TIMBERLAB_DATA_DIR="$PWD/build/gui-data" ./build/timberlab --demo
 
 Qt must be able to open a display. This baseline was launched with `QT_QPA_PLATFORM=xcb` on `DISPLAY=:1`. `TIMBERLAB_SCREENSHOT=/path/to.png` grabs the window after 1.5 seconds and quits. That path should stay inside the repository.
 
+## Panel icon
+
+The process loads `assets/icons/icon.png` and calls `QGuiApplication::setDesktopFileName("timberlab")`. That base name matches `assets/timberlab.desktop`. A Wayland panel resolves `Icon=timberlab` from the icon theme. Copy the desktop file to `~/.local/share/applications/` and scaled PNGs to `~/.local/share/icons/hicolor/<size>/apps/timberlab.png` (48, 64, 128, 256, and 512). Then run `update-desktop-database` on the applications directory. `gtk-update-icon-cache` writes `icon-theme.cache` only when that hicolor directory already has an `index.theme`. Do not add a partial index there: the first `index.theme` on the data path replaces the system one. Without a local index, the system hicolor index still names these sizes, and GTK finds the PNGs under `~/.local/share`. The tracked desktop file keeps `Exec=timberlab`. A machine-local copy can point `Exec` at `build/timberlab`. Nothing from this tree is installed under `/usr`.
+
 ## OCCT options used for the vendored build
 
 Modeling only: Foundation, ModelingData, ModelingAlgorithms. Application frameworks, data exchange, Draw, and visualization were off. FreeType, OpenGL, RapidJSON, TBB, VTK, FreeImage, FFmpeg, and OpenVR were off. The libraries the application links are TKernel, TKMath, TKG2d, TKG3d, TKGeomBase, TKBRep, TKGeomAlgo, TKTopAlgo, TKPrim, TKBO, TKShHealing, TKBool, TKHLR, TKFillet, TKOffset, TKFeat, TKMesh, and TKXMesh.

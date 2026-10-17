@@ -6,6 +6,7 @@
 
 #include <QCoreApplication>
 #include <QGuiApplication>
+#include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QLocale>
@@ -59,6 +60,8 @@ int main(int argc, char* argv[]) {
   QCoreApplication::setOrganizationDomain("timberlab.local");
   QCoreApplication::setApplicationName("TimberLab");
   QCoreApplication::setApplicationVersion("0.1.0");
+  QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/icons/icon.png")));
+  QGuiApplication::setDesktopFileName(QStringLiteral("timberlab"));
   QQuickStyle::setStyle("Fusion");
 
   bool demo = false;
@@ -80,6 +83,8 @@ int main(int argc, char* argv[]) {
   engine.addImportPath(QStringLiteral("qrc:/qt/qml"));
   engine.load(QUrl(QStringLiteral("qrc:/qml/Main.qml")));
   if (engine.rootObjects().isEmpty()) return 1;
+  if (auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().value(0)))
+    window->setIcon(QGuiApplication::windowIcon());
   if (!projectArgument.isEmpty()) controller.loadProject(QUrl::fromLocalFile(projectArgument));
 
   const QString screenshot = qEnvironmentVariable("TIMBERLAB_SCREENSHOT");
