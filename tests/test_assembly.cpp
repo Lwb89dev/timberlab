@@ -101,6 +101,8 @@ TEST_CASE("the demo table keeps its short driver ids") {
   REQUIRE(document.parameters().front().id == "table.width");
   REQUIRE(document.parameters().front().name == "Width");
   REQUIRE(document.components().front().name == "Leg 1");
+  REQUIRE(document.components().front().role == "leg");
+  REQUIRE(document.components().front().parentId.empty());
   for (const Binding& binding : document.bindings()) REQUIRE(binding.constantNm == 0);
 }
 
@@ -385,4 +387,88 @@ TEST_CASE("the component cap rejects a carcass and keeps the parts") {
   REQUIRE(loadBoards(exact, 1995));
   REQUIRE(exact.addAssembly("carcass", error));
   REQUIRE(exact.components().size() == 2000);
+}
+
+TEST_CASE("a frame is four touching rails driven by its stock") {
+  Document document;
+  std::string error;
+  REQUIRE(document.addAssembly("frame", error));
+  REQUIRE(document.components().size() == 4);
+  REQUIRE(document.parameters().size() == 4);
+  REQUIRE(document.joints().empty());
+  REQUIRE(named(document, "Frame left")->role == "stile");
+  REQUIRE(named(document, "Frame left")->parentId.empty());
+  REQUIRE(named(document, "Frame left")->placement.xNm == 0);
+  REQUIRE(named(document, "Frame left")->widthNm == 60 * kMm);
+  REQUIRE(named(document, "Frame right")->placement.xNm == 540 * kMm);
+  REQUIRE(named(document, "Frame right")->role == "stile");
+  REQUIRE(named(document, "Frame bottom")->widthNm == 480 * kMm);
+  REQUIRE(named(document, "Frame bottom")->role == "rail");
+  REQUIRE(named(document, "Frame top")->placement.zNm == 740 * kMm);
+  REQUIRE(named(document, "Frame top")->role == "rail");
+  REQUIRE(separated(document));
+
+  const std::string widthId = findDriver(document, "frame_", "width")->id;
+  REQUIRE(document.setParameter(widthId, 900 * kMm, error));
+  REQUIRE(named(document, "Frame right")->placement.xNm == 840 * kMm);
+  REQUIRE(named(document, "Frame bottom")->widthNm == 780 * kMm);
+  REQUIRE(document.undo(error));
+  REQUIRE(named(document, "Frame right")->placement.xNm == 540 * kMm);
+}
+
+TEST_CASE("shelving spaces the shelves with a bay") {
+  Document document;
+  std::string error;
+  REQUIRE(document.addAssembly("shelving", error));
+  REQUIRE(document.components().size() == 6);
+  REQUIRE(document.parameters().size() == 5);
+  REQUIRE(named(document, "Shelf left")->role == "side");
+  REQUIRE(named(document, "Shelf left")->parentId.empty());
+  REQUIRE(named(document, "Shelf left")->heightNm == 972 * kMm);
+  REQUIRE(named(document, "Shelf bottom")->role == "shelf");
+  REQUIRE(named(document, "Shelf bottom")->widthNm == 764 * kMm);
+  REQUIRE(named(document, "Shelf mid 1")->placement.zNm == 318 * kMm);
+  REQUIRE(named(document, "Shelf mid 2")->placement.zNm == 636 * kMm);
+  REQUIRE(named(document, "Shelf top")->placement.zNm == 954 * kMm);
+  REQUIRE(separated(document));
+
+  const std::string bayId = findDriver(document, "shelving_", "bay")->id;
+  REQUIRE(document.setParameter(bayId, 400 * kMm, error));
+  REQUIRE(named(document, "Shelf left")->heightNm == 1272 * kMm);
+  REQUIRE(named(document, "Shelf mid 1")->placement.zNm == 418 * kMm);
+  REQUIRE(document.undo(error));
+  REQUIRE(named(document, "Shelf left")->heightNm == 972 * kMm);
+}
+
+TEST_CASE("a bedside table keeps the lower shelf still when the height changes") {
+  Document document;
+  std::string error;
+  REQUIRE(document.addAssembly("bedside", error));
+  REQUIRE(document.components().size() == 11);
+  REQUIRE(document.parameters().size() == 8);
+  REQUIRE(document.joints().empty());
+  REQUIRE(named(document, "Bedside leg 1")->role == "leg");
+  REQUIRE(named(document, "Bedside leg 1")->parentId.empty());
+  REQUIRE(named(document, "Bedside leg 1")->heightNm == 530 * kMm);
+  REQUIRE(named(document, "Bedside top")->role == "top");
+  REQUIRE(named(document, "Bedside top")->placement.zNm == 530 * kMm);
+  REQUIRE(named(document, "Bedside shelf")->role == "shelf");
+  REQUIRE(named(document, "Bedside shelf")->placement.zNm == 120 * kMm);
+  REQUIRE(named(document, "Bedside shelf")->heightNm == 18 * kMm);
+  REQUIRE(named(document, "Bedside drawer left")->role == "side");
+  REQUIRE(named(document, "Bedside drawer left")->placement.zNm == 350 * kMm);
+  REQUIRE(named(document, "Bedside drawer front")->role == "front");
+  REQUIRE(named(document, "Bedside drawer back")->role == "back");
+  REQUIRE(named(document, "Bedside drawer bottom")->role == "bottom");
+  REQUIRE(named(document, "Bedside drawer bottom")->heightNm == 6 * kMm);
+  REQUIRE(separated(document));
+
+  const std::string heightId = findDriver(document, "bedside_", "height")->id;
+  REQUIRE(document.setParameter(heightId, 600 * kMm, error));
+  REQUIRE(named(document, "Bedside leg 1")->heightNm == 580 * kMm);
+  REQUIRE(named(document, "Bedside drawer left")->placement.zNm == 400 * kMm);
+  REQUIRE(named(document, "Bedside shelf")->placement.zNm == 120 * kMm);
+  REQUIRE(named(document, "Bedside shelf")->heightNm == 18 * kMm);
+  REQUIRE(document.undo(error));
+  REQUIRE(named(document, "Bedside drawer left")->placement.zNm == 350 * kMm);
 }

@@ -263,6 +263,11 @@ bool buildTable(Recipe& recipe, const std::string& prefix, std::int64_t originNm
   bindTo(recipe, top, "width", 0, {widthTerm});
   bindTo(recipe, top, "thickness", 0, {depthTerm});
   bindTo(recipe, top, "height", 0, {topThickness});
+  for (Component& part : recipe.parts) {
+    if (part.name.rfind("Leg", 0) == 0) part.role = "leg";
+    else if (part.name.find("apron") != std::string::npos) part.role = "apron";
+    else if (part.name == "Top") part.role = "top";
+  }
   return true;
 }
 
@@ -336,6 +341,11 @@ bool buildCarcass(Recipe& recipe, const std::string& prefix, std::int64_t origin
   bindTo(recipe, backPart, "width", 0, {widthTerm, minusTwoSide});
   bindTo(recipe, backPart, "thickness", 0, {backTerm});
   bindTo(recipe, backPart, "height", 0, {heightTerm, minusTwoPanel});
+  for (Component& part : recipe.parts) {
+    if (part.name.find("left") != std::string::npos || part.name.find("right") != std::string::npos) part.role = "side";
+    else if (part.name.find("back") != std::string::npos) part.role = "back";
+    else part.role = "panel";
+  }
   return true;
 }
 
@@ -404,6 +414,259 @@ bool buildDrawer(Recipe& recipe, const std::string& prefix, std::int64_t originN
   bindTo(recipe, bottom, "width", 0, {widthTerm, minusTwoSide});
   bindTo(recipe, bottom, "thickness", 0, {depthTerm, minusTwoSide});
   bindTo(recipe, bottom, "height", 0, {bottomTerm});
+  for (Component& part : recipe.parts) {
+    if (part.name.find("left") != std::string::npos || part.name.find("right") != std::string::npos) part.role = "side";
+    else if (part.name.find("front") != std::string::npos) part.role = "front";
+    else if (part.name.find("back") != std::string::npos) part.role = "back";
+    else part.role = "bottom";
+  }
+  return true;
+}
+
+bool buildFrame(Recipe& recipe, const std::string& prefix, std::int64_t originNm, std::string& error) {
+  const std::int64_t width = 600 * kMm;
+  const std::int64_t height = 800 * kMm;
+  const std::int64_t stock = 60 * kMm;
+  const std::int64_t depth = 20 * kMm;
+  const std::int64_t span = width - 2 * stock;
+  const std::string widthId = driverId(prefix, "width");
+  const std::string heightId = driverId(prefix, "height");
+  const std::string stockId = driverId(prefix, "stock");
+  const std::string depthId = driverId(prefix, "depth");
+  if (!addDriver(recipe, widthId, "Frame width", width, error) ||
+      !addDriver(recipe, heightId, "Frame height", height, error) ||
+      !addDriver(recipe, stockId, "Frame stock", stock, error) ||
+      !addDriver(recipe, depthId, "Frame depth", depth, error)) {
+    return false;
+  }
+  const std::string left = addPart(recipe, "Frame left", "european-oak", originNm, 0, 0, stock, depth, height);
+  const std::string right =
+      addPart(recipe, "Frame right", "european-oak", originNm + width - stock, 0, 0, stock, depth, height);
+  const std::string bottom =
+      addPart(recipe, "Frame bottom", "european-oak", originNm + stock, 0, 0, span, depth, stock);
+  const std::string top =
+      addPart(recipe, "Frame top", "european-oak", originNm + stock, 0, height - stock, span, depth, stock);
+  const constraints::Term widthTerm = driver(widthId, 1);
+  const constraints::Term heightTerm = driver(heightId, 1);
+  const constraints::Term stockTerm = driver(stockId, 1);
+  const constraints::Term minusStock = driver(stockId, -1);
+  const constraints::Term minusTwoStock = driver(stockId, -2);
+  const constraints::Term depthTerm = driver(depthId, 1);
+  bindTo(recipe, left, "width", 0, {stockTerm});
+  bindTo(recipe, left, "thickness", 0, {depthTerm});
+  bindTo(recipe, left, "height", 0, {heightTerm});
+  bindTo(recipe, right, "x", originNm, {widthTerm, minusStock});
+  bindTo(recipe, right, "width", 0, {stockTerm});
+  bindTo(recipe, right, "thickness", 0, {depthTerm});
+  bindTo(recipe, right, "height", 0, {heightTerm});
+  bindTo(recipe, bottom, "x", originNm, {stockTerm});
+  bindTo(recipe, bottom, "width", 0, {widthTerm, minusTwoStock});
+  bindTo(recipe, bottom, "thickness", 0, {depthTerm});
+  bindTo(recipe, bottom, "height", 0, {stockTerm});
+  bindTo(recipe, top, "x", originNm, {stockTerm});
+  bindTo(recipe, top, "z", 0, {heightTerm, minusStock});
+  bindTo(recipe, top, "width", 0, {widthTerm, minusTwoStock});
+  bindTo(recipe, top, "thickness", 0, {depthTerm});
+  bindTo(recipe, top, "height", 0, {stockTerm});
+  for (Component& part : recipe.parts) part.role = part.name.find("left") != std::string::npos ||
+                                                           part.name.find("right") != std::string::npos
+                                                       ? "stile"
+                                                       : "rail";
+  return true;
+}
+
+bool buildShelving(Recipe& recipe, const std::string& prefix, std::int64_t originNm, std::string& error) {
+  const std::int64_t width = 800 * kMm;
+  const std::int64_t depth = 320 * kMm;
+  const std::int64_t side = 18 * kMm;
+  const std::int64_t shelf = 18 * kMm;
+  const std::int64_t bay = 300 * kMm;
+  const std::int64_t height = 4 * shelf + 3 * bay;
+  const std::int64_t inner = width - 2 * side;
+  const std::string widthId = driverId(prefix, "width");
+  const std::string depthId = driverId(prefix, "depth");
+  const std::string sideId = driverId(prefix, "side");
+  const std::string shelfId = driverId(prefix, "shelf");
+  const std::string bayId = driverId(prefix, "bay");
+  if (!addDriver(recipe, widthId, "Shelf width", width, error) ||
+      !addDriver(recipe, depthId, "Shelf depth", depth, error) ||
+      !addDriver(recipe, sideId, "Shelf side", side, error) ||
+      !addDriver(recipe, shelfId, "Shelf thickness", shelf, error) ||
+      !addDriver(recipe, bayId, "Shelf bay", bay, error)) {
+    return false;
+  }
+  const std::string left = addPart(recipe, "Shelf left", "birch-plywood", originNm, 0, 0, side, depth, height);
+  const std::string right =
+      addPart(recipe, "Shelf right", "birch-plywood", originNm + width - side, 0, 0, side, depth, height);
+  const std::string bottom = addPart(recipe, "Shelf bottom", "birch-plywood", originNm + side, 0, 0, inner, depth, shelf);
+  const std::string mid1 =
+      addPart(recipe, "Shelf mid 1", "birch-plywood", originNm + side, 0, shelf + bay, inner, depth, shelf);
+  const std::string mid2 =
+      addPart(recipe, "Shelf mid 2", "birch-plywood", originNm + side, 0, 2 * shelf + 2 * bay, inner, depth, shelf);
+  const std::string top = addPart(recipe, "Shelf top", "birch-plywood", originNm + side, 0, 3 * shelf + 3 * bay, inner,
+                                  depth, shelf);
+  const constraints::Term widthTerm = driver(widthId, 1);
+  const constraints::Term depthTerm = driver(depthId, 1);
+  const constraints::Term sideTerm = driver(sideId, 1);
+  const constraints::Term minusSide = driver(sideId, -1);
+  const constraints::Term minusTwoSide = driver(sideId, -2);
+  const constraints::Term shelfTerm = driver(shelfId, 1);
+  const constraints::Term twoShelf = driver(shelfId, 2);
+  const constraints::Term threeShelf = driver(shelfId, 3);
+  const constraints::Term bayTerm = driver(bayId, 1);
+  const constraints::Term twoBay = driver(bayId, 2);
+  const constraints::Term threeBay = driver(bayId, 3);
+  const constraints::Term fourShelf = driver(shelfId, 4);
+  bindTo(recipe, left, "width", 0, {sideTerm});
+  bindTo(recipe, left, "thickness", 0, {depthTerm});
+  bindTo(recipe, left, "height", 0, {fourShelf, threeBay});
+  bindTo(recipe, right, "x", originNm, {widthTerm, minusSide});
+  bindTo(recipe, right, "width", 0, {sideTerm});
+  bindTo(recipe, right, "thickness", 0, {depthTerm});
+  bindTo(recipe, right, "height", 0, {fourShelf, threeBay});
+  for (const std::string& id : {bottom, mid1, mid2, top}) {
+    bindTo(recipe, id, "x", originNm, {sideTerm});
+    bindTo(recipe, id, "width", 0, {widthTerm, minusTwoSide});
+    bindTo(recipe, id, "thickness", 0, {depthTerm});
+    bindTo(recipe, id, "height", 0, {shelfTerm});
+  }
+  bindTo(recipe, mid1, "z", 0, {shelfTerm, bayTerm});
+  bindTo(recipe, mid2, "z", 0, {twoShelf, twoBay});
+  bindTo(recipe, top, "z", 0, {threeShelf, threeBay});
+  for (Component& part : recipe.parts) {
+    part.role = part.name.find("left") != std::string::npos || part.name.find("right") != std::string::npos ? "side"
+                                                                                                             : "shelf";
+  }
+  return true;
+}
+
+bool buildBedside(Recipe& recipe, const std::string& prefix, std::int64_t originNm, std::string& error) {
+  const std::int64_t width = 450 * kMm;
+  const std::int64_t depth = 380 * kMm;
+  const std::int64_t height = 550 * kMm;
+  const std::int64_t leg = 35 * kMm;
+  const std::int64_t topT = 20 * kMm;
+  const std::int64_t drawerH = 140 * kMm;
+  const std::int64_t side = 12 * kMm;
+  const std::int64_t bottomT = 6 * kMm;
+  const std::int64_t gap = 40 * kMm;
+  const std::int64_t shelfT = 18 * kMm;
+  const std::int64_t shelfZ = 120 * kMm;
+  const std::int64_t legH = height - topT;
+  const std::int64_t drawerZ = height - topT - drawerH - gap;
+  const std::int64_t innerW = width - 2 * leg - 2 * side;
+  const std::int64_t innerD = depth - 2 * leg - 2 * side;
+  const std::int64_t boxW = width - 2 * leg;
+  const std::int64_t boxD = depth - 2 * leg;
+  const std::string widthId = driverId(prefix, "width");
+  const std::string depthId = driverId(prefix, "depth");
+  const std::string heightId = driverId(prefix, "height");
+  const std::string legId = driverId(prefix, "leg");
+  const std::string topId = driverId(prefix, "top");
+  const std::string drawerId = driverId(prefix, "drawerHeight");
+  const std::string sideId = driverId(prefix, "side");
+  const std::string bottomId = driverId(prefix, "bottom");
+  if (!addDriver(recipe, widthId, "Bedside width", width, error) ||
+      !addDriver(recipe, depthId, "Bedside depth", depth, error) ||
+      !addDriver(recipe, heightId, "Bedside height", height, error) ||
+      !addDriver(recipe, legId, "Bedside leg", leg, error) ||
+      !addDriver(recipe, topId, "Bedside top", topT, error) ||
+      !addDriver(recipe, drawerId, "Bedside drawer", drawerH, error) ||
+      !addDriver(recipe, sideId, "Bedside side", side, error) ||
+      !addDriver(recipe, bottomId, "Bedside bottom", bottomT, error)) {
+    return false;
+  }
+  const std::string leg1 = addPart(recipe, "Bedside leg 1", "european-oak", originNm, 0, 0, leg, leg, legH);
+  const std::string leg2 =
+      addPart(recipe, "Bedside leg 2", "european-oak", originNm + width - leg, 0, 0, leg, leg, legH);
+  const std::string leg3 =
+      addPart(recipe, "Bedside leg 3", "european-oak", originNm, depth - leg, 0, leg, leg, legH);
+  const std::string leg4 =
+      addPart(recipe, "Bedside leg 4", "european-oak", originNm + width - leg, depth - leg, 0, leg, leg, legH);
+  const std::string top = addPart(recipe, "Bedside top", "european-oak", originNm, 0, height - topT, width, depth, topT);
+  const std::string shelf = addPart(recipe, "Bedside shelf", "european-oak", originNm + leg, leg, shelfZ, boxW, boxD, shelfT);
+  const std::string left =
+      addPart(recipe, "Bedside drawer left", "european-beech", originNm + leg, leg, drawerZ, side, boxD, drawerH);
+  const std::string right = addPart(recipe, "Bedside drawer right", "european-beech", originNm + width - leg - side, leg,
+                                    drawerZ, side, boxD, drawerH);
+  const std::string front = addPart(recipe, "Bedside drawer front", "european-beech", originNm + leg + side, leg,
+                                    drawerZ + bottomT, innerW, side, drawerH - bottomT);
+  const std::string back = addPart(recipe, "Bedside drawer back", "european-beech", originNm + leg + side,
+                                   depth - leg - side, drawerZ + bottomT, innerW, side, drawerH - bottomT);
+  const std::string bottom = addPart(recipe, "Bedside drawer bottom", "poplar-plywood", originNm + leg + side, leg + side,
+                                     drawerZ, innerW, innerD, bottomT);
+  const constraints::Term widthTerm = driver(widthId, 1);
+  const constraints::Term depthTerm = driver(depthId, 1);
+  const constraints::Term heightTerm = driver(heightId, 1);
+  const constraints::Term legTerm = driver(legId, 1);
+  const constraints::Term minusLeg = driver(legId, -1);
+  const constraints::Term minusTwoLeg = driver(legId, -2);
+  const constraints::Term topTerm = driver(topId, 1);
+  const constraints::Term minusTop = driver(topId, -1);
+  const constraints::Term drawerTerm = driver(drawerId, 1);
+  const constraints::Term minusDrawer = driver(drawerId, -1);
+  const constraints::Term sideTerm = driver(sideId, 1);
+  const constraints::Term minusSide = driver(sideId, -1);
+  const constraints::Term minusTwoSide = driver(sideId, -2);
+  const constraints::Term bottomTerm = driver(bottomId, 1);
+  const constraints::Term minusBottom = driver(bottomId, -1);
+  for (const std::string& id : {leg1, leg2, leg3, leg4}) {
+    bindTo(recipe, id, "width", 0, {legTerm});
+    bindTo(recipe, id, "thickness", 0, {legTerm});
+    bindTo(recipe, id, "height", 0, {heightTerm, minusTop});
+  }
+  bindTo(recipe, leg2, "x", originNm, {widthTerm, minusLeg});
+  bindTo(recipe, leg3, "y", 0, {depthTerm, minusLeg});
+  bindTo(recipe, leg4, "x", originNm, {widthTerm, minusLeg});
+  bindTo(recipe, leg4, "y", 0, {depthTerm, minusLeg});
+  bindTo(recipe, top, "z", 0, {heightTerm, minusTop});
+  bindTo(recipe, top, "width", 0, {widthTerm});
+  bindTo(recipe, top, "thickness", 0, {depthTerm});
+  bindTo(recipe, top, "height", 0, {topTerm});
+  bindTo(recipe, shelf, "x", originNm, {legTerm});
+  bindTo(recipe, shelf, "y", 0, {legTerm});
+  bindTo(recipe, shelf, "width", 0, {widthTerm, minusTwoLeg});
+  bindTo(recipe, shelf, "thickness", 0, {depthTerm, minusTwoLeg});
+  bindTo(recipe, left, "x", originNm, {legTerm});
+  bindTo(recipe, left, "y", 0, {legTerm});
+  bindTo(recipe, left, "z", -gap, {heightTerm, minusTop, minusDrawer});
+  bindTo(recipe, left, "width", 0, {sideTerm});
+  bindTo(recipe, left, "thickness", 0, {depthTerm, minusTwoLeg});
+  bindTo(recipe, left, "height", 0, {drawerTerm});
+  bindTo(recipe, right, "x", originNm, {widthTerm, minusLeg, minusSide});
+  bindTo(recipe, right, "y", 0, {legTerm});
+  bindTo(recipe, right, "z", -gap, {heightTerm, minusTop, minusDrawer});
+  bindTo(recipe, right, "width", 0, {sideTerm});
+  bindTo(recipe, right, "thickness", 0, {depthTerm, minusTwoLeg});
+  bindTo(recipe, right, "height", 0, {drawerTerm});
+  bindTo(recipe, front, "x", originNm, {legTerm, sideTerm});
+  bindTo(recipe, front, "y", 0, {legTerm});
+  bindTo(recipe, front, "z", -gap, {heightTerm, minusTop, minusDrawer, bottomTerm});
+  bindTo(recipe, front, "width", 0, {widthTerm, minusTwoLeg, minusTwoSide});
+  bindTo(recipe, front, "thickness", 0, {sideTerm});
+  bindTo(recipe, front, "height", 0, {drawerTerm, minusBottom});
+  bindTo(recipe, back, "x", originNm, {legTerm, sideTerm});
+  bindTo(recipe, back, "y", 0, {depthTerm, minusLeg, minusSide});
+  bindTo(recipe, back, "z", -gap, {heightTerm, minusTop, minusDrawer, bottomTerm});
+  bindTo(recipe, back, "width", 0, {widthTerm, minusTwoLeg, minusTwoSide});
+  bindTo(recipe, back, "thickness", 0, {sideTerm});
+  bindTo(recipe, back, "height", 0, {drawerTerm, minusBottom});
+  bindTo(recipe, bottom, "x", originNm, {legTerm, sideTerm});
+  bindTo(recipe, bottom, "y", 0, {legTerm, sideTerm});
+  bindTo(recipe, bottom, "z", -gap, {heightTerm, minusTop, minusDrawer});
+  bindTo(recipe, bottom, "width", 0, {widthTerm, minusTwoLeg, minusTwoSide});
+  bindTo(recipe, bottom, "thickness", 0, {depthTerm, minusTwoLeg, minusTwoSide});
+  bindTo(recipe, bottom, "height", 0, {bottomTerm});
+  for (Component& part : recipe.parts) {
+    if (part.name.find("leg") != std::string::npos) part.role = "leg";
+    else if (part.name.find("top") != std::string::npos) part.role = "top";
+    else if (part.name.find("shelf") != std::string::npos) part.role = "shelf";
+    else if (part.name.find("left") != std::string::npos || part.name.find("right") != std::string::npos)
+      part.role = "side";
+    else if (part.name.find("front") != std::string::npos) part.role = "front";
+    else if (part.name.find("back") != std::string::npos) part.role = "back";
+    else part.role = "bottom";
+  }
   return true;
 }
 
@@ -412,6 +675,9 @@ bool buildRecipe(std::string_view kind, const std::string& prefix, std::int64_t 
   if (kind == "table") return buildTable(recipe, prefix, originNm, shortNames, error);
   if (kind == "carcass") return buildCarcass(recipe, prefix, originNm, error);
   if (kind == "drawer") return buildDrawer(recipe, prefix, originNm, error);
+  if (kind == "frame") return buildFrame(recipe, prefix, originNm, error);
+  if (kind == "shelving") return buildShelving(recipe, prefix, originNm, error);
+  if (kind == "bedside") return buildBedside(recipe, prefix, originNm, error);
   error = "assembly.unknown";
   return false;
 }
@@ -499,7 +765,8 @@ void Document::makeDemoTable() {
 }
 
 bool Document::addAssembly(std::string_view kind, std::string& error) {
-  if (kind != "table" && kind != "carcass" && kind != "drawer") {
+  if (kind != "table" && kind != "carcass" && kind != "drawer" && kind != "frame" && kind != "shelving" &&
+      kind != "bedside") {
     error = "assembly.unknown";
     return false;
   }

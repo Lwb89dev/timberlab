@@ -10,6 +10,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 
 TEST_CASE("a project archive round trips") {
   timberlab::Document document;
@@ -98,6 +99,75 @@ TEST_CASE("garbage and a bad checksum are rejected") {
   const auto checksum = timberlab::storage::loadProject(path.string(), rejected);
   REQUIRE_FALSE(checksum.ok);
   REQUIRE(checksum.error == "storage.checksum");
+}
+
+std::string fileBytes(const std::filesystem::path& path) {
+  std::ifstream input(path, std::ios::binary);
+  std::ostringstream buffer;
+  buffer << input.rdbuf();
+  return buffer.str();
+}
+
+TEST_CASE("restore copies a valid backup and leaves the project when the backup is bad") {
+  timberlab::Document document;
+  document.addBoard();
+  std::string error;
+  REQUIRE(document.setProjectName("First", error));
+  const auto path = testDirectory() / "restore.timberlab";
+  REQUIRE(timberlab::storage::saveProject(path.string(), document).ok);
+  REQUIRE(document.setProjectName("Second", error));
+  REQUIRE(timberlab::storage::saveProject(path.string(), document).ok);
+
+  const std::string second = fileBytes(path);
+  {
+    std::ofstream output(path.string() + ".bak", std::ios::binary | std::ios::trunc);
+    output << "not a backup";
+  }
+  timberlab::Document untouched;
+  untouched.addBox();
+  const auto rejected = timberlab::storage::restoreBackup(path.string(), untouched);
+  REQUIRE_FALSE(rejected.ok);
+  REQUIRE(rejected.error == "storage.format");
+  REQUIRE(fileBytes(path) == second);
+  REQUIRE(untouched.components().size() == 1);
+  REQUIRE(untouched.components().front().type == timberlab::ComponentType::Box);
+
+  REQUIRE(std::filesystem::remove(path.string() + ".bak"));
+  const auto missing = timberlab::storage::restoreBackup(path.string(), untouched);
+  REQUIRE_FALSE(missing.ok);
+  REQUIRE(missing.error == "storage.restore");
+  REQUIRE(fileBytes(path) == second);
+
+  {
+    std::ofstream output(path, std::ios::binary | std::ios::trunc);
+    output << "damaged project";
+  }
+  timberlab::Document refused;
+  const auto loaded = timberlab::storage::loadProject(path.string(), refused);
+  REQUIRE_FALSE(loaded.ok);
+  REQUIRE(fileBytes(path) == "damaged project");
+
+  REQUIRE(timberlab::storage::saveProject(path.string(), document).ok);
+  timberlab::Document older;
+  older.addBoard();
+  REQUIRE(older.setProjectName("First", error));
+  REQUIRE(timberlab::storage::saveProject((path.string() + ".hold"), older).ok);
+  std::filesystem::copy_file(path.string() + ".hold", path.string() + ".bak",
+                             std::filesystem::copy_options::overwrite_existing);
+  {
+    std::ofstream output(path, std::ios::binary | std::ios::trunc);
+    output << "damaged project";
+  }
+  timberlab::Document ignored;
+  REQUIRE_FALSE(timberlab::storage::loadProject(path.string(), ignored).ok);
+  REQUIRE(fileBytes(path) == "damaged project");
+  timberlab::Document restored;
+  REQUIRE(timberlab::storage::restoreBackup(path.string(), restored).ok);
+  REQUIRE(restored.name() == "First");
+  timberlab::Document reloaded;
+  REQUIRE(timberlab::storage::loadProject(path.string(), reloaded).ok);
+  REQUIRE(reloaded.name() == "First");
+  REQUIRE(fileBytes(path) != "damaged project");
 }
 
 TEST_CASE("raw model json still loads") {

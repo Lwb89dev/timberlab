@@ -375,6 +375,30 @@ Rectangle {
                 value: app.selection.rz || ""
                 onCommitted: function (text) { app.setRotationFromText(app.selectedId, "z", text) }
             }
+            Label { text: qsTr("Parent"); color: Theme.muted }
+            ComboBox {
+                id: parentBox
+                Layout.fillWidth: true
+                implicitHeight: Theme.controlHeight
+                textRole: "name"
+                valueRole: "id"
+                model: app.parentChoices
+                onActivated: app.setParent(app.selectedId, currentValue)
+                function syncParent() {
+                    const index = indexOfValue(app.selection.parentId || "")
+                    if (index >= 0) currentIndex = index
+                }
+                Component.onCompleted: syncParent()
+                Connections {
+                    target: app
+                    function onDocumentChanged() { parentBox.syncParent() }
+                }
+            }
+            ValueField {
+                label: qsTr("Role")
+                value: app.selection.role || ""
+                onCommitted: function (text) { app.setRole(app.selectedId, text) }
+            }
             CheckBox {
                 id: visibleBox
                 text: qsTr("Visible")

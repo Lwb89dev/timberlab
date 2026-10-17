@@ -21,8 +21,10 @@ Work stays inside this repository. `deps/` and `build/` are local. Do not commit
 - Do not write display rounding back into nanometres.
 - Do not invent density or hardness. Leave the field null.
 - Joints are booleans with stored sizes. Do not fake a joint with a decorative mesh.
-- An assembly is a recipe that writes ordinary parts, parameters, and bindings. It does not cut a joint, and it is not solved again when a part changes.
-- The user library is `library.sqlite`, schema version 2. Do not store a solid in it, and do not fold it into the preferences database.
+- An assembly is a recipe that writes ordinary parts, parameters, bindings, and a role. It does not cut a joint, it does not set `parentId`, and it is not solved again when a part changes.
+- A cut list is finished size plus an allowance. The SVG, DXF, and PDF views are tessellation wires. Do not describe them as a dimensioned drawing.
+- Sync code may seal a library row and compare revisions. It must not open a socket, write a key, or rewrite a project file.
+- The user library is `library.sqlite`, schema version 3. Do not store a solid in it, and do not fold it into the preferences database. A failed project load must not copy `.bak` over the project. Restore is `restoreBackup`, and only after the backup loads.
 - OCCT stays on the calling thread.
 
 ## Regenerating the catalog

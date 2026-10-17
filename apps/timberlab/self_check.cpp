@@ -198,6 +198,16 @@ int runSelfCheck() {
   }
   if (carcassRight == nullptr || carcassRight->placement.xNm != carcassRightX) return fail("carcass restored");
 
+  Document frame;
+  if (!frame.addAssembly("frame", error)) return fail("frame " + error);
+  if (frame.components().size() != 4) return fail("frame count");
+  bool sawFrame = false;
+  for (const Component& component : frame.components()) {
+    if (component.name != "Frame right") continue;
+    sawFrame = component.placement.xNm == 540 * units::kNmPerMm && component.role == "stile" && component.parentId.empty();
+  }
+  if (!sawFrame) return fail("frame right");
+
   const char* dataDir = std::getenv("TIMBERLAB_DATA_DIR");
   const std::filesystem::path root = dataDir != nullptr ? dataDir : std::filesystem::path("build/self-check");
   std::filesystem::create_directories(root);

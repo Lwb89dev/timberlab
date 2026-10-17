@@ -52,6 +52,9 @@ class Document {
   bool setNotes(const std::string& id, const std::string& notes, std::string& error);
   bool setVisible(const std::string& id, bool visible, std::string& error);
   bool setLocked(const std::string& id, bool locked, std::string& error);
+  // parentId empty clears the parent. A cycle or a missing parent is rejected.
+  bool setParent(const std::string& id, const std::string& parentId, std::string& error);
+  bool setRole(const std::string& id, const std::string& role, std::string& error);
   bool setDimension(const std::string& id, std::string_view key, std::int64_t nm, std::string& error);
   bool setTranslation(const std::string& id, std::string_view axis, std::int64_t nm, std::string& error);
   bool setRotation(const std::string& id, std::string_view axis, double degrees, std::string& error);
@@ -86,7 +89,7 @@ class Document {
   // short driver ids table.width and the rest, at the origin. Replaces the project.
   void makeDemoTable();
 
-  // Inserts a table, a cabinet carcass, or a drawer box as ordinary parts.
+  // Inserts ordinary parts for table, carcass, drawer, frame, shelving, or bedside.
   // Unknown kind is assembly.unknown. The recipe is not stored.
   bool addAssembly(std::string_view kind, std::string& error);
 

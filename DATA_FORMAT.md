@@ -23,19 +23,22 @@ Fields: `id`, `name`, `displayUnit` (`mm`, `cm`, `m`, `in`, `ft`), `fractionPrec
 Each component:
 
 - `id`, `type` (`board`, `box`, `cylinder`), `name`, `materialId`
-- `visible`, `locked`, `parentId`, `notes`
+- `visible`, `locked`, `parentId`, optional `role`, `notes`
 - `placement`: `x`, `y`, `z` in nanometres, `rx`, `ry`, `rz` in degrees
 - `parameters`: `width`, `height`, `thickness`, `radius` in nanometres
 
 A board or box must have positive width, height, and thickness. A cylinder must have positive radius and height. Zero and negative values are rejected. The maximum part edge is 100 m (`kMaxPartNm`).
 
+`role` is omitted when empty. When present it is a token of at most 32 bytes matching `[a-z0-9._-]`. A bad token is `storage.json` on load and `component.role` from the editor. `parentId` empty means no parent. A missing parent is `component.missing`. A parent chain that returns to the part, or that is longer than the part list, is `component.cycle`. Removing a part clears that id from every child, including a locked child. An assembly does not set `parentId`.
+
 `joints` is optional. A model with no joints omits the array, so an older file still loads. Schema version stays 1. Each joint:
 
-- `id`, `type` (`joint.mortise_tenon`, `joint.half_lap`, `joint.dado`, `joint.groove`, `joint.rabbet`)
+- `id`, `type` (`joint.mortise_tenon`, `joint.half_lap`, `joint.dado`, `joint.groove`, `joint.rabbet`, `joint.bridle`, `joint.castle`, `joint.miter`, `joint.dovetail`, `joint.sliding_dovetail`)
 - `partA`, `partB`, `faceA`, `faceB` (`x0`, `x1`, `y0`, `y1`, `z0`, `z1`)
 - `edge` for a rabbet (`u0`, `u1`, `v0`, `v1`)
 - `length`, `width`, `thickness`, `depth`, `offset`, `offset2` in nanometres
-- `removeMinA`, `removeMinB` for a half-lap; a missing flag means false
+- optional `count`, an integer. Castle and dovetail require it. It is omitted when zero. It is not a length
+- `removeMinA`, `removeMinB` for a half-lap or a miter; a missing flag means false
 
 On load, bindings are applied before joints are checked, so a joint is judged against the recomputed parts. A joint that does not fit is rejected (`joint.parameter`). A missing part is `component.missing`. Duplicate joint ids are `storage.duplicate`. More than 2000 joints is `storage.too_many`. The cuts are not stored; they are rebuilt from these fields and the current part sizes. Joint sizes are not formulas.
 
@@ -51,7 +54,7 @@ An assembly is not a stored object. Creating one writes rows into these `paramet
 
 ## Writes
 
-The save path is `path.tmp`, then rename onto the destination. If that rename fails, the temporary file is removed and the existing project is left in place. If the destination already exists it is copied to `path.bak` first. If that backup copy fails, the save fails and the previous file stays. The new project file and the backup are owner-read/write only. A file larger than 32 MiB is rejected before it is parsed (`storage.too_large`). A model with more than 2000 components is rejected (`storage.too_many`). Duplicate component ids are rejected (`storage.duplicate`). Names are at most 200 bytes, notes at most 8000 bytes, ids at most 64 bytes, and a rotation whose absolute value is above one million degrees is rejected. A checksum mismatch on load is an error. The loader also accepts a raw JSON object that starts with `{` and uses the model schema, so a single component file can be inspected without unzipping. That path is still size-capped and still parsed by the model checks. It does not verify the zip checksum.
+The save path is `path.tmp`, then rename onto the destination. If that rename fails, the temporary file is removed and the existing project is left in place. If the destination already exists it is copied to `path.bak` first. If that backup copy fails, the save fails and the previous file stays. `restoreBackup` copies that `.bak` onto the project only after the backup itself loads. A missing backup is `storage.restore`. An invalid backup returns the load error. Either failure leaves the project file and the caller's document untouched. `loadProject` does not call `restoreBackup`. The new project file and the backup are owner-read/write only. A file larger than 32 MiB is rejected before it is parsed (`storage.too_large`). A model with more than 2000 components is rejected (`storage.too_many`). Duplicate component ids are rejected (`storage.duplicate`). Names are at most 200 bytes, notes at most 8000 bytes, ids at most 64 bytes, and a rotation whose absolute value is above one million degrees is rejected. A checksum mismatch on load is an error. The loader also accepts a raw JSON object that starts with `{` and uses the model schema, so a single component file can be inspected without unzipping. That path is still size-capped and still parsed by the model checks. It does not verify the zip checksum.
 
 ## Preferences
 
@@ -59,11 +62,13 @@ SQLite, schema version 1, tables `schema_meta(version)` and `user_preference(key
 
 ## User library
 
-SQLite, current schema version 2. A file at version 1 is migrated on open. A file newer than 2 is refused and left as it is. Tables:
+SQLite, current schema version 3. A file at version 1 is migrated through version 2 on open. A file at version 2 gains a revision column. A file newer than 3 is refused and left as it is. Tables:
 
 - `schema_meta(version)`
-- `user_material(id, name, visual_hex, notes)`. Version 1 had no `notes`.
-- `user_preset(id, label, thickness_nm, group_name)`. Version 1 had no `group_name`.
+- `user_material(id, name, visual_hex, notes, revision)`. Version 1 had no `notes`. Version 2 had no `revision`.
+- `user_preset(id, label, thickness_nm, group_name, revision)`. Version 1 had no `group_name`. Version 2 had no `revision`.
+
+`revision` is a positive integer. A row inserted in the application starts at 1. An imported envelope may store the remote revision.
 
 `id` is a token of at most 64 bytes. `name` and `label` are at most 200 bytes. `notes` is at most 8000 bytes. `visual_hex` is `#` plus six hex digits. `thickness_nm` is a positive nanometre count up to the same maximum as a part. Each table stops at 2000 rows. The file, its `-wal` file, and its `-shm` file are owner-read/write only. Open and schema failures stay stable codes (`library.open`, `library.schema`, `library.version`) and do not include the filesystem path. A project still stores only the material id.
 

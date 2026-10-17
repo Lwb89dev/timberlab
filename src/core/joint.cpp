@@ -210,6 +210,281 @@ std::int64_t shrinkTo(std::int64_t value, std::int64_t limit) {
   return std::max<std::int64_t>(1, limit / 3);
 }
 
+void faceDepth(const FaceAxes& face, std::int64_t extent, std::int64_t depth, std::int64_t& outer, std::int64_t& inner) {
+  if (face.atMax) {
+    outer = extent;
+    inner = extent - depth;
+    return;
+  }
+  outer = 0;
+  inner = depth;
+}
+
+struct ProfilePoint {
+  std::int64_t x = 0;
+  std::int64_t y = 0;
+  std::int64_t z = 0;
+};
+
+void putAxis(ProfilePoint& point, int axis, std::int64_t value) {
+  if (axis == 0) point.x = value;
+  else if (axis == 1) point.y = value;
+  else point.z = value;
+}
+
+ProfilePoint profileAt(int normalAxis, std::int64_t normal, int uAxis, std::int64_t u, int vAxis, std::int64_t v) {
+  ProfilePoint point;
+  putAxis(point, normalAxis, normal);
+  putAxis(point, uAxis, u);
+  putAxis(point, vAxis, v);
+  return point;
+}
+
+void pushPrism(std::vector<LocalCut>& cuts, int axis, std::int64_t end, const ProfilePoint* points, int count) {
+  if (count < 3 || count > 4) return;
+  LocalCut cut;
+  cut.prismAxis = axis;
+  cut.prismEnd = end;
+  cut.pointCount = count;
+  for (int i = 0; i < count; ++i) {
+    cut.px[i] = points[i].x;
+    cut.py[i] = points[i].y;
+    cut.pz[i] = points[i].z;
+  }
+  cuts.push_back(cut);
+}
+
+bool fitBridle(const Joint& joint, const Component& female, const Component& male, std::string& error) {
+  const FaceAxes faceA = faceAxes(joint.faceA);
+  const FaceAxes faceB = faceAxes(joint.faceB);
+  const std::int64_t uA = axisNm(female, faceA.u);
+  const std::int64_t uB = axisNm(male, faceB.u);
+  const std::int64_t nA = axisNm(female, faceA.normal);
+  const std::int64_t nB = axisNm(male, faceB.normal);
+  if (!inRange(joint.lengthNm) || !inRange(joint.thicknessNm)) {
+    error = "joint.parameter";
+    return false;
+  }
+  if (joint.lengthNm >= nA || joint.lengthNm >= nB || joint.thicknessNm >= uA || joint.thicknessNm >= uB) {
+    error = "joint.parameter";
+    return false;
+  }
+  return true;
+}
+
+bool fitCastle(const Joint& joint, const Component& female, const Component& male, std::string& error) {
+  if (joint.count < 2 || joint.count > 8) {
+    error = "joint.parameter";
+    return false;
+  }
+  if (!fitBridle(joint, female, male, error)) return false;
+  const std::int64_t bands = static_cast<std::int64_t>(joint.count) * 2 - 1;
+  const std::int64_t uA = axisNm(female, faceAxes(joint.faceA).u);
+  const std::int64_t uB = axisNm(male, faceAxes(joint.faceB).u);
+  if (joint.thicknessNm > uA / bands || joint.thicknessNm > uB / bands) {
+    error = "joint.parameter";
+    return false;
+  }
+  return true;
+}
+
+bool fitMiter(const Joint& joint, const Component& partA, const Component& partB, std::string& error) {
+  const std::int64_t nA = axisNm(partA, faceAxes(joint.faceA).normal);
+  const std::int64_t nB = axisNm(partB, faceAxes(joint.faceB).normal);
+  if (!inRange(joint.lengthNm) || joint.lengthNm >= nA || joint.lengthNm >= nB) {
+    error = "joint.parameter";
+    return false;
+  }
+  return true;
+}
+
+bool fitDovetail(const Joint& joint, const Component& pins, const Component& tails, std::string& error) {
+  const FaceAxes pinFace = faceAxes(joint.faceA);
+  const FaceAxes tailFace = faceAxes(joint.faceB);
+  const std::int64_t uPins = axisNm(pins, pinFace.u);
+  const std::int64_t uTails = axisNm(tails, tailFace.u);
+  const std::int64_t nPins = axisNm(pins, pinFace.normal);
+  const std::int64_t nTails = axisNm(tails, tailFace.normal);
+  if (joint.count < 1 || joint.count > 8) {
+    error = "joint.parameter";
+    return false;
+  }
+  if (!inRange(joint.thicknessNm) || !inRange(joint.widthNm) || !inRange(joint.lengthNm) || !inRange(joint.depthNm) ||
+      !inRange(joint.offsetNm)) {
+    error = "joint.parameter";
+    return false;
+  }
+  if (joint.lengthNm >= nTails || joint.depthNm > nPins) {
+    error = "joint.parameter";
+    return false;
+  }
+  if (joint.offsetNm * 2 >= joint.thicknessNm || joint.offsetNm * 2 >= joint.widthNm) {
+    error = "joint.parameter";
+    return false;
+  }
+  const std::int64_t span = static_cast<std::int64_t>(joint.count) * (joint.thicknessNm + joint.widthNm);
+  if (span > uPins || span > uTails) {
+    error = "joint.parameter";
+    return false;
+  }
+  return true;
+}
+
+bool fitSliding(const Joint& joint, const Component& host, const Component& tongue, std::string& error) {
+  const FaceAxes hostFace = faceAxes(joint.faceA);
+  const FaceAxes tongueFace = faceAxes(joint.faceB);
+  const std::int64_t hostU = axisNm(host, hostFace.u);
+  const std::int64_t hostN = axisNm(host, hostFace.normal);
+  const std::int64_t tongueU = axisNm(tongue, tongueFace.u);
+  const std::int64_t tongueN = axisNm(tongue, tongueFace.normal);
+  if (!inRange(joint.widthNm) || !inRange(joint.depthNm) || !inRange(joint.offset2Nm)) {
+    error = "joint.parameter";
+    return false;
+  }
+  if (joint.depthNm >= hostN || joint.depthNm >= tongueN) {
+    error = "joint.parameter";
+    return false;
+  }
+  if (joint.offsetNm < joint.offset2Nm || joint.offsetNm > hostU) {
+    error = "joint.parameter";
+    return false;
+  }
+  if (hostU - joint.offsetNm < joint.widthNm + joint.offset2Nm) {
+    error = "joint.parameter";
+    return false;
+  }
+  if (joint.widthNm + 2 * joint.offset2Nm > tongueU) {
+    error = "joint.parameter";
+    return false;
+  }
+  return true;
+}
+
+void addBridleCuts(const Joint& joint, const Component& part, std::vector<LocalCut>& cuts) {
+  const bool female = part.id == joint.partA;
+  const FaceAxes face = faceAxes(female ? joint.faceA : joint.faceB);
+  const std::int64_t uSize = axisNm(part, face.u);
+  const std::int64_t vSize = axisNm(part, face.v);
+  const std::int64_t normal = axisNm(part, face.normal);
+  const std::int64_t u0 = (uSize - joint.thicknessNm) / 2;
+  const std::int64_t u1 = u0 + joint.thicknessNm;
+  std::int64_t n0 = 0;
+  std::int64_t n1 = 0;
+  endSlab(face, joint.lengthNm, normal, n0, n1);
+  if (female) {
+    addFaceSlot(part, face, joint.lengthNm, u0, u1, 0, vSize, cuts);
+    return;
+  }
+  pushIfOpen(cuts, ranged(part, face, n0, n1, 0, u0, 0, vSize));
+  pushIfOpen(cuts, ranged(part, face, n0, n1, u1, uSize, 0, vSize));
+}
+
+void addCastleCuts(const Joint& joint, const Component& part, std::vector<LocalCut>& cuts) {
+  const bool female = part.id == joint.partA;
+  const FaceAxes face = faceAxes(female ? joint.faceA : joint.faceB);
+  const std::int64_t uSize = axisNm(part, face.u);
+  const std::int64_t vSize = axisNm(part, face.v);
+  const std::int64_t normal = axisNm(part, face.normal);
+  const std::int64_t bands = static_cast<std::int64_t>(joint.count) * 2 - 1;
+  const std::int64_t origin = (uSize - bands * joint.thicknessNm) / 2;
+  std::int64_t n0 = 0;
+  std::int64_t n1 = 0;
+  endSlab(face, joint.lengthNm, normal, n0, n1);
+  for (int band = 0; band < joint.count * 2 - 1; ++band) {
+    const bool slotOnFemale = (band % 2) == 1;
+    if (female != slotOnFemale) continue;
+    const std::int64_t u0 = origin + static_cast<std::int64_t>(band) * joint.thicknessNm;
+    pushIfOpen(cuts, ranged(part, face, n0, n1, u0, u0 + joint.thicknessNm, 0, vSize));
+  }
+}
+
+void addMiterCut(const Component& part, PartFace which, std::int64_t length, bool keepMin, std::vector<LocalCut>& cuts) {
+  const FaceAxes face = faceAxes(which);
+  const std::int64_t uSize = axisNm(part, face.u);
+  const std::int64_t vSize = axisNm(part, face.v);
+  const std::int64_t normal = axisNm(part, face.normal);
+  std::int64_t outer = 0;
+  std::int64_t inner = 0;
+  faceDepth(face, normal, length, outer, inner);
+  const std::int64_t cutU = keepMin ? uSize : 0;
+  const std::int64_t keepU = keepMin ? 0 : uSize;
+  const ProfilePoint points[3] = {
+      profileAt(face.normal, outer, face.u, cutU, face.v, 0),
+      profileAt(face.normal, inner, face.u, cutU, face.v, 0),
+      profileAt(face.normal, outer, face.u, keepU, face.v, 0),
+  };
+  pushPrism(cuts, face.v, vSize, points, 3);
+}
+
+void pushTrapezoid(std::vector<LocalCut>& cuts, const FaceAxes& face, std::int64_t outer, std::int64_t inner,
+                   std::int64_t uOuter0, std::int64_t uOuter1, std::int64_t uInner0, std::int64_t uInner1,
+                   std::int64_t vSize) {
+  const ProfilePoint points[4] = {
+      profileAt(face.normal, outer, face.u, uOuter0, face.v, 0),
+      profileAt(face.normal, outer, face.u, uOuter1, face.v, 0),
+      profileAt(face.normal, inner, face.u, uInner1, face.v, 0),
+      profileAt(face.normal, inner, face.u, uInner0, face.v, 0),
+  };
+  pushPrism(cuts, face.v, vSize, points, 4);
+}
+
+void addDovetailCuts(const Joint& joint, const Component& part, std::vector<LocalCut>& cuts) {
+  const bool pins = part.id == joint.partA;
+  const FaceAxes face = faceAxes(pins ? joint.faceA : joint.faceB);
+  const std::int64_t uSize = axisNm(part, face.u);
+  const std::int64_t vSize = axisNm(part, face.v);
+  const std::int64_t normal = axisNm(part, face.normal);
+  const std::int64_t reach = pins ? joint.depthNm : joint.lengthNm;
+  const std::int64_t slope = joint.offsetNm;
+  std::int64_t outer = 0;
+  std::int64_t inner = 0;
+  faceDepth(face, normal, reach, outer, inner);
+  const std::int64_t span = static_cast<std::int64_t>(joint.count) * (joint.thicknessNm + joint.widthNm);
+  const std::int64_t extra = uSize - span;
+  std::int64_t pos = joint.widthNm / 2 + extra / 2;
+  if (!pins) pushTrapezoid(cuts, face, outer, inner, 0, pos, 0, pos + slope, vSize);
+  for (int tail = 0; tail < joint.count; ++tail) {
+    const std::int64_t tail0 = pos;
+    const std::int64_t tail1 = pos + joint.thicknessNm;
+    pos = tail1;
+    if (pins) {
+      pushTrapezoid(cuts, face, outer, inner, tail0, tail1, tail0 + slope, tail1 - slope, vSize);
+    }
+    if (tail + 1 < joint.count) {
+      const std::int64_t pin1 = pos + joint.widthNm;
+      if (!pins) pushTrapezoid(cuts, face, outer, inner, pos, pin1, pos - slope, pin1 + slope, vSize);
+      pos = pin1;
+    }
+  }
+  if (!pins) pushTrapezoid(cuts, face, outer, inner, pos, uSize, pos - slope, uSize, vSize);
+}
+
+void addSlidingCuts(const Joint& joint, const Component& part, std::vector<LocalCut>& cuts) {
+  const bool host = part.id == joint.partA;
+  const FaceAxes face = faceAxes(host ? joint.faceA : joint.faceB);
+  const std::int64_t uSize = axisNm(part, face.u);
+  const std::int64_t vSize = axisNm(part, face.v);
+  const std::int64_t normal = axisNm(part, face.normal);
+  const std::int64_t slope = joint.offset2Nm;
+  std::int64_t outer = 0;
+  std::int64_t inner = 0;
+  faceDepth(face, normal, joint.depthNm, outer, inner);
+  if (host) {
+    const std::int64_t u0 = joint.offsetNm;
+    const std::int64_t u1 = u0 + joint.widthNm;
+    pushTrapezoid(cuts, face, outer, inner, u0, u1, u0 - slope, u1 + slope, vSize);
+    return;
+  }
+  const std::int64_t wide = joint.widthNm + 2 * slope;
+  const std::int64_t center = uSize / 2;
+  const std::int64_t tip0 = center - wide / 2;
+  const std::int64_t tip1 = tip0 + wide;
+  const std::int64_t shoulder0 = center - joint.widthNm / 2;
+  const std::int64_t shoulder1 = shoulder0 + joint.widthNm;
+  pushTrapezoid(cuts, face, outer, inner, 0, tip0, 0, shoulder0, vSize);
+  pushTrapezoid(cuts, face, outer, inner, tip1, uSize, shoulder1, uSize, vSize);
+}
+
 }  // namespace
 
 FaceAxes faceAxes(PartFace face) {
@@ -248,6 +523,16 @@ const char* jointTypeKey(JointType type) {
       return "joint.groove";
     case JointType::Rabbet:
       return "joint.rabbet";
+    case JointType::Bridle:
+      return "joint.bridle";
+    case JointType::Castle:
+      return "joint.castle";
+    case JointType::Miter:
+      return "joint.miter";
+    case JointType::Dovetail:
+      return "joint.dovetail";
+    case JointType::SlidingDovetail:
+      return "joint.sliding_dovetail";
   }
   return "joint.mortise_tenon";
 }
@@ -271,6 +556,26 @@ bool jointTypeFromKey(std::string_view key, JointType& out) {
   }
   if (key == "joint.rabbet") {
     out = JointType::Rabbet;
+    return true;
+  }
+  if (key == "joint.bridle") {
+    out = JointType::Bridle;
+    return true;
+  }
+  if (key == "joint.castle") {
+    out = JointType::Castle;
+    return true;
+  }
+  if (key == "joint.miter") {
+    out = JointType::Miter;
+    return true;
+  }
+  if (key == "joint.dovetail") {
+    out = JointType::Dovetail;
+    return true;
+  }
+  if (key == "joint.sliding_dovetail") {
+    out = JointType::SlidingDovetail;
     return true;
   }
   return false;
@@ -380,6 +685,16 @@ bool jointFits(const Joint& joint, const Component& partA, const Component& part
       return fitGroove(joint, partA, error);
     case JointType::Rabbet:
       return fitRabbet(joint, partA, error);
+    case JointType::Bridle:
+      return fitBridle(joint, partA, partB, error);
+    case JointType::Castle:
+      return fitCastle(joint, partA, partB, error);
+    case JointType::Miter:
+      return fitMiter(joint, partA, partB, error);
+    case JointType::Dovetail:
+      return fitDovetail(joint, partA, partB, error);
+    case JointType::SlidingDovetail:
+      return fitSliding(joint, partA, partB, error);
   }
   error = "joint.parameter";
   return false;
@@ -420,6 +735,22 @@ bool cutsForPart(const Joint& joint, const Component& part, std::vector<LocalCut
       addFaceSlot(part, face, joint.depthNm, u0, u1, v0, v1, cuts);
       break;
     }
+    case JointType::Bridle:
+      addBridleCuts(joint, part, cuts);
+      break;
+    case JointType::Castle:
+      addCastleCuts(joint, part, cuts);
+      break;
+    case JointType::Miter:
+      if (part.id == joint.partA) addMiterCut(part, joint.faceA, joint.lengthNm, joint.removeMinA, cuts);
+      if (part.id == joint.partB) addMiterCut(part, joint.faceB, joint.lengthNm, joint.removeMinB, cuts);
+      break;
+    case JointType::Dovetail:
+      addDovetailCuts(joint, part, cuts);
+      break;
+    case JointType::SlidingDovetail:
+      addSlidingCuts(joint, part, cuts);
+      break;
   }
   if (cuts.size() == before) {
     error = "joint.no_effect";
@@ -450,6 +781,51 @@ bool defaultJoint(JointType type, const Component& selected, const Component& ma
     out.faceB = PartFace::X0;
     out.lengthNm = shrinkTo(std::min(selected.widthNm, mate.widthNm) / 4, std::min(selected.widthNm, mate.widthNm));
     out.removeMinB = true;
+  } else if (type == JointType::Bridle || type == JointType::Castle) {
+    out.partA = mate.id;
+    out.partB = selected.id;
+    out.faceA = PartFace::X1;
+    out.faceB = PartFace::X0;
+    const std::int64_t u = std::min(selected.thicknessNm, mate.thicknessNm);
+    out.lengthNm = shrinkTo(std::min(selected.widthNm, mate.widthNm) / 4, std::min(selected.widthNm, mate.widthNm));
+    if (type == JointType::Castle) {
+      out.count = 3;
+      out.thicknessNm = shrinkTo(u / 5, u);
+    } else {
+      out.thicknessNm = shrinkTo(u / 3, u);
+    }
+  } else if (type == JointType::Miter) {
+    out.partA = selected.id;
+    out.partB = mate.id;
+    out.faceA = PartFace::X0;
+    out.faceB = PartFace::X0;
+    out.removeMinA = true;
+    out.removeMinB = true;
+    const std::int64_t leg = std::min(selected.thicknessNm, mate.thicknessNm);
+    const std::int64_t room = std::min(selected.widthNm, mate.widthNm);
+    out.lengthNm = shrinkTo(leg, room);
+  } else if (type == JointType::Dovetail) {
+    out.partA = mate.id;
+    out.partB = selected.id;
+    out.faceA = PartFace::X1;
+    out.faceB = PartFace::X0;
+    out.count = 1;
+    const std::int64_t u = std::min(selected.thicknessNm, mate.thicknessNm);
+    out.thicknessNm = shrinkTo(u / 3, u);
+    out.widthNm = shrinkTo(u / 3, u);
+    out.lengthNm = shrinkTo(selected.widthNm / 3, selected.widthNm);
+    out.depthNm = shrinkTo(out.lengthNm, mate.widthNm);
+    out.offsetNm = shrinkTo(std::min(out.thicknessNm, out.widthNm) / 4, std::min(out.thicknessNm, out.widthNm) / 2);
+  } else if (type == JointType::SlidingDovetail) {
+    out.partA = selected.id;
+    out.partB = mate.id;
+    out.faceA = PartFace::Z1;
+    out.faceB = PartFace::X0;
+    out.widthNm = shrinkTo(mate.thicknessNm / 2, std::min(mate.thicknessNm, selected.widthNm));
+    out.offset2Nm = shrinkTo(out.widthNm / 8, out.widthNm / 2);
+    out.depthNm = shrinkTo(selected.heightNm / 4, std::min(selected.heightNm, mate.widthNm));
+    const std::int64_t wide = out.widthNm + 2 * out.offset2Nm;
+    out.offsetNm = std::max(out.offset2Nm, (selected.widthNm - wide) / 2);
   } else {
     out.partA = selected.id;
     out.partB = mate.id;

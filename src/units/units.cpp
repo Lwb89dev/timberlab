@@ -2,6 +2,7 @@
 
 #include <charconv>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 
 namespace timberlab::units {
@@ -90,10 +91,65 @@ std::int64_t pow10(int digits) {
   return value;
 }
 
-bool mulDivRound(std::int64_t magnitude, std::int64_t factor, std::int64_t denominator, bool negative,
-                 std::int64_t& out) {
-  if (denominator <= 0 || magnitude < 0 || factor < 0) return false;
+struct U128 {
+  std::uint64_t hi = 0;
+  std::uint64_t lo = 0;
+};
+
+U128 mulU64(std::uint64_t left, std::uint64_t right) {
+  const std::uint64_t leftLo = left & 0xffffffffULL;
+  const std::uint64_t leftHi = left >> 32;
+  const std::uint64_t rightLo = right & 0xffffffffULL;
+  const std::uint64_t rightHi = right >> 32;
+  const std::uint64_t low = leftLo * rightLo;
+  const std::uint64_t midLeft = leftLo * rightHi;
+  const std::uint64_t midRight = leftHi * rightLo;
+  const std::uint64_t high = leftHi * rightHi;
+  const std::uint64_t mid = (low >> 32) + (midLeft & 0xffffffffULL) + (midRight & 0xffffffffULL);
+  U128 out;
+  out.lo = (low & 0xffffffffULL) | (mid << 32);
+  out.hi = high + (midLeft >> 32) + (midRight >> 32) + (mid >> 32);
+  return out;
+}
+
+void addU64(U128& value, std::uint64_t extra) {
+  const std::uint64_t sum = value.lo + extra;
+  if (sum < value.lo) ++value.hi;
+  value.lo = sum;
+}
+
+bool divU128(U128 value, std::uint64_t denominator, std::uint64_t& quotient) {
+  if (denominator == 0 || value.hi >= denominator) return false;
+  U128 remainder;
+  quotient = 0;
+  for (int bit = 127; bit >= 0; --bit) {
+    remainder.hi = (remainder.hi << 1) | (remainder.lo >> 63);
+    remainder.lo <<= 1;
+    const std::uint64_t next = bit >= 64 ? (value.hi >> (bit - 64)) & 1ULL : (value.lo >> bit) & 1ULL;
+    remainder.lo |= next;
+    if (remainder.hi == 0 && remainder.lo < denominator) continue;
+    if (remainder.lo < denominator) --remainder.hi;
+    remainder.lo -= denominator;
+    if (bit >= 64) return false;
+    quotient |= 1ULL << bit;
+  }
+  return true;
+}
+
+bool mulDivRoundPortable(std::int64_t magnitude, std::int64_t factor, std::int64_t denominator, bool negative,
+                         std::int64_t& out) {
+  U128 product = mulU64(static_cast<std::uint64_t>(magnitude), static_cast<std::uint64_t>(factor));
+  addU64(product, static_cast<std::uint64_t>(denominator / 2));
+  std::uint64_t quotient = 0;
+  if (!divU128(product, static_cast<std::uint64_t>(denominator), quotient)) return false;
+  if (quotient > static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max())) return false;
+  out = negative ? -static_cast<std::int64_t>(quotient) : static_cast<std::int64_t>(quotient);
+  return true;
+}
+
 #if defined(__SIZEOF_INT128__)
+bool mulDivRoundInt128(std::int64_t magnitude, std::int64_t factor, std::int64_t denominator, bool negative,
+                       std::int64_t& out) {
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
@@ -102,14 +158,28 @@ bool mulDivRound(std::int64_t magnitude, std::int64_t factor, std::int64_t denom
   product += denominator / 2;
   product /= denominator;
   if (product > static_cast<__int128>(std::numeric_limits<std::int64_t>::max())) return false;
+  out = negative ? -static_cast<std::int64_t>(product) : static_cast<std::int64_t>(product);
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif
-  out = negative ? -static_cast<std::int64_t>(product) : static_cast<std::int64_t>(product);
   return true;
-#else
-#error "TimberLab length math needs a 128-bit integer. Add a portable path before building with this compiler."
+}
 #endif
+
+bool mulDivRound(std::int64_t magnitude, std::int64_t factor, std::int64_t denominator, bool negative,
+                 std::int64_t& out) {
+  if (denominator <= 0 || magnitude < 0 || factor < 0) return false;
+  std::int64_t portable = 0;
+  const bool portableOk = mulDivRoundPortable(magnitude, factor, denominator, negative, portable);
+#if defined(__SIZEOF_INT128__)
+  std::int64_t reference = 0;
+  const bool referenceOk = mulDivRoundInt128(magnitude, factor, denominator, negative, reference);
+  if (portableOk != referenceOk) return false;
+  if (portableOk && portable != reference) return false;
+#endif
+  if (!portableOk) return false;
+  out = portable;
+  return true;
 }
 
 bool numberToNm(const Number& number, std::int64_t unitNm, std::int64_t& out) {

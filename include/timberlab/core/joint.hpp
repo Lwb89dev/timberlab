@@ -11,7 +11,18 @@ namespace timberlab {
 
 // Faces use the part's local axes. X is width, Y is thickness, Z is height.
 // x0 is the face at the minimum of that axis, x1 the face at the maximum.
-enum class JointType { MortiseTenon, HalfLap, Dado, Groove, Rabbet };
+enum class JointType {
+  MortiseTenon,
+  HalfLap,
+  Dado,
+  Groove,
+  Rabbet,
+  Bridle,
+  Castle,
+  Miter,
+  Dovetail,
+  SlidingDovetail
+};
 enum class PartFace { X0, X1, Y0, Y1, Z0, Z1 };
 enum class FaceEdge { U0, U1, V0, V1 };
 
@@ -33,6 +44,19 @@ struct FaceAxes {
 // Dado: full V slot on faceA of partA. width along U, depth inward, offset on U.
 // Groove: stopped slot. length along V, offset2 on V.
 // Rabbet: step on edge of faceA. width is the inset from that edge, depth inward.
+// Bridle: partA is the open slot, partB is the tongue. thickness is the tongue
+// width along U. length is the engagement. The cut runs the full V.
+// Castle: the same end, divided into count fingers on partA. thickness is one
+// band. count is at least 2.
+// Miter: both ends lose a right triangle. length is the inset along the normal.
+// removeMin* keeps the point on the low-U side.
+// Dovetail: partB carries count tails, partA the pins. thickness is the tail
+// width at the tail's end, width is the pin width there, offset is the slope
+// on each side. length enters partB, depth enters partA. depth may equal the
+// pin board's thickness (through).
+// Sliding dovetail: a trapezoid dado on partA and the matching tongue on partB.
+// width is the opening at the face, offset2 is the slope on each side, depth is
+// both the groove depth and the tongue length.
 struct Joint {
   std::string id;
   JointType type = JointType::MortiseTenon;
@@ -47,12 +71,15 @@ struct Joint {
   std::int64_t depthNm = 0;
   std::int64_t offsetNm = 0;
   std::int64_t offset2Nm = 0;
+  int count = 0;
   bool removeMinA = false;
   bool removeMinB = false;
 };
 
-// Axis-aligned cutter in the part's local frame, nanometres, before the
-// boolean opens the cutter slightly past the outer faces.
+// A cutter in the part's local frame, nanometres. A box uses x0..z1.
+// A prism (prismAxis 0, 1, or 2) extrudes pointCount profile points, which all
+// share that axis coordinate, out to prismEnd. The boolean opens a box past an
+// outer face. A prism keeps its sloped profile and is extended only outside.
 struct LocalCut {
   std::int64_t x0 = 0;
   std::int64_t y0 = 0;
@@ -60,6 +87,12 @@ struct LocalCut {
   std::int64_t x1 = 0;
   std::int64_t y1 = 0;
   std::int64_t z1 = 0;
+  int prismAxis = -1;
+  int pointCount = 0;
+  std::int64_t px[4] = {};
+  std::int64_t py[4] = {};
+  std::int64_t pz[4] = {};
+  std::int64_t prismEnd = 0;
 };
 
 FaceAxes faceAxes(PartFace face);

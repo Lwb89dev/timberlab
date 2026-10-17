@@ -1,3 +1,5 @@
+#include "timberlab/storage/sha256.hpp"
+
 #include <openssl/sha.h>
 
 #include <sstream>

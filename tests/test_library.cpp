@@ -1,13 +1,20 @@
 #include "near.hpp"
+#include "timberlab/core/document.hpp"
+#include "timberlab/storage/archive.hpp"
 #include "timberlab/storage/library.hpp"
 #include "timberlab/storage/preferences.hpp"
+#include "timberlab/storage/sha256.hpp"
+#include "timberlab/storage/sync.hpp"
 #include "timberlab/units/units.hpp"
 
+#include <nlohmann/json.hpp>
 #include <sqlite3.h>
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <filesystem>
+#include <fstream>
+#include <sstream>
 #include <string>
 
 namespace {
@@ -73,7 +80,7 @@ int rawVersion(const std::filesystem::path& path) {
 
 }  // namespace
 
-TEST_CASE("a new library is schema 2 and round trips") {
+TEST_CASE("a new library is schema 3 and round trips") {
   const auto path = testDirectory() / "library.sqlite";
   removeDatabase(path);
   std::string error;
@@ -85,7 +92,7 @@ TEST_CASE("a new library is schema 2 and round trips") {
   {
     timberlab::storage::Library library(path.string());
     REQUIRE(library.ok());
-    REQUIRE(library.schemaVersion() == 2);
+    REQUIRE(library.schemaVersion() == 3);
     REQUIRE(library.addMaterial(material, error));
     timberlab::storage::UserPreset preset;
     preset.id = "user_18mm";
@@ -100,9 +107,10 @@ TEST_CASE("a new library is schema 2 and round trips") {
 
   timberlab::storage::Library again(path.string());
   REQUIRE(again.ok());
-  REQUIRE(again.schemaVersion() == 2);
+  REQUIRE(again.schemaVersion() == 3);
   const auto materials = again.materials();
   REQUIRE(materials.size() == 1);
+  REQUIRE(materials[0].revision == 1);
   REQUIRE(materials[0].id == material.id);
   REQUIRE(materials[0].name == material.name);
   REQUIRE(materials[0].visualHex == material.visualHex);
@@ -125,7 +133,7 @@ TEST_CASE("a version 1 library migrates and keeps its rows") {
   {
     timberlab::storage::Library library(path.string());
     REQUIRE(library.ok());
-    REQUIRE(library.schemaVersion() == 2);
+    REQUIRE(library.schemaVersion() == 3);
     const auto materials = library.materials();
     REQUIRE(materials.size() == 1);
     REQUIRE(materials[0].id == "user_v1oak");
@@ -148,10 +156,39 @@ TEST_CASE("a version 1 library migrates and keeps its rows") {
   }
 
   timberlab::storage::Library again(path.string());
-  REQUIRE(again.schemaVersion() == 2);
+  REQUIRE(again.schemaVersion() == 3);
   REQUIRE(again.materials().size() == 2);
   REQUIRE(again.materials()[0].name == "Added after migration");
-  REQUIRE(rawVersion(path) == 2);
+  REQUIRE(again.materials()[0].revision == 1);
+  REQUIRE(again.presets()[0].revision == 1);
+  REQUIRE(rawVersion(path) == 3);
+}
+
+TEST_CASE("a version 2 library gains a revision and keeps its rows") {
+  const auto path = testDirectory() / "library-v2.sqlite";
+  removeDatabase(path);
+  {
+    sqlite3* db = nullptr;
+    REQUIRE(sqlite3_open_v2(path.string().c_str(), &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr) == SQLITE_OK);
+    REQUIRE(execSql(db,
+                    "CREATE TABLE schema_meta(version INTEGER NOT NULL);"
+                    "INSERT INTO schema_meta(version) VALUES (2);"
+                    "CREATE TABLE user_material(id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, visual_hex TEXT NOT NULL, "
+                    "notes TEXT NOT NULL DEFAULT '');"
+                    "CREATE TABLE user_preset(id TEXT PRIMARY KEY NOT NULL, label TEXT NOT NULL, thickness_nm INTEGER NOT NULL, "
+                    "group_name TEXT NOT NULL DEFAULT 'user');"
+                    "INSERT INTO user_material(id, name, visual_hex, notes) VALUES ('user_v2oak', 'Shop oak', '#112233', 'kept');"
+                    "INSERT INTO user_preset(id, label, thickness_nm, group_name) VALUES ('user_v2mm', '18 mm', 18000000, 'user');"));
+    sqlite3_close(db);
+  }
+  timberlab::storage::Library library(path.string());
+  REQUIRE(library.ok());
+  REQUIRE(library.schemaVersion() == 3);
+  REQUIRE(library.materials().size() == 1);
+  REQUIRE(library.materials()[0].notes == "kept");
+  REQUIRE(library.materials()[0].revision == 1);
+  REQUIRE(library.presets()[0].revision == 1);
+  REQUIRE(rawVersion(path) == 3);
 }
 
 TEST_CASE("a newer library and a preferences file are refused without losing rows") {
@@ -170,14 +207,14 @@ TEST_CASE("a newer library and a preferences file are refused without losing row
   {
     sqlite3* db = nullptr;
     REQUIRE(sqlite3_open_v2(path.string().c_str(), &db, SQLITE_OPEN_READWRITE, nullptr) == SQLITE_OK);
-    REQUIRE(execSql(db, "UPDATE schema_meta SET version = 3"));
+    REQUIRE(execSql(db, "UPDATE schema_meta SET version = 4"));
     sqlite3_close(db);
   }
   timberlab::storage::Library newer(path.string());
   REQUIRE_FALSE(newer.ok());
   REQUIRE(newer.error() == "library.version");
   REQUIRE(newer.materials().empty());
-  REQUIRE(rawVersion(path) == 3);
+  REQUIRE(rawVersion(path) == 4);
   {
     sqlite3* db = nullptr;
     REQUIRE(sqlite3_open_v2(path.string().c_str(), &db, SQLITE_OPEN_READONLY, nullptr) == SQLITE_OK);
@@ -283,4 +320,98 @@ TEST_CASE("a library stops at its row cap") {
   REQUIRE_FALSE(library.addMaterial(extra, error));
   REQUIRE(error == "library.too_many");
   REQUIRE(library.materials().size() == timberlab::storage::Library::kMaxRows);
+}
+
+std::string readBytes(const std::filesystem::path& path) {
+  std::ifstream input(path, std::ios::binary);
+  std::ostringstream buffer;
+  buffer << input.rdbuf();
+  return buffer.str();
+}
+
+TEST_CASE("a sealed library envelope updates the library and leaves the project file") {
+  const auto libraryPath = testDirectory() / "library-sync.sqlite";
+  const auto projectPath = testDirectory() / "library-sync.timberlab";
+  removeDatabase(libraryPath);
+  std::filesystem::remove(projectPath);
+  unsigned char key[32];
+  for (int i = 0; i < 32; ++i) key[i] = static_cast<unsigned char>(20 + i);
+
+  timberlab::Document document;
+  document.addBoard();
+  std::string error;
+  REQUIRE(document.setProjectName("Keep", error));
+  REQUIRE(timberlab::storage::saveProject(projectPath.string(), document).ok);
+  const std::string projectBefore = readBytes(projectPath);
+
+  timberlab::storage::Library library(libraryPath.string());
+  REQUIRE(library.ok());
+  timberlab::storage::UserMaterial material;
+  material.id = "user_sync";
+  material.name = "Shop oak";
+  material.visualHex = "#A67C52";
+  material.notes = "local";
+  REQUIRE(library.addMaterial(material, error));
+  REQUIRE(library.materials()[0].revision == 1);
+
+  timberlab::storage::SealedBlob sealed;
+  REQUIRE(library.sealMaterial(material.id, key, sealed, error));
+  std::string opened;
+  REQUIRE(timberlab::storage::openAes256Gcm(key, sealed, opened, error));
+  const auto parsed = nlohmann::json::parse(opened);
+  REQUIRE(parsed["revision"] == 1);
+  REQUIRE(parsed["contentHash"] == timberlab::storage::sha256Hex(parsed["payload"].dump()));
+
+  nlohmann::json remote = parsed;
+  remote["revision"] = 2;
+  remote["payload"]["notes"] = "remote";
+  remote["contentHash"] = timberlab::storage::sha256Hex(remote["payload"].dump());
+  REQUIRE(timberlab::storage::sealAes256Gcm(key, remote.dump(), sealed, error));
+  std::string winner;
+  REQUIRE(library.importEnvelope(key, sealed, winner, error));
+  REQUIRE(winner == "remote");
+  REQUIRE(library.materials()[0].notes == "remote");
+  REQUIRE(library.materials()[0].revision == 2);
+  REQUIRE(readBytes(projectPath) == projectBefore);
+
+  REQUIRE(library.importEnvelope(key, sealed, winner, error));
+  REQUIRE(winner == "local");
+  REQUIRE(library.materials()[0].notes == "remote");
+  REQUIRE(readBytes(projectPath) == projectBefore);
+
+  remote["payload"]["notes"] = "conflict";
+  remote["contentHash"] = timberlab::storage::sha256Hex(remote["payload"].dump());
+  REQUIRE(timberlab::storage::sealAes256Gcm(key, remote.dump(), sealed, error));
+  REQUIRE_FALSE(library.importEnvelope(key, sealed, winner, error));
+  REQUIRE(error == "sync.conflict");
+  REQUIRE(winner.empty());
+  REQUIRE(library.materials()[0].notes == "remote");
+  REQUIRE(readBytes(projectPath) == projectBefore);
+
+  unsigned char other[32];
+  for (int i = 0; i < 32; ++i) other[i] = static_cast<unsigned char>(i);
+  REQUIRE_FALSE(library.importEnvelope(other, sealed, winner, error));
+  REQUIRE(error == "sync.crypto");
+  REQUIRE(library.materials()[0].notes == "remote");
+  REQUIRE(readBytes(projectPath) == projectBefore);
+
+  timberlab::storage::UserPreset preset;
+  preset.id = "user_syncmm";
+  preset.label = "18 mm";
+  preset.group = "user";
+  preset.thicknessNm = 18 * kMm;
+  REQUIRE(library.addPreset(preset, error));
+  REQUIRE(library.sealPreset(preset.id, key, sealed, error));
+  REQUIRE(timberlab::storage::openAes256Gcm(key, sealed, opened, error));
+  nlohmann::json presetRemote = nlohmann::json::parse(opened);
+  presetRemote["revision"] = 4;
+  presetRemote["payload"]["label"] = "19 mm";
+  presetRemote["contentHash"] = timberlab::storage::sha256Hex(presetRemote["payload"].dump());
+  REQUIRE(timberlab::storage::sealAes256Gcm(key, presetRemote.dump(), sealed, error));
+  REQUIRE(library.importEnvelope(key, sealed, winner, error));
+  REQUIRE(winner == "remote");
+  REQUIRE(library.presets()[0].label == "19 mm");
+  REQUIRE(library.presets()[0].revision == 4);
+  REQUIRE(library.materials()[0].notes == "remote");
+  REQUIRE(readBytes(projectPath) == projectBefore);
 }

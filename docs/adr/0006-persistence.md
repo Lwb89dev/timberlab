@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Synchronization is not implemented.
+Accepted. A relay is not implemented. Local sealing and revision compare are a later decision (`docs/adr/0011-local-sync.md`).
 
 ## Context
 
@@ -14,7 +14,7 @@ The authoritative project is the `.timberlab` archive: format version 1, `model.
 
 SQLite schema version 1 stores preferences only: display unit, fraction denominator, mesh quality. A database newer than the code is refused. Preferences are not the project.
 
-The user library is its own SQLite database, schema version 2, with a migration from version 1. It holds custom materials and thickness presets. It does not replace the project archive, and it is not the only copy of a solid. See `docs/adr/0008-user-library.md`.
+The user library is its own SQLite database, schema version 3, with a migration from version 1 through version 2. It holds custom materials and thickness presets. It does not replace the project archive, and it is not the only copy of a solid. See `docs/adr/0008-user-library.md`.
 
 Nostr is blocked until that library exists and has been round-tripped locally. The sync layer must not open a socket, generate a key, or write into the archive code before then. A remote update must not delete an unpublished local edit.
 
@@ -23,4 +23,4 @@ Nostr is blocked until that library exists and has been round-tripped locally. T
 - `timberlab --accept` saves and reopens a real archive through the editor controller. Catch2 covers the archive format without Qt.
 - A failed rename does not delete the previous archive. The loader refuses a file over 32 MiB, a model over 2000 components, or duplicate component ids. Project files and the preferences database are owner-read/write only.
 - Moving the model itself into SQLite is not this decision. Replacing a checksummed file with an unproven database would be the failure mode this ADR is avoiding.
-- See `NOSTR_SYNC.md`. Nothing there is code.
+- See `NOSTR_SYNC.md`. The relay described there is still not code.

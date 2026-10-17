@@ -65,6 +65,7 @@ class DocumentController : public QObject {
   Q_PROPERTY(QVariantList userPresets READ userPresets NOTIFY documentChanged)
   Q_PROPERTY(QVariantMap selection READ selection NOTIFY documentChanged)
   Q_PROPERTY(QVariantList partChoices READ partChoices NOTIFY documentChanged)
+  Q_PROPERTY(QVariantList parentChoices READ parentChoices NOTIFY documentChanged)
   Q_PROPERTY(QVariantList joints READ joints NOTIFY documentChanged)
   Q_PROPERTY(QVariantList parameters READ parameters NOTIFY documentChanged)
   Q_PROPERTY(QVariantList driveFields READ driveFields CONSTANT)
@@ -92,6 +93,7 @@ class DocumentController : public QObject {
   QVariantList userPresets() const;
   QVariantMap selection() const;
   QVariantList partChoices() const;
+  QVariantList parentChoices() const;
   QVariantList joints() const;
   QVariantList parameters() const;
   QVariantList driveFields() const;
@@ -127,7 +129,13 @@ class DocumentController : public QObject {
   Q_INVOKABLE void setMaterial(const QString& id, const QString& materialId);
   Q_INVOKABLE void setVisible(const QString& id, bool visible);
   Q_INVOKABLE void setLocked(const QString& id, bool locked);
+  Q_INVOKABLE void setParent(const QString& id, const QString& parentId);
+  Q_INVOKABLE void setRole(const QString& id, const QString& role);
   Q_INVOKABLE void setNotes(const QString& id, const QString& notes);
+  Q_INVOKABLE bool exportCutList(const QUrl& url, const QString& allowanceText);
+  Q_INVOKABLE bool exportFrontView(const QUrl& url);
+  Q_INVOKABLE bool exportDrawing(const QUrl& url, const QString& kind);
+  Q_INVOKABLE bool restoreBackup();
   Q_INVOKABLE void setDisplayUnit(const QString& unitKey);
   Q_INVOKABLE void setFractionPrecision(int denom);
   Q_INVOKABLE void applyThicknessPreset(const QString& presetId);

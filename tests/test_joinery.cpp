@@ -18,6 +18,7 @@ using timberlab::Document;
 using timberlab::FaceEdge;
 using timberlab::Joint;
 using timberlab::JointType;
+using timberlab::jointTypeKey;
 using timberlab::PartFace;
 using timberlab::geometry::MeshQuality;
 using timberlab::geometry::PointSide;
@@ -277,6 +278,7 @@ TEST_CASE("joints survive save text, undo, lock, and part deletion") {
   REQUIRE(document.find(rail) == nullptr);
 
   nlohmann::json broken = nlohmann::json::parse(snapshot);
+
   broken["joints"][0]["thickness"] = 1000 * kMm;
   Document rejected;
   rejected.setProjectName("untouched", error);
@@ -298,4 +300,143 @@ TEST_CASE("joints survive save text, undo, lock, and part deletion") {
   orphan["joints"][0]["partA"] = "missing-part";
   REQUIRE_FALSE(Document::fromJson(orphan.dump(), rejected, error));
   REQUIRE(error == "component.missing");
+}
+
+TEST_CASE("a bridle cuts a centered slot and two cheeks") {
+  Component female = board("female", 80 * kMm, 40 * kMm, 30 * kMm);
+  Component male = board("male", 50 * kMm, 40 * kMm, 30 * kMm);
+  Joint joint;
+  joint.type = JointType::Bridle;
+  joint.partA = female.id;
+  joint.partB = male.id;
+  joint.faceA = PartFace::X1;
+  joint.faceB = PartFace::X0;
+  joint.lengthNm = 15 * kMm;
+  joint.thicknessNm = 10 * kMm;
+  std::vector<Component> parts{female, male};
+  const std::vector<Joint> joints{joint};
+  expectVolume(female, joints, parts, 80.0 * 40.0 * 30.0 - 15.0 * 10.0 * 30.0);
+  expectVolume(male, joints, parts, 50.0 * 40.0 * 30.0 - 15.0 * 30.0 * 30.0);
+}
+
+TEST_CASE("a castle joint alternates equal fingers") {
+  Component female = board("female", 80 * kMm, 40 * kMm, 30 * kMm);
+  Component male = board("male", 50 * kMm, 40 * kMm, 30 * kMm);
+  Joint joint;
+  joint.type = JointType::Castle;
+  joint.partA = female.id;
+  joint.partB = male.id;
+  joint.faceA = PartFace::X1;
+  joint.faceB = PartFace::X0;
+  joint.count = 3;
+  joint.lengthNm = 15 * kMm;
+  joint.thicknessNm = 8 * kMm;
+  std::vector<Component> parts{female, male};
+  const std::vector<Joint> joints{joint};
+  expectVolume(female, joints, parts, 80.0 * 40.0 * 30.0 - 2.0 * 15.0 * 8.0 * 30.0);
+  expectVolume(male, joints, parts, 50.0 * 40.0 * 30.0 - 3.0 * 15.0 * 8.0 * 30.0);
+}
+
+TEST_CASE("a miter removes a right triangle and keeps the low corner") {
+  Component part = board("rail", 80 * kMm, 20 * kMm, 40 * kMm);
+  Joint joint;
+  joint.type = JointType::Miter;
+  joint.partA = part.id;
+  joint.partB = "other";
+  joint.faceA = PartFace::X0;
+  joint.lengthNm = 20 * kMm;
+  joint.removeMinA = true;
+  Component other = board("other", 80 * kMm, 20 * kMm, 40 * kMm);
+  joint.faceB = PartFace::X0;
+  joint.removeMinB = true;
+  std::vector<Component> parts{part, other};
+  const std::vector<Joint> joints{joint};
+  expectVolume(part, joints, parts, 80.0 * 20.0 * 40.0 - 0.5 * 20.0 * 20.0 * 40.0);
+  REQUIRE(classifyLocal(part, joints, parts, 2, 10, 20) == PointSide::Out);
+  REQUIRE(classifyLocal(part, joints, parts, 10, 2, 20) == PointSide::In);
+}
+
+TEST_CASE("a through dovetail cuts pins and tails as trapezoids") {
+  Component pins = board("pins", 40 * kMm, 48 * kMm, 20 * kMm);
+  Component tails = board("tails", 40 * kMm, 48 * kMm, 20 * kMm);
+  Joint joint;
+  joint.type = JointType::Dovetail;
+  joint.partA = pins.id;
+  joint.partB = tails.id;
+  joint.faceA = PartFace::X1;
+  joint.faceB = PartFace::X0;
+  joint.count = 2;
+  joint.thicknessNm = 12 * kMm;
+  joint.widthNm = 12 * kMm;
+  joint.offsetNm = 2 * kMm;
+  joint.lengthNm = 10 * kMm;
+  joint.depthNm = 10 * kMm;
+  std::vector<Component> parts{pins, tails};
+  const std::vector<Joint> joints{joint};
+  expectVolume(tails, joints, parts, 40.0 * 48.0 * 20.0 - 5600.0);
+  expectVolume(pins, joints, parts, 40.0 * 48.0 * 20.0 - 4000.0);
+}
+
+TEST_CASE("a sliding dovetail cuts a flared dado and two shoulders") {
+  Component host = board("host", 100 * kMm, 30 * kMm, 40 * kMm);
+  Component tongue = board("tongue", 40 * kMm, 20 * kMm, 30 * kMm);
+  Joint joint;
+  joint.type = JointType::SlidingDovetail;
+  joint.partA = host.id;
+  joint.partB = tongue.id;
+  joint.faceA = PartFace::Z1;
+  joint.faceB = PartFace::X0;
+  joint.widthNm = 10 * kMm;
+  joint.offsetNm = 20 * kMm;
+  joint.offset2Nm = 2 * kMm;
+  joint.depthNm = 8 * kMm;
+  std::vector<Component> parts{host, tongue};
+  const std::vector<Joint> joints{joint};
+  expectVolume(host, joints, parts, 100.0 * 30.0 * 40.0 - 2880.0);
+  expectVolume(tongue, joints, parts, 40.0 * 20.0 * 30.0 - 1920.0);
+  REQUIRE(classifyLocal(host, joints, parts, 25, 15, 39) == PointSide::Out);
+  REQUIRE(classifyLocal(host, joints, parts, 10, 15, 39) == PointSide::In);
+  REQUIRE(classifyLocal(tongue, joints, parts, 2, 1, 15) == PointSide::Out);
+  REQUIRE(classifyLocal(tongue, joints, parts, 2, 10, 15) == PointSide::In);
+}
+
+TEST_CASE("starting sizes of the new joints fit two default boards") {
+  const char* keys[] = {"joint.bridle", "joint.castle", "joint.miter", "joint.dovetail", "joint.sliding_dovetail"};
+  for (const char* key : keys) {
+    Document document;
+    std::string error;
+    const std::string selected = document.addBoard();
+    const std::string mate = document.addBoard();
+    const std::string id = document.addJoint(key, selected, mate, error);
+    INFO(key);
+    INFO(error);
+    REQUIRE_FALSE(id.empty());
+    const auto cutA = probeSolid(*document.find(selected), document.joints(), document.components());
+    const auto cutB = probeSolid(*document.find(mate), document.joints(), document.components());
+    REQUIRE(cutA.ok);
+    REQUIRE(cutB.ok);
+    REQUIRE(cutA.volumeMm3 < 600.0 * 18.0 * 720.0 - 0.5);
+    REQUIRE(cutB.volumeMm3 < 600.0 * 18.0 * 720.0 - 0.5);
+    Document loaded;
+    REQUIRE(Document::fromJson(document.toJson(), loaded, error));
+    REQUIRE(loaded.joints().size() == 1);
+    REQUIRE(jointTypeKey(loaded.joints().front().type) == std::string(key));
+  }
+}
+
+TEST_CASE("castle and dovetail require a count and reload it") {
+  Document document;
+  std::string error;
+  const std::string selected = document.addBoard();
+  const std::string mate = document.addBoard();
+  REQUIRE_FALSE(document.addJoint("joint.castle", selected, mate, error).empty());
+  REQUIRE(document.joints().front().count == 3);
+  Document loaded;
+  REQUIRE(Document::fromJson(document.toJson(), loaded, error));
+  REQUIRE(loaded.joints().front().count == 3);
+
+  nlohmann::json missing = nlohmann::json::parse(document.toJson());
+  missing["joints"][0].erase("count");
+  REQUIRE_FALSE(Document::fromJson(missing.dump(), loaded, error));
+  REQUIRE(error == "storage.json");
 }

@@ -41,6 +41,17 @@ ApplicationWindow {
             MenuItem { text: qsTr("Open…"); onTriggered: confirmIfDirty("open") }
             MenuItem { text: qsTr("Save"); onTriggered: saveOrAsk() }
             MenuItem { text: qsTr("Save as…"); onTriggered: saveDialog.open() }
+            MenuSeparator {}
+            MenuItem { text: qsTr("Export cut list CSV…"); onTriggered: cutListCsvDialog.open() }
+            MenuItem { text: qsTr("Export cut list JSON…"); onTriggered: cutListJsonDialog.open() }
+            MenuItem { text: qsTr("Export front view…"); onTriggered: openDrawing("front", "svg", qsTr("Export front view"), qsTr("Front view wire (*.svg)")) }
+            MenuItem { text: qsTr("Export top view…"); onTriggered: openDrawing("top", "svg", qsTr("Export top view"), qsTr("Top view wire (*.svg)")) }
+            MenuItem { text: qsTr("Export right view…"); onTriggered: openDrawing("right", "svg", qsTr("Export right view"), qsTr("Right view wire (*.svg)")) }
+            MenuItem { text: qsTr("Export sheet…"); onTriggered: openDrawing("sheet", "svg", qsTr("Export sheet"), qsTr("Sheet wire (*.svg)")) }
+            MenuItem { text: qsTr("Export DXF wire…"); onTriggered: openDrawing("dxf", "dxf", qsTr("Export DXF wire"), qsTr("DXF wire (*.dxf)")) }
+            MenuItem { text: qsTr("Export PDF wire…"); onTriggered: openDrawing("pdf", "pdf", qsTr("Export PDF wire"), qsTr("PDF wire (*.pdf)")) }
+            MenuSeparator {}
+            MenuItem { text: qsTr("Restore backup…"); onTriggered: confirmRestore.open() }
         }
         Menu {
             title: qsTr("Edit")
@@ -66,6 +77,9 @@ ApplicationWindow {
         MenuItem { text: qsTr("Table"); onTriggered: app.addAssembly("table") }
         MenuItem { text: qsTr("Cabinet"); onTriggered: app.addAssembly("carcass") }
         MenuItem { text: qsTr("Drawer box"); onTriggered: app.addAssembly("drawer") }
+        MenuItem { text: qsTr("Frame"); onTriggered: app.addAssembly("frame") }
+        MenuItem { text: qsTr("Shelving"); onTriggered: app.addAssembly("shelving") }
+        MenuItem { text: qsTr("Bedside table"); onTriggered: app.addAssembly("bedside") }
     }
 
     header: ToolBar {
@@ -196,6 +210,46 @@ ApplicationWindow {
         nameFilters: [qsTr("TimberLab project (*.timberlab)")]
         onAccepted: app.saveProject(selectedFile)
     }
+    FileDialog {
+        id: cutListCsvDialog
+        title: qsTr("Export cut list")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "csv"
+        nameFilters: [qsTr("Cut list (*.csv)")]
+        onAccepted: app.exportCutList(selectedFile, "0")
+    }
+    FileDialog {
+        id: cutListJsonDialog
+        title: qsTr("Export cut list and bill of materials")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "json"
+        nameFilters: [qsTr("Cut list and BOM (*.json)")]
+        onAccepted: app.exportCutList(selectedFile, "0")
+    }
+    FileDialog {
+        id: drawingDialog
+        property string kind: "front"
+        title: qsTr("Export front view")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "svg"
+        nameFilters: [qsTr("Front view wire (*.svg)")]
+        onAccepted: app.exportDrawing(selectedFile, kind)
+    }
+    Dialog {
+        id: confirmRestore
+        title: qsTr("Restore backup")
+        modal: true
+        anchors.centerIn: parent
+        standardButtons: Dialog.Yes | Dialog.No
+        Label {
+            text: qsTr("Replace the project with the backup? The backup is checked first. An invalid backup leaves the project file as it is.")
+            textFormat: Text.PlainText
+            color: Theme.text
+            wrapMode: Text.WordWrap
+            width: 360
+        }
+        onAccepted: app.restoreBackup()
+    }
 
     Dialog {
         id: confirmDirty
@@ -247,6 +301,13 @@ ApplicationWindow {
             allowDirtyQuit = true
             window.close()
         }
+    }
+    function openDrawing(kind, suffix, title, filter) {
+        drawingDialog.kind = kind
+        drawingDialog.title = title
+        drawingDialog.defaultSuffix = suffix
+        drawingDialog.nameFilters = [filter]
+        drawingDialog.open()
     }
     function saveOrAsk() {
         viewport.forceActiveFocus()

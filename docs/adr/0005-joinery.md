@@ -12,7 +12,7 @@ A furniture configurator can draw a mortise as a texture or as a separate mesh a
 
 A joint modifies the OCCT solids of the parts it connects. The operation is a boolean (or an equivalent OCCT feature) driven by parameters kept in the document: type, the two parts, position, and the sizes needed to regenerate the cut. The viewport mesh is only a tessellation of the resulting shape. Editing that mesh is not a joint.
 
-The first set is mortise and tenon, half-lap, dado, groove, and rabbet/rebate. Identifiers and the stored fields are in `JOINERY_ENGINE.md`. The editor writes them. A dado, groove, or rabbet cuts the host only and still stores the mate. Mortise and tenon, and half-lap, cut both solids.
+The implemented set is mortise and tenon, half-lap, dado, groove, rabbet/rebate, bridle, castle, miter, through dovetail, and sliding dovetail. Identifiers and the stored fields are in `JOINERY_ENGINE.md`. The editor writes them. A dado, groove, or rabbet cuts the host only and still stores the mate. The others cut both solids. A miter, a through dovetail, and a sliding dovetail are prism cutters. They are not approximated by axis-aligned boxes.
 
 Joinery does not start until creating a board, typing an exact size, saving, and reopening that project is a tested path. A joint on top of a simulated editor would be a simulation.
 

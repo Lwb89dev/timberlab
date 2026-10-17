@@ -10,9 +10,9 @@ Custom materials and stock thicknesses belong to the user, not to one project. A
 
 ## Decision
 
-`library.sqlite` sits next to `timberlab.sqlite` in the user data directory. It stores custom materials (id, name, `#RRGGBB` color, notes) and thickness presets (id, label, nanometres, group). It does not store parts, joints, or project JSON.
+`library.sqlite` sits next to `timberlab.sqlite` in the user data directory. It stores custom materials (id, name, `#RRGGBB` color, notes, revision) and thickness presets (id, label, nanometres, group, revision). It does not store parts, joints, or project JSON.
 
-Schema version 1 is the material and preset tables without notes or a group. The current code writes version 2. Opening a version 1 file adds those columns, sets the version to 2, and keeps the rows. A newer version is refused and left unchanged. A preferences file opened by mistake is refused and its rows stay. The database file and its WAL files are owner-read/write only. Failures use stable codes and do not include the path or the SQLite message.
+Schema version 1 is the material and preset tables without notes or a group. Version 2 adds those columns. Version 3 adds `revision`, default 1. A new file is written at version 3. Opening version 1 adds the version 2 columns and then the revision. Opening version 2 adds the revision and keeps the rows. A newer version is refused and left unchanged. A preferences file opened by mistake is refused and its rows stay. The database file and its WAL files are owner-read/write only. Failures use stable codes and do not include the path or the SQLite message. A sealed envelope may replace one library row. It does not open a project.
 
 The shipped catalog stays the JSON resource. User rows are appended in the material and preset lists. A part still stores only the material id. Removing a library row does not edit any project. Density and hardness are not columns.
 

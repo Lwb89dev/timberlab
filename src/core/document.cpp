@@ -79,6 +79,18 @@ bool acceptableOffset(std::int64_t nm, std::string& error) {
   return true;
 }
 
+bool acceptableRole(const std::string& role) {
+  if (role.empty()) return true;
+  if (role.size() > 32) return false;
+  for (unsigned char letter : role) {
+    if (letter >= 'a' && letter <= 'z') continue;
+    if (letter >= '0' && letter <= '9') continue;
+    if (letter == '.' || letter == '_' || letter == '-') continue;
+    return false;
+  }
+  return true;
+}
+
 bool duplicateId(const std::vector<Component>& components, const std::string& id) {
   for (const Component& existing : components) {
     if (existing.id == id) return true;
@@ -114,8 +126,9 @@ bool readComponent(const nlohmann::json& item, Component& component, std::string
   component.visible = item.value("visible", true);
   component.locked = item.value("locked", false);
   component.parentId = item.value("parentId", "");
+  component.role = item.value("role", "");
   component.notes = item.value("notes", "");
-  if (component.parentId.size() > Document::kMaxIdBytes) {
+  if (component.parentId.size() > Document::kMaxIdBytes || !acceptableRole(component.role)) {
     error = "storage.json";
     return false;
   }
@@ -178,6 +191,16 @@ bool jointNeeds(JointType type, const char* key) {
       return name != "thickness";
     case JointType::Rabbet:
       return name == "width" || name == "depth";
+    case JointType::Bridle:
+      return name == "length" || name == "thickness";
+    case JointType::Castle:
+      return name == "length" || name == "thickness";
+    case JointType::Miter:
+      return name == "length";
+    case JointType::Dovetail:
+      return name == "length" || name == "width" || name == "thickness" || name == "depth" || name == "offset";
+    case JointType::SlidingDovetail:
+      return name == "width" || name == "depth" || name == "offset" || name == "offset2";
   }
   return false;
 }
@@ -262,6 +285,19 @@ bool readJoint(const nlohmann::json& item, Joint& joint, std::string& error) {
       !takeNm(item, "offset2", jointNeeds(joint.type, "offset2"), joint.offset2Nm, error)) {
     return false;
   }
+  const bool countRequired = joint.type == JointType::Castle || joint.type == JointType::Dovetail;
+  if (!item.contains("count")) {
+    joint.count = 0;
+    if (countRequired) {
+      error = "storage.json";
+      return false;
+    }
+  } else if (!item.at("count").is_number_integer()) {
+    error = "storage.json";
+    return false;
+  } else {
+    joint.count = item.at("count").get<int>();
+  }
   return readFlag(item, "removeMinA", joint.removeMinA, error) && readFlag(item, "removeMinB", joint.removeMinB, error);
 }
 
@@ -284,6 +320,29 @@ const Component* findLoaded(const std::vector<Component>& components, const std:
     if (component.id == id) return &component;
   }
   return nullptr;
+}
+
+bool parentsOk(const std::vector<Component>& components, std::string& error) {
+  for (const Component& component : components) {
+    std::string cursor = component.parentId;
+    for (std::size_t step = 0; step < components.size() && !cursor.empty(); ++step) {
+      if (cursor == component.id) {
+        error = "component.cycle";
+        return false;
+      }
+      const Component* next = findLoaded(components, cursor);
+      if (next == nullptr) {
+        error = "component.missing";
+        return false;
+      }
+      cursor = next->parentId;
+    }
+    if (!cursor.empty()) {
+      error = "component.cycle";
+      return false;
+    }
+  }
+  return true;
 }
 
 bool jointsFit(const std::vector<Component>& components, const std::vector<Joint>& joints, std::string& error) {
@@ -652,7 +711,10 @@ bool Document::remove(const std::string& id, std::string& error) {
   std::vector<Component> kept;
   kept.reserve(components_.size());
   for (const Component& item : components_) {
-    if (item.id != id) kept.push_back(item);
+    if (item.id == id) continue;
+    Component keptPart = item;
+    if (keptPart.parentId == id) keptPart.parentId.clear();
+    kept.push_back(std::move(keptPart));
   }
   components_ = std::move(kept);
   std::vector<Joint> keptJoints;
@@ -734,6 +796,59 @@ bool Document::setVisible(const std::string& id, bool visible, std::string& erro
     return false;
   }
   component->visible = visible;
+  pushHistory();
+  return true;
+}
+
+bool Document::setParent(const std::string& id, const std::string& parentId, std::string& error) {
+  Component* component = findMutable(id);
+  if (component == nullptr) {
+    error = "component.missing";
+    return false;
+  }
+  if (!editable(*component, error)) return false;
+  if (parentId == component->parentId) return true;
+  if (!parentId.empty()) {
+    if (find(parentId) == nullptr) {
+      error = "component.missing";
+      return false;
+    }
+    std::string cursor = parentId;
+    for (std::size_t step = 0; step < components_.size() && !cursor.empty(); ++step) {
+      if (cursor == id) {
+        error = "component.cycle";
+        return false;
+      }
+      const Component* next = find(cursor);
+      if (next == nullptr) {
+        error = "component.missing";
+        return false;
+      }
+      cursor = next->parentId;
+    }
+    if (!cursor.empty()) {
+      error = "component.cycle";
+      return false;
+    }
+  }
+  component->parentId = parentId;
+  pushHistory();
+  return true;
+}
+
+bool Document::setRole(const std::string& id, const std::string& role, std::string& error) {
+  Component* component = findMutable(id);
+  if (component == nullptr) {
+    error = "component.missing";
+    return false;
+  }
+  if (!editable(*component, error)) return false;
+  if (!acceptableRole(role)) {
+    error = "component.role";
+    return false;
+  }
+  if (component->role == role) return true;
+  component->role = role;
   pushHistory();
   return true;
 }
@@ -1058,7 +1173,13 @@ bool Document::setJointParameter(const std::string& id, std::string_view key, st
   else if (key == "depth") next.depthNm = nm;
   else if (key == "offset") next.offsetNm = nm;
   else if (key == "offset2") next.offset2Nm = nm;
-  else {
+  else if (key == "count") {
+    if (nm < 1 || nm > 8) {
+      error = "joint.parameter";
+      return false;
+    }
+    next.count = static_cast<int>(nm);
+  } else {
     error = "joint.parameter";
     return false;
   }
@@ -1083,7 +1204,7 @@ bool Document::redo(std::string& error) {
 std::string Document::toJson() const {
   nlohmann::json components = nlohmann::json::array();
   for (const Component& component : components_) {
-    components.push_back({
+    nlohmann::json item = {
         {"id", component.id},
         {"type", componentTypeKey(component.type)},
         {"name", component.name},
@@ -1104,7 +1225,9 @@ std::string Document::toJson() const {
           {"height", component.heightNm},
           {"thickness", component.thicknessNm},
           {"radius", component.radiusNm}}},
-    });
+    };
+    if (!component.role.empty()) item["role"] = component.role;
+    components.push_back(std::move(item));
   }
   nlohmann::json root = {{"schema", "timberlab.model"},
                          {"schemaVersion", kSchemaVersion},
@@ -1117,21 +1240,23 @@ std::string Document::toJson() const {
   if (!joints_.empty()) {
     nlohmann::json joints = nlohmann::json::array();
     for (const Joint& joint : joints_) {
-      joints.push_back({{"id", joint.id},
-                        {"type", jointTypeKey(joint.type)},
-                        {"partA", joint.partA},
-                        {"partB", joint.partB},
-                        {"faceA", faceKey(joint.faceA)},
-                        {"faceB", faceKey(joint.faceB)},
-                        {"edge", edgeKey(joint.edge)},
-                        {"length", joint.lengthNm},
-                        {"width", joint.widthNm},
-                        {"thickness", joint.thicknessNm},
-                        {"depth", joint.depthNm},
-                        {"offset", joint.offsetNm},
-                        {"offset2", joint.offset2Nm},
-                        {"removeMinA", joint.removeMinA},
-                        {"removeMinB", joint.removeMinB}});
+      nlohmann::json item = {{"id", joint.id},
+                             {"type", jointTypeKey(joint.type)},
+                             {"partA", joint.partA},
+                             {"partB", joint.partB},
+                             {"faceA", faceKey(joint.faceA)},
+                             {"faceB", faceKey(joint.faceB)},
+                             {"edge", edgeKey(joint.edge)},
+                             {"length", joint.lengthNm},
+                             {"width", joint.widthNm},
+                             {"thickness", joint.thicknessNm},
+                             {"depth", joint.depthNm},
+                             {"offset", joint.offsetNm},
+                             {"offset2", joint.offset2Nm},
+                             {"removeMinA", joint.removeMinA},
+                             {"removeMinB", joint.removeMinB}};
+      if (joint.count != 0) item["count"] = joint.count;
+      joints.push_back(std::move(item));
     }
     root["joints"] = std::move(joints);
   }
@@ -1233,6 +1358,7 @@ bool Document::readModel(const std::string& json, Document& out, std::string& er
     }
     components.push_back(std::move(component));
   }
+  if (!parentsOk(components, error)) return false;
 
   std::vector<constraints::Parameter> parameters;
   if (root.contains("parameters")) {

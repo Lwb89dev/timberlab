@@ -42,6 +42,8 @@ set(TIMBERLAB_MODEL_SOURCES
   src/core/joint.cpp
   src/core/document.cpp
   src/core/assembly.cpp
+  src/core/manufacturing.cpp
+  src/storage/sync.cpp
   src/constraints/dependency_graph.cpp
   src/constraints/binding.cpp
   src/geometry/solids.cpp
@@ -78,6 +80,11 @@ target_compile_options(timberlab-model PRIVATE
   $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra -Wpedantic>
   $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra>
 )
+option(TIMBERLAB_SANITIZE "Instrument the model with AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
+if(TIMBERLAB_SANITIZE)
+  target_compile_options(timberlab-model PUBLIC -fsanitize=address,undefined -fno-omit-frame-pointer)
+  target_link_options(timberlab-model PUBLIC -fsanitize=address,undefined)
+endif()
 
 qt_add_executable(timberlab
   apps/timberlab/main.cpp
@@ -139,6 +146,9 @@ if(BUILD_TESTING)
     tests/test_propagation.cpp
     tests/test_assembly.cpp
     tests/test_library.cpp
+    tests/test_hierarchy.cpp
+    tests/test_manufacturing.cpp
+    tests/test_sync.cpp
   )
   target_link_libraries(timberlab-tests PRIVATE timberlab-model Catch2::Catch2WithMain)
   target_compile_definitions(timberlab-tests PRIVATE

@@ -1,4 +1,5 @@
 #include "timberlab/storage/archive.hpp"
+#include "timberlab/storage/sha256.hpp"
 
 #include <miniz.h>
 
@@ -9,9 +10,6 @@
 #include <sstream>
 
 namespace timberlab::storage {
-
-std::string sha256Hex(const std::string& data);
-
 namespace {
 
 IoResult fail(const char* code) {
@@ -162,6 +160,33 @@ IoResult loadProject(const std::string& path, Document& document) {
   }
   if (manifest.value("modelSha256", "") != sha256Hex(model)) return fail("storage.checksum");
   if (!Document::fromJson(model, document, error)) return fail(error);
+  return IoResult{true, {}};
+}
+
+IoResult restoreBackup(const std::string& path, Document& document) {
+  const std::filesystem::path target(path);
+  const std::filesystem::path backup = target.string() + ".bak";
+  std::error_code ec;
+  if (!std::filesystem::is_regular_file(backup, ec)) return fail("storage.restore");
+  Document candidate;
+  const IoResult opened = loadProject(backup.string(), candidate);
+  if (!opened.ok) return opened;
+
+  const std::filesystem::path temporary = target.string() + ".tmp";
+  std::filesystem::copy_file(backup, temporary, std::filesystem::copy_options::overwrite_existing, ec);
+  if (ec) {
+    std::filesystem::remove(temporary, ec);
+    return fail("storage.io");
+  }
+  ownerOnly(temporary);
+  std::filesystem::rename(temporary, target, ec);
+  if (ec) {
+    std::error_code removeError;
+    std::filesystem::remove(temporary, removeError);
+    return fail("storage.io");
+  }
+  ownerOnly(target);
+  document = std::move(candidate);
   return IoResult{true, {}};
 }
 

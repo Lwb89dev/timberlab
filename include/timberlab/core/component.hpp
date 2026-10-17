@@ -36,6 +36,8 @@ struct Component {
   bool visible = true;
   bool locked = false;
   std::string parentId;
+  // Stable woodworking role, or empty. Examples: leg, rail, stile, apron, shelf.
+  std::string role;
   std::string notes;
 };
 

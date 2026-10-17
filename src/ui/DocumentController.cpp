@@ -1,5 +1,6 @@
 #include "DocumentController.hpp"
 
+#include "timberlab/core/manufacturing.hpp"
 #include "timberlab/core/transform.hpp"
 #include "timberlab/platform/paths.hpp"
 #include "timberlab/storage/archive.hpp"
@@ -294,6 +295,8 @@ QVariantMap DocumentController::selection() const {
   map.insert(QStringLiteral("rz"), QString::fromStdString(units::formatAngle(component->placement.rzDeg)));
   map.insert(QStringLiteral("visible"), component->visible);
   map.insert(QStringLiteral("locked"), component->locked);
+  map.insert(QStringLiteral("parentId"), QString::fromStdString(component->parentId));
+  map.insert(QStringLiteral("role"), QString::fromStdString(component->role));
   map.insert(QStringLiteral("notes"), QString::fromStdString(component->notes));
   QVariantList drives;
   for (const constraints::Binding& binding : document_.bindings()) {
@@ -310,6 +313,17 @@ QVariantMap DocumentController::selection() const {
 
 QVariantList DocumentController::partChoices() const {
   QVariantList list;
+  for (const Component& component : document_.components()) {
+    if (QString::fromStdString(component.id) == selectedId_) continue;
+    list.push_back(QVariantMap{{"id", QString::fromStdString(component.id)},
+                               {"name", QString::fromStdString(component.name)}});
+  }
+  return list;
+}
+
+QVariantList DocumentController::parentChoices() const {
+  QVariantList list;
+  list.push_back(QVariantMap{{"id", QString()}, {"name", tr("None")}});
   for (const Component& component : document_.components()) {
     if (QString::fromStdString(component.id) == selectedId_) continue;
     list.push_back(QVariantMap{{"id", QString::fromStdString(component.id)},
@@ -340,6 +354,7 @@ QVariantList DocumentController::joints() const {
     map.insert(QStringLiteral("depth"), text(joint.depthNm));
     map.insert(QStringLiteral("offset"), text(joint.offsetNm));
     map.insert(QStringLiteral("offset2"), text(joint.offset2Nm));
+    map.insert(QStringLiteral("count"), QString::number(joint.count));
     list.push_back(map);
   }
   return list;
@@ -411,6 +426,32 @@ QString DocumentController::instanceParameterLabel(const std::string& id, const 
     if (role == "height") return tr("Drawer height");
     if (role == "side") return tr("Drawer side");
     if (role == "bottom") return tr("Drawer bottom");
+    return {};
+  }
+  if (id.starts_with("frame_")) {
+    if (role == "width") return tr("Frame width");
+    if (role == "height") return tr("Frame height");
+    if (role == "stock") return tr("Frame stock");
+    if (role == "depth") return tr("Frame depth");
+    return {};
+  }
+  if (id.starts_with("shelving_")) {
+    if (role == "width") return tr("Shelf width");
+    if (role == "depth") return tr("Shelf depth");
+    if (role == "side") return tr("Shelf side");
+    if (role == "shelf") return tr("Shelf thickness");
+    if (role == "bay") return tr("Shelf bay");
+    return {};
+  }
+  if (id.starts_with("bedside_")) {
+    if (role == "width") return tr("Bedside width");
+    if (role == "depth") return tr("Bedside depth");
+    if (role == "height") return tr("Bedside height");
+    if (role == "leg") return tr("Bedside leg");
+    if (role == "top") return tr("Bedside top");
+    if (role == "drawerHeight") return tr("Bedside drawer");
+    if (role == "side") return tr("Bedside side");
+    if (role == "bottom") return tr("Bedside bottom");
     return {};
   }
   return {};
@@ -523,6 +564,9 @@ void DocumentController::addAssembly(const QString& kind) {
   if (kind == QStringLiteral("table")) status_ = tr("Table added. Its sizes are parameters.");
   else if (kind == QStringLiteral("carcass")) status_ = tr("Cabinet added. Its sizes are parameters.");
   else if (kind == QStringLiteral("drawer")) status_ = tr("Drawer box added. Its sizes are parameters.");
+  else if (kind == QStringLiteral("frame")) status_ = tr("Frame added. Its sizes are parameters.");
+  else if (kind == QStringLiteral("shelving")) status_ = tr("Shelving added. Its sizes are parameters.");
+  else if (kind == QStringLiteral("bedside")) status_ = tr("Bedside table added. Its sizes are parameters.");
   touch(true);
 }
 
@@ -894,18 +938,164 @@ bool DocumentController::addJoint(const QString& typeKey, const QString& selecte
 }
 
 bool DocumentController::setJointFromText(const QString& id, const QString& key, const QString& text) {
-  const auto parsed = units::parseLength(text.toStdString(), currentUnit());
-  if (!parsed.ok) {
-    report(parsed.error, false);
-    return false;
+  std::int64_t nm = 0;
+  if (key == QStringLiteral("count")) {
+    bool ok = false;
+    const int count = text.trimmed().toInt(&ok);
+    if (!ok) {
+      report("joint.parameter", false);
+      return false;
+    }
+    nm = count;
+  } else {
+    const auto parsed = units::parseLength(text.toStdString(), currentUnit());
+    if (!parsed.ok) {
+      report(parsed.error, false);
+      return false;
+    }
+    nm = parsed.nm;
   }
   std::string error;
-  if (!document_.setJointParameter(id.toStdString(), key.toStdString(), parsed.nm, error)) {
+  if (!document_.setJointParameter(id.toStdString(), key.toStdString(), nm, error)) {
     report(error, false);
     return false;
   }
   status_ = tr("Joint updated");
   touch(false);
+  return true;
+}
+
+void DocumentController::setParent(const QString& id, const QString& parentId) {
+  std::string error;
+  if (!document_.setParent(id.toStdString(), parentId.toStdString(), error)) {
+    report(error, false);
+    return;
+  }
+  status_ = tr("Parent updated");
+  touch(false);
+}
+
+void DocumentController::setRole(const QString& id, const QString& role) {
+  std::string error;
+  if (!document_.setRole(id.toStdString(), role.toStdString(), error)) {
+    report(error, false);
+    return;
+  }
+  status_ = tr("Role updated");
+  touch(false);
+}
+
+bool DocumentController::exportCutList(const QUrl& url, const QString& allowanceText) {
+  const QString path = url.toLocalFile();
+  if (path.isEmpty()) {
+    report("storage.io", false);
+    return false;
+  }
+  const auto parsed = units::parseLength(allowanceText.toStdString(), currentUnit());
+  if (!parsed.ok) {
+    report(parsed.error, false);
+    return false;
+  }
+  std::vector<manufacturing::CutPiece> pieces;
+  std::string error;
+  if (!manufacturing::cutList(document_.components(), parsed.nm, pieces, error)) {
+    report(error, false);
+    return false;
+  }
+  const auto bom = manufacturing::billOfMaterials(pieces);
+  const bool asJson = path.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive);
+  const std::string text =
+      asJson ? manufacturing::cutListJson(parsed.nm, pieces, bom) : manufacturing::cutListCsv(pieces);
+  QFile file(path);
+  if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+    report("storage.io", false);
+    return false;
+  }
+  const QByteArray bytes = QByteArray::fromStdString(text);
+  if (file.write(bytes) != bytes.size()) {
+    report("storage.io", false);
+    return false;
+  }
+  status_ = parsed.nm == 0 ? tr("Cut list written. Rough size equals finished size.") : tr("Cut list written.");
+  emit statusChanged();
+  return true;
+}
+
+bool DocumentController::exportFrontView(const QUrl& url) { return exportDrawing(url, QStringLiteral("front")); }
+
+bool DocumentController::exportDrawing(const QUrl& url, const QString& kind) {
+  const QString path = url.toLocalFile();
+  if (path.isEmpty()) {
+    report("storage.io", false);
+    return false;
+  }
+  const Component* component = document_.find(selectedId_.toStdString());
+  if (component == nullptr) {
+    report("component.missing", false);
+    return false;
+  }
+  std::string error;
+  const std::vector<Joint>& joints = document_.joints();
+  const std::vector<Component>& parts = document_.components();
+  std::string text;
+  QString written;
+  if (kind == QLatin1String("front")) {
+    text = manufacturing::frontViewSvg(*component, joints, parts, error);
+    written = tr("Front view written. It is a tessellation wire, not a dimensioned drawing.");
+  } else if (kind == QLatin1String("top")) {
+    text = manufacturing::topViewSvg(*component, joints, parts, error);
+    written = tr("Top view written. It is a tessellation wire, not a dimensioned drawing.");
+  } else if (kind == QLatin1String("right")) {
+    text = manufacturing::rightViewSvg(*component, joints, parts, error);
+    written = tr("Right view written. It is a tessellation wire, not a dimensioned drawing.");
+  } else if (kind == QLatin1String("sheet")) {
+    text = manufacturing::sheetSvg(*component, joints, parts, error);
+    written = tr("Sheet written. It is a tessellation wire, not a dimensioned drawing.");
+  } else if (kind == QLatin1String("dxf")) {
+    text = manufacturing::wireDxf(*component, joints, parts, error);
+    written = tr("DXF wire written. It is a tessellation wire, not a dimensioned drawing.");
+  } else if (kind == QLatin1String("pdf")) {
+    text = manufacturing::wirePdf(*component, joints, parts, error);
+    written = tr("PDF wire written. It is a tessellation wire, not a dimensioned drawing.");
+  } else {
+    report("drawing.kind", false);
+    return false;
+  }
+  if (text.empty()) {
+    report(error.empty() ? "geometry.invalid" : error, false);
+    return false;
+  }
+  QFile file(path);
+  if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+    report("storage.io", false);
+    return false;
+  }
+  const QByteArray bytes = QByteArray::fromStdString(text);
+  if (file.write(bytes) != bytes.size()) {
+    report("storage.io", false);
+    return false;
+  }
+  status_ = written;
+  emit statusChanged();
+  return true;
+}
+
+bool DocumentController::restoreBackup() {
+  if (projectPath_.isEmpty()) {
+    report("storage.io", true);
+    return false;
+  }
+  Document loaded;
+  const auto result = storage::restoreBackup(projectPath_.toStdString(), loaded);
+  if (!result.ok) {
+    report(result.error, true);
+    return false;
+  }
+  document_ = std::move(loaded);
+  document_.markSaved();
+  selectedId_.clear();
+  status_ = tr("Restored the previous save. The backup was checked before it replaced the project.");
+  touch(true);
   return true;
 }
 
@@ -1022,12 +1212,16 @@ QString DocumentController::messageFor(const QString& code) const {
   if (code == "dimension.not_applicable") return tr("That dimension does not apply to this part.");
   if (code == "component.locked") return tr("Unlock the part before editing it.");
   if (code == "component.missing") return tr("That part is no longer in the project.");
+  if (code == "component.cycle") return tr("That parent would make a loop.");
+  if (code == "component.role") return tr("A role is a short token: letters, digits, dot, underscore, or hyphen.");
   if (code == "name.empty") return tr("The name cannot be empty.");
   if (code == "name.too_long") return tr("That name is too long.");
   if (code == "notes.too_long") return tr("Those notes are too long.");
   if (code == "text.too_long") return tr("That text is too long.");
   if (code == "storage.io") return tr("Could not read or write the project file.");
   if (code == "storage.backup") return tr("Could not update the project backup.");
+  if (code == "storage.restore") return tr("There is no backup to restore.");
+  if (code == "drawing.kind") return tr("That drawing is not available.");
   if (code == "storage.format" || code == "storage.json") return tr("This file is not a TimberLab project.");
   if (code == "storage.checksum") return tr("The project file failed its integrity check.");
   if (code == "storage.version") return tr("This project uses a newer file version.");

@@ -10,7 +10,7 @@ A cabinet is several boards whose sizes follow a few numbers. A live parent woul
 
 ## Decision
 
-`addAssembly` accepts `table`, `carcass`, or `drawer`. Anything else is `assembly.unknown`. The recipe appends ordinary boards, ordinary parameters, and ordinary linear bindings, then stops. The project file does not gain an assemblies array. `parentId` stays empty. No joint is cut.
+`addAssembly` accepts `table`, `carcass`, `drawer`, `frame`, `shelving`, or `bedside`. Anything else is `assembly.unknown`. The recipe appends ordinary boards, ordinary parameters, and ordinary linear bindings, then stops. The project file does not gain an assemblies array. `parentId` stays empty. Each part gets a role token (`leg`, `apron`, `top`, `side`, `panel`, `back`, `front`, `bottom`, `stile`, `rail`, `shelf`). No joint is cut. Shelving uses a bay parameter. It does not divide a height, and changing the bay does not create or delete boards. The bedside lower shelf stays at a literal 120 mm, and its thickness stays 18 mm. Those two numbers are not drivers.
 
 Parameter ids are `table_<id>.width` and the same pattern for the other roles, so two tables do not share `table.width`. The demo table still uses the short ids `table.width` and the short stored names. An inserted table stores names such as `Table width`.
 

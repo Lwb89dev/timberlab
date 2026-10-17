@@ -20,4 +20,9 @@ struct IoResult {
 IoResult saveProject(const std::string& path, const Document& document);
 IoResult loadProject(const std::string& path, Document& document);
 
+// Copies path.bak onto path after that backup loads. A missing backup is
+// storage.restore. An invalid backup returns the load error. Either failure
+// leaves path and document untouched. loadProject does not call this.
+IoResult restoreBackup(const std::string& path, Document& document);
+
 }  // namespace timberlab::storage

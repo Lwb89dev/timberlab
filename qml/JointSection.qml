@@ -13,7 +13,12 @@ ColumnLayout {
         "joint.half_lap",
         "joint.dado",
         "joint.groove",
-        "joint.rabbet"
+        "joint.rabbet",
+        "joint.bridle",
+        "joint.castle",
+        "joint.miter",
+        "joint.dovetail",
+        "joint.sliding_dovetail"
     ]
 
     function typeKey() {
@@ -25,6 +30,11 @@ ColumnLayout {
         if (type === "joint.dado") return qsTr("Dado")
         if (type === "joint.groove") return qsTr("Groove")
         if (type === "joint.rabbet") return qsTr("Rabbet")
+        if (type === "joint.bridle") return qsTr("Bridle")
+        if (type === "joint.castle") return qsTr("Castle")
+        if (type === "joint.miter") return qsTr("Miter")
+        if (type === "joint.dovetail") return qsTr("Dovetail")
+        if (type === "joint.sliding_dovetail") return qsTr("Sliding dovetail")
         return type
     }
     function shows(type, key) {
@@ -35,6 +45,13 @@ ColumnLayout {
         if (type === "joint.groove")
             return key === "length" || key === "width" || key === "depth" || key === "offset" || key === "offset2"
         if (type === "joint.rabbet") return key === "width" || key === "depth"
+        if (type === "joint.bridle") return key === "length" || key === "thickness"
+        if (type === "joint.castle") return key === "length" || key === "thickness" || key === "count"
+        if (type === "joint.miter") return key === "length"
+        if (type === "joint.dovetail")
+            return key === "length" || key === "width" || key === "thickness" || key === "depth" || key === "offset" || key === "count"
+        if (type === "joint.sliding_dovetail")
+            return key === "width" || key === "depth" || key === "offset" || key === "offset2"
         return false
     }
     function syncMate() {
@@ -73,7 +90,12 @@ ColumnLayout {
             qsTr("Half lap"),
             qsTr("Dado"),
             qsTr("Groove"),
-            qsTr("Rabbet")
+            qsTr("Rabbet"),
+            qsTr("Bridle"),
+            qsTr("Castle"),
+            qsTr("Miter"),
+            qsTr("Dovetail"),
+            qsTr("Sliding dovetail")
         ]
     }
     Label { text: qsTr("Mate"); color: Theme.muted }
@@ -137,15 +159,21 @@ ColumnLayout {
             }
             ValueField {
                 visible: section.shows(modelData.type, "offset")
-                label: qsTr("Offset")
+                label: modelData.type === "joint.dovetail" ? qsTr("Slope") : qsTr("Offset")
                 value: modelData.offset || ""
                 onCommitted: function (text) { app.setJointFromText(modelData.id, "offset", text) }
             }
             ValueField {
                 visible: section.shows(modelData.type, "offset2")
-                label: qsTr("Second offset")
+                label: modelData.type === "joint.sliding_dovetail" ? qsTr("Slope") : qsTr("Second offset")
                 value: modelData.offset2 || ""
                 onCommitted: function (text) { app.setJointFromText(modelData.id, "offset2", text) }
+            }
+            ValueField {
+                visible: section.shows(modelData.type, "count")
+                label: qsTr("Count")
+                value: modelData.count || ""
+                onCommitted: function (text) { app.setJointFromText(modelData.id, "count", text) }
             }
             Button {
                 text: qsTr("Remove joint")

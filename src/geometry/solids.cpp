@@ -5,12 +5,15 @@
 #include <BRepAlgoAPI_Cut.hxx>
 #include <BRepAlgoAPI_Fuse.hxx>
 #include <BRepBndLib.hxx>
+#include <BRepBuilderAPI_MakeFace.hxx>
+#include <BRepBuilderAPI_MakePolygon.hxx>
 #include <BRepCheck_Analyzer.hxx>
 #include <BRepClass3d_SolidClassifier.hxx>
 #include <BRepGProp.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <BRepPrimAPI_MakeBox.hxx>
 #include <BRepPrimAPI_MakeCylinder.hxx>
+#include <BRepPrimAPI_MakePrism.hxx>
 #include <BRep_Tool.hxx>
 #include <Bnd_Box.hxx>
 #include <GProp_GProps.hxx>
@@ -25,7 +28,9 @@
 #include <gp.hxx>
 #include <gp_Ax2.hxx>
 #include <gp_Pnt.hxx>
+#include <gp_Vec.hxx>
 
+#include <cmath>
 #include <utility>
 #include <vector>
 
@@ -131,7 +136,7 @@ void expandBoundary(LocalCut& cut, const Component& part) {
   open(cut.z0, cut.z1, part.heightNm);
 }
 
-bool makeCutter(const LocalCut& cut, TopoDS_Shape& shape, std::string& error) {
+bool makeBox(const LocalCut& cut, TopoDS_Shape& shape, std::string& error) {
   double x0 = units::toMillimetres(cut.x0);
   double y0 = units::toMillimetres(cut.y0);
   double z0 = units::toMillimetres(cut.z0);
@@ -152,6 +157,110 @@ bool makeCutter(const LocalCut& cut, TopoDS_Shape& shape, std::string& error) {
     return false;
   }
   shape = box.Shape();
+  return true;
+}
+
+std::int64_t profileCoord(const LocalCut& cut, int point, int axis) {
+  if (axis == 0) return cut.px[point];
+  if (axis == 1) return cut.py[point];
+  return cut.pz[point];
+}
+
+bool fuseTools(const TopoDS_Shape& left, const TopoDS_Shape& right, TopoDS_Shape& out, std::string& error);
+
+bool profileOpen(const LocalCut& cut) {
+  if (cut.pointCount < 3 || cut.prismAxis < 0 || cut.prismAxis > 2) return false;
+  const int u = cut.prismAxis == 0 ? 1 : 0;
+  const int v = cut.prismAxis == 2 ? 1 : 2;
+  const double ux = static_cast<double>(profileCoord(cut, 1, u) - profileCoord(cut, 0, u));
+  const double uy = static_cast<double>(profileCoord(cut, 1, v) - profileCoord(cut, 0, v));
+  const double vx = static_cast<double>(profileCoord(cut, 2, u) - profileCoord(cut, 0, u));
+  const double vy = static_cast<double>(profileCoord(cut, 2, v) - profileCoord(cut, 0, v));
+  return std::abs(ux * vy - uy * vx) > 1.0;
+}
+
+bool makePrism(LocalCut cut, const Component& part, TopoDS_Shape& shape, std::string& error) {
+  if (!profileOpen(cut)) {
+    error = "joint.no_effect";
+    return false;
+  }
+  const int axis = cut.prismAxis;
+  const std::int64_t extents[3] = {part.widthNm, part.thicknessNm, part.heightNm};
+  std::int64_t start = profileCoord(cut, 0, axis);
+  std::int64_t end = cut.prismEnd;
+  if (start <= 0) start -= kBooleanOverlapNm;
+  if (end >= extents[axis]) end += kBooleanOverlapNm;
+  const std::int64_t shift = start - profileCoord(cut, 0, axis);
+  BRepBuilderAPI_MakePolygon polygon;
+  for (int i = 0; i < cut.pointCount; ++i) {
+    double coords[3] = {units::toMillimetres(cut.px[i]), units::toMillimetres(cut.py[i]),
+                        units::toMillimetres(cut.pz[i])};
+    coords[axis] = units::toMillimetres(profileCoord(cut, i, axis) + shift);
+    polygon.Add(gp_Pnt(coords[0], coords[1], coords[2]));
+  }
+  polygon.Close();
+  if (!polygon.IsDone()) {
+    error = "geometry.kernel";
+    return false;
+  }
+  BRepBuilderAPI_MakeFace face(polygon.Wire());
+  if (!face.IsDone()) {
+    error = "geometry.kernel";
+    return false;
+  }
+  const double delta = units::toMillimetres(end - start);
+  gp_Vec direction;
+  if (axis == 0) direction = gp_Vec(delta, 0, 0);
+  else if (axis == 1) direction = gp_Vec(0, delta, 0);
+  else direction = gp_Vec(0, 0, delta);
+  BRepPrimAPI_MakePrism prism(face.Shape(), direction);
+  prism.Build();
+  if (!prism.IsDone()) {
+    error = "geometry.kernel";
+    return false;
+  }
+  shape = prism.Shape();
+  for (int i = 0; i < cut.pointCount; ++i) {
+    const int next = (i + 1) % cut.pointCount;
+    for (int side = 0; side < 3; ++side) {
+      if (side == axis) continue;
+      const std::int64_t a = profileCoord(cut, i, side);
+      const std::int64_t b = profileCoord(cut, next, side);
+      if (a != b || (a > 0 && a < extents[side])) continue;
+      LocalCut slab;
+      slab.x0 = cut.px[i];
+      slab.y0 = cut.py[i];
+      slab.z0 = cut.pz[i];
+      slab.x1 = cut.px[next];
+      slab.y1 = cut.py[next];
+      slab.z1 = cut.pz[next];
+      if (axis == 0) {
+        slab.x0 = start;
+        slab.x1 = end;
+      } else if (axis == 1) {
+        slab.y0 = start;
+        slab.y1 = end;
+      } else {
+        slab.z0 = start;
+        slab.z1 = end;
+      }
+      if (side == 0) {
+        slab.x0 = a <= 0 ? a - kBooleanOverlapNm : a;
+        slab.x1 = a <= 0 ? a : a + kBooleanOverlapNm;
+      } else if (side == 1) {
+        slab.y0 = a <= 0 ? a - kBooleanOverlapNm : a;
+        slab.y1 = a <= 0 ? a : a + kBooleanOverlapNm;
+      } else {
+        slab.z0 = a <= 0 ? a - kBooleanOverlapNm : a;
+        slab.z1 = a <= 0 ? a : a + kBooleanOverlapNm;
+      }
+      TopoDS_Shape extra;
+      if (!makeBox(slab, extra, error)) return false;
+      TopoDS_Shape fused;
+      if (!fuseTools(shape, extra, fused, error)) return false;
+      shape = fused;
+    }
+  }
   return true;
 }
 
@@ -214,16 +323,20 @@ bool applyCuts(TopoDS_Shape& shape, const Component& part, const std::vector<Loc
   TopoDS_Shape tool;
   bool haveTool = false;
   for (LocalCut cut : cuts) {
-    expandBoundary(cut, part);
-    TopoDS_Shape box;
-    if (!makeCutter(cut, box, error)) return false;
+    TopoDS_Shape piece;
+    if (cut.prismAxis < 0) {
+      expandBoundary(cut, part);
+      if (!makeBox(cut, piece, error)) return false;
+    } else if (!makePrism(cut, part, piece, error)) {
+      return false;
+    }
     if (!haveTool) {
-      tool = box;
+      tool = piece;
       haveTool = true;
       continue;
     }
     TopoDS_Shape fused;
-    if (!fuseTools(tool, box, fused, error)) return false;
+    if (!fuseTools(tool, piece, fused, error)) return false;
     tool = fused;
   }
   if (!haveTool) {
