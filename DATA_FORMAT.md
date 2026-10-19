@@ -10,7 +10,7 @@ Extension: `.timberlab`. Format version 1. It is a zip file, not a memory dump.
 {
   "format": "timberlab",
   "formatVersion": 1,
-  "createdBy": "TimberLab 0.1.0",
+  "createdBy": "TimberLab 0.2.0",
   "model": "model.json",
   "modelSha256": "<hex sha-256 of the model.json bytes>"
 }

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(TimberLab VERSION 0.1.0 LANGUAGES C CXX)
+project(TimberLab VERSION 0.2.0 LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -39,6 +39,7 @@ find_package(SQLite3 REQUIRED)
 set(TIMBERLAB_MODEL_SOURCES
   src/units/units.cpp
   src/core/component.cpp
+  src/core/align.cpp
   src/core/joint.cpp
   src/core/document.cpp
   src/core/assembly.cpp
@@ -142,6 +143,7 @@ if(BUILD_TESTING)
   add_executable(timberlab-tests
     tests/test_units.cpp
     tests/test_document.cpp
+    tests/test_align.cpp
     tests/test_geometry.cpp
     tests/test_storage.cpp
     tests/test_catalog.cpp

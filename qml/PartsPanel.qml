@@ -4,8 +4,10 @@ import QtQuick.Layouts
 import TimberLab
 
 Rectangle {
+    id: panel
     color: Theme.panel
     signal demoRequested()
+    signal renameRequested(string partId, string partName)
     function typeName(key) {
         if (key === "board") return qsTr("Board")
         if (key === "box") return qsTr("Box")
@@ -47,8 +49,41 @@ Rectangle {
                 border.color: partId === app.selectedId ? Theme.accent : Theme.border
                 border.width: 1
                 MouseArea {
+                    id: rowMouse
                     anchors.fill: parent
-                    onClicked: app.select(partId)
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    onClicked: function (mouse) {
+                        if (mouse.button === Qt.RightButton) {
+                            partMenu.partId = partId
+                            partMenu.partName = name
+                            partMenu.popup(rowMouse, mouse.x, mouse.y)
+                        } else {
+                            app.select(partId)
+                        }
+                    }
+                }
+                Menu {
+                    id: partMenu
+                    property string partId: ""
+                    property string partName: ""
+                    MenuItem {
+                        text: qsTr("Rename")
+                        onTriggered: panel.renameRequested(partMenu.partId, partMenu.partName)
+                    }
+                    MenuItem {
+                        text: qsTr("Duplicate")
+                        onTriggered: {
+                            app.select(partMenu.partId)
+                            app.duplicateSelected()
+                        }
+                    }
+                    MenuItem {
+                        text: qsTr("Delete")
+                        onTriggered: {
+                            app.select(partMenu.partId)
+                            app.deleteSelected()
+                        }
+                    }
                 }
                 RowLayout {
                     anchors.fill: parent

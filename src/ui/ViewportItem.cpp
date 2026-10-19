@@ -1,6 +1,7 @@
 #include "ViewportItem.hpp"
 
 #include "DocumentController.hpp"
+#include "timberlab/core/align.hpp"
 
 #include <QByteArray>
 #include <QDebug>
@@ -139,8 +140,22 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
       projection_.perspective(kFov, aspect, nearPlane, farPlane);
     }
     selectedId_ = view->selectedId();
-    if (view->controller() != nullptr) parts_ = view->controller()->copyScene();
+    if (view->controller() != nullptr) {
+      parts_ = view->controller()->copyScene();
+      const auto* controller = view->controller();
+      if (controller->isDragging()) {
+        guideCenter_ = controller->dragCenter();
+        guideSnapX_ = controller->dragSnapX();
+        guideSnapY_ = controller->dragSnapY();
+        guideSnapZ_ = controller->dragSnapZ();
+      } else {
+        guideCount_ = 0;
+      }
+    } else {
+      guideCount_ = 0;
+    }
     geometryDirty_ = true;
+    guideDirty_ = true;
     dpr_ = view->window() != nullptr ? float(view->window()->devicePixelRatio()) : 1.f;
     if (view->pickPending() && view->pickSerial() != consumedPick_) {
       pick_ = true;
@@ -154,12 +169,14 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
   void render() override {
     ensurePrograms();
     ensureGrid();
+    ensureGuides();
     if (geometryDirty_) uploadParts();
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
     glClearColor(0.176f, 0.169f, 0.161f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     drawGrid();
+    drawGuides();
     drawMeshes(false);
 
     if (pick_) {
@@ -251,6 +268,67 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
     gridVao_.bind();
     glDrawArrays(GL_LINES, 0, gridCount_);
     gridVao_.release();
+    lineProgram_.release();
+  }
+
+  void ensureGuides() {
+    if (!guideDirty_) return;
+    uploadGuides();
+  }
+
+  void uploadGuides() {
+    guideCount_ = 0;
+    if (guideCenter_.isNull()) {
+      guideDirty_ = false;
+      return;
+    }
+    std::vector<float> lines;
+    auto push = [&](float x, float y, float z, float r, float g, float b) {
+      lines.insert(lines.end(), {x, y, z, r, g, b});
+    };
+    const float span = 5000.f;
+    const float dim = 0.25f;
+    const QVector3D c = guideCenter_;
+
+    const float xr = guideSnapX_ ? 0.95f : dim;
+    const float xg = guideSnapX_ ? 0.70f : dim;
+    const float xb = guideSnapX_ ? 0.25f : dim;
+    push(c.x() - span, c.y(), c.z(), xr, xg, xb);
+    push(c.x() + span, c.y(), c.z(), xr, xg, xb);
+
+    const float yr = guideSnapY_ ? 0.95f : dim;
+    const float yg = guideSnapY_ ? 0.70f : dim;
+    const float yb = guideSnapY_ ? 0.25f : dim;
+    push(c.x(), c.y() - span, c.z(), yr, yg, yb);
+    push(c.x(), c.y() + span, c.z(), yr, yg, yb);
+
+    const float zr = guideSnapZ_ ? 0.95f : dim;
+    const float zg = guideSnapZ_ ? 0.70f : dim;
+    const float zb = guideSnapZ_ ? 0.25f : dim;
+    push(c.x(), c.y(), c.z() - span, zr, zg, zb);
+    push(c.x(), c.y(), c.z() + span, zr, zg, zb);
+
+    guideCount_ = int(lines.size() / 6);
+    if (!guideVao_.isCreated()) guideVao_.create();
+    guideVao_.bind();
+    if (!guideVbo_.isCreated()) guideVbo_.create();
+    guideVbo_.bind();
+    guideVbo_.allocate(lines.data(), int(lines.size() * sizeof(float)));
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), nullptr);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(3 * sizeof(float)));
+    guideVao_.release();
+    guideDirty_ = false;
+  }
+
+  void drawGuides() {
+    if (!lineProgram_.isLinked() || guideCount_ == 0) return;
+    lineProgram_.bind();
+    lineProgram_.setUniformValue("uViewProj", projection_ * view_);
+    guideVao_.bind();
+    glDrawArrays(GL_LINES, 0, guideCount_);
+    guideVao_.release();
     lineProgram_.release();
   }
 
@@ -353,6 +431,14 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
   QOpenGLBuffer gridVbo_{QOpenGLBuffer::VertexBuffer};
   int gridCount_ = 0;
   bool gridReady_ = false;
+  QOpenGLVertexArrayObject guideVao_;
+  QOpenGLBuffer guideVbo_{QOpenGLBuffer::VertexBuffer};
+  int guideCount_ = 0;
+  bool guideDirty_ = false;
+  QVector3D guideCenter_;
+  bool guideSnapX_ = false;
+  bool guideSnapY_ = false;
+  bool guideSnapZ_ = false;
   GLuint pickFbo_ = 0;
   GLuint pickColor_ = 0;
   GLuint pickDepth_ = 0;
@@ -450,6 +536,221 @@ void ViewportItem::frameAll() { fit(false); }
 
 void ViewportItem::frameSelection() { fit(true); }
 
+void ViewportItem::viewProjection(QMatrix4x4& view, QMatrix4x4& projection) const {
+  const QVector3D up = std::abs(elevation_) > 80.f ? QVector3D(0, 1, 0) : QVector3D(0, 0, 1);
+  view.setToIdentity();
+  view.lookAt(eye(), target_, up);
+  const float aspect = height() > 0 ? float(width()) / float(height()) : 1.f;
+  const float nearPlane = std::max(0.5f, distance_ * 0.001f);
+  const float farPlane = std::max(nearPlane + 10.f, distance_ * 40.f);
+  projection.setToIdentity();
+  if (orthographic_) {
+    const float halfHeight = distance_ * 0.45f;
+    const float halfWidth = halfHeight * aspect;
+    projection.ortho(-halfWidth, halfWidth, -halfHeight, halfHeight, nearPlane, farPlane);
+  } else {
+    projection.perspective(kFov, aspect, nearPlane, farPlane);
+  }
+}
+
+bool ViewportItem::rayThrough(QPointF position, QVector3D& origin, QVector3D& direction) const {
+  if (width() <= 0 || height() <= 0) return false;
+  QMatrix4x4 view, projection;
+  viewProjection(view, projection);
+  const float x = 2.f * float(position.x()) / float(width()) - 1.f;
+  const float y = 1.f - 2.f * float(position.y()) / float(height());
+  const QMatrix4x4 vp = projection * view;
+  const QMatrix4x4 inv = vp.inverted();
+  if (orthographic_) {
+    const QVector4D p = inv * QVector4D(x, y, 0.f, 1.f);
+    origin = QVector3D(p.x() / p.w(), p.y() / p.w(), p.z() / p.w());
+    direction = (target_ - eye()).normalized();
+    if (direction.lengthSquared() < 1e-12f) direction = QVector3D(0, 0, -1);
+  } else {
+    origin = eye();
+    const QVector4D far = inv * QVector4D(x, y, 1.f, 1.f);
+    const QVector3D farWorld(far.x() / far.w(), far.y() / far.w(), far.z() / far.w());
+    direction = (farWorld - origin).normalized();
+    if (direction.lengthSquared() < 1e-12f) return false;
+  }
+  return true;
+}
+
+bool ViewportItem::projectToScreen(const QVector3D& world, QPointF& screen) const {
+  if (width() <= 0 || height() <= 0) return false;
+  QMatrix4x4 view, projection;
+  viewProjection(view, projection);
+  const QVector3D clip = (projection * view).map(world);
+  if (clip.z() < -1.f || clip.z() > 1.f) return false;
+  screen.rx() = (clip.x() + 1.f) * 0.5f * width();
+  screen.ry() = (1.f - clip.y()) * 0.5f * height();
+  return true;
+}
+
+bool ViewportItem::planeHit(QPointF position, QVector3D& hit) const {
+  QVector3D origin, direction;
+  if (!rayThrough(position, origin, direction)) return false;
+  const float denom = QVector3D::dotProduct(direction, planeNormal_);
+  if (std::abs(denom) < 1e-6f) return false;
+  const float t = QVector3D::dotProduct(planePoint_ - origin, planeNormal_) / denom;
+  if (t < 0.f) return false;
+  hit = origin + t * direction;
+  return true;
+}
+
+bool ViewportItem::screenBox(const ContactZone& zone, QRectF& rect) const {
+  const QVector3D corners[8] = {
+      zone.minimum,
+      QVector3D(zone.maximum.x(), zone.minimum.y(), zone.minimum.z()),
+      QVector3D(zone.minimum.x(), zone.maximum.y(), zone.minimum.z()),
+      QVector3D(zone.minimum.x(), zone.minimum.y(), zone.maximum.z()),
+      QVector3D(zone.maximum.x(), zone.maximum.y(), zone.minimum.z()),
+      QVector3D(zone.maximum.x(), zone.minimum.y(), zone.maximum.z()),
+      QVector3D(zone.minimum.x(), zone.maximum.y(), zone.maximum.z()),
+      zone.maximum};
+  bool any = false;
+  QPointF minScreen, maxScreen;
+  for (const QVector3D& corner : corners) {
+    QPointF screen;
+    if (!projectToScreen(corner, screen)) continue;
+    if (!any) {
+      minScreen = maxScreen = screen;
+      any = true;
+      continue;
+    }
+    minScreen.rx() = std::min(minScreen.x(), screen.x());
+    minScreen.ry() = std::min(minScreen.y(), screen.y());
+    maxScreen.rx() = std::max(maxScreen.x(), screen.x());
+    maxScreen.ry() = std::max(maxScreen.y(), screen.y());
+  }
+  if (!any) return false;
+  rect = QRectF(minScreen, maxScreen);
+  return true;
+}
+
+bool ViewportItem::contactUnder(QPointF position, QString& idA, QString& idB) const {
+  if (controller_ == nullptr) return false;
+  QVector3D origin, direction;
+  if (!rayThrough(position, origin, direction)) return false;
+  const double o[3] = {origin.x(), origin.y(), origin.z()};
+  const double d[3] = {direction.x(), direction.y(), direction.z()};
+  const std::vector<ContactZone> zones = controller_->contactZones();
+  double best = 1e300;
+  for (const ContactZone& zone : zones) {
+    timberlab::WorldBox box;
+    box.minX = zone.minimum.x();
+    box.minY = zone.minimum.y();
+    box.minZ = zone.minimum.z();
+    box.maxX = zone.maximum.x();
+    box.maxY = zone.maximum.y();
+    box.maxZ = zone.maximum.z();
+    double tEnter = 0;
+    if (!timberlab::rayHitsBox(o, d, box, tEnter)) continue;
+    if (tEnter >= best) continue;
+    best = tEnter;
+    idA = zone.idA;
+    idB = zone.idB;
+  }
+  return best < 1e300;
+}
+
+void ViewportItem::beginLeftPress(QPointF position, bool shift) {
+  pressKind_ = PressKind::Orbit;
+  moveStarted_ = false;
+  blockNoted_ = false;
+  pressPartId_.clear();
+  if (shift || controller_ == nullptr) return;
+  QVector3D origin, direction;
+  if (!rayThrough(position, origin, direction)) return;
+  const QString id = controller_->pickPart(origin, direction);
+  const auto start = controller_->classifyDrag(id);
+  if (start == DocumentController::DragStart::Blocked) {
+    pressKind_ = PressKind::Blocked;
+    pressPartId_ = id;
+    controller_->reportDragBlocked();
+    return;
+  }
+  if (start != DocumentController::DragStart::Move || !controller_->beginPartDrag(id)) return;
+  pressKind_ = PressKind::Move;
+  pressPartId_ = id;
+  grabPoint_ = controller_->dragAnchor();
+  planeNormal_ = (target_ - eye()).normalized();
+  if (planeNormal_.lengthSquared() < 1e-12f) planeNormal_ = QVector3D(0, 0, 1);
+  planePoint_ = grabPoint_;
+}
+
+void ViewportItem::movePressedPart(QPointF position) {
+  if (pressKind_ == PressKind::Orbit) {
+    orbit(position - lastPos_);
+    lastPos_ = position;
+    return;
+  }
+  if (pressKind_ != PressKind::Move) return;
+  QVector3D hit;
+  if (!planeHit(position, hit)) return;
+  if (!moveStarted_) {
+    moveStarted_ = true;
+    grabPoint_ = hit;
+  }
+  const QVector3D delta = hit - grabPoint_;
+  const auto preview = controller_->previewPartDrag(delta.x(), delta.y(), delta.z());
+  if (preview.ok) {
+    const QVector3D pos = controller_->dragPositionMm();
+    const qreal nextX = pos.x();
+    const qreal nextY = pos.y();
+    const qreal nextZ = pos.z();
+    const QPointF nextPos = position + QPointF(14, -30);
+    if (!dragOverlayVisible_ || dragOverlayX_ != nextX || dragOverlayY_ != nextY || dragOverlayZ_ != nextZ ||
+        dragSnapX_ != preview.snapX || dragSnapY_ != preview.snapY || dragSnapZ_ != preview.snapZ ||
+        dragOverlayPosition_ != nextPos) {
+      dragOverlayVisible_ = true;
+      dragOverlayX_ = nextX;
+      dragOverlayY_ = nextY;
+      dragOverlayZ_ = nextZ;
+      dragSnapX_ = preview.snapX;
+      dragSnapY_ = preview.snapY;
+      dragSnapZ_ = preview.snapZ;
+      dragOverlayPosition_ = nextPos;
+      emit dragOverlayChanged();
+    }
+  } else if (dragOverlayVisible_) {
+    dragOverlayVisible_ = false;
+    emit dragOverlayChanged();
+  }
+  update();
+  lastPos_ = position;
+}
+
+void ViewportItem::showContactMenu(QPointF position) {
+  if (controller_ == nullptr) return;
+  QString idA, idB;
+  if (!contactUnder(position, idA, idB)) return;
+  if (!controller_->armContact(idA, idB)) return;
+  emit contactMenuRequested(position.x(), position.y());
+}
+
+void ViewportItem::finishPress(bool commitMove) {
+  if (pressKind_ == PressKind::Move) {
+    if (commitMove && moveStarted_)
+      controller_->commitPartDrag();
+    else
+      controller_->cancelPartDrag();
+  } else if (pressKind_ == PressKind::Orbit && !moveStarted_ && !dragging_) {
+    requestPick(pressPos_);
+  }
+  pressKind_ = PressKind::Orbit;
+  moveStarted_ = false;
+  blockNoted_ = false;
+  pressPartId_.clear();
+  if (dragOverlayVisible_ || dragSnapX_ || dragSnapY_ || dragSnapZ_) {
+    dragOverlayVisible_ = false;
+    dragSnapX_ = false;
+    dragSnapY_ = false;
+    dragSnapZ_ = false;
+    emit dragOverlayChanged();
+  }
+}
+
 void ViewportItem::setStandardView(const QString& name) {
   orthographic_ = name != "iso";
   if (name == "top") {
@@ -492,25 +793,40 @@ void ViewportItem::mousePressEvent(QMouseEvent* event) {
   lastPos_ = pressPos_;
   pressButton_ = event->button();
   dragging_ = false;
+  if (pressButton_ == Qt::LeftButton)
+    beginLeftPress(pressPos_, event->modifiers() & Qt::ShiftModifier);
+  else
+    pressKind_ = PressKind::Orbit;
   event->accept();
 }
 
 void ViewportItem::mouseMoveEvent(QMouseEvent* event) {
   if (!isRealMouse(event)) return;
-  const QPointF delta = event->position() - lastPos_;
   if ((event->position() - pressPos_).manhattanLength() > 4) dragging_ = true;
-  if (!dragging_) return;
-  lastPos_ = event->position();
+  if (!dragging_) {
+    lastPos_ = event->position();
+    return;
+  }
   const bool panDrag = pressButton_ == Qt::MiddleButton || pressButton_ == Qt::RightButton ||
                        (pressButton_ == Qt::LeftButton && (event->modifiers() & Qt::ShiftModifier));
-  if (panDrag) pan(delta);
-  else if (pressButton_ == Qt::LeftButton) orbit(delta);
+  if (panDrag) {
+    pan(event->position() - lastPos_);
+    lastPos_ = event->position();
+  } else if (pressButton_ == Qt::LeftButton) {
+    movePressedPart(event->position());
+  }
   event->accept();
 }
 
 void ViewportItem::mouseReleaseEvent(QMouseEvent* event) {
   if (!isRealMouse(event)) return;
-  if (!dragging_ && pressButton_ == Qt::LeftButton) requestPick(event->position());
+  if (pressButton_ == Qt::RightButton && !dragging_) {
+    showContactMenu(event->position());
+  } else if (pressButton_ == Qt::LeftButton) {
+    finishPress(dragging_);
+  } else if (!dragging_) {
+    requestPick(event->position());
+  }
   dragging_ = false;
   pressButton_ = Qt::NoButton;
   event->accept();
@@ -557,6 +873,21 @@ void ViewportItem::touchEvent(QTouchEvent* event) {
   }
   if (points.size() < 2 && event->isEndEvent()) pinchActive_ = false;
   event->accept();
+}
+
+void ViewportItem::focusOutEvent(QFocusEvent* event) {
+  if (pressKind_ == PressKind::Move) controller_->cancelPartDrag();
+  pressKind_ = PressKind::Orbit;
+  moveStarted_ = false;
+  pressPartId_.clear();
+  if (dragOverlayVisible_ || dragSnapX_ || dragSnapY_ || dragSnapZ_) {
+    dragOverlayVisible_ = false;
+    dragSnapX_ = false;
+    dragSnapY_ = false;
+    dragSnapZ_ = false;
+    emit dragOverlayChanged();
+  }
+  QQuickFramebufferObject::focusOutEvent(event);
 }
 
 }  // namespace timberlab::ui

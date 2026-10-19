@@ -88,7 +88,7 @@ IoResult saveProject(const std::string& path, const Document& document) {
   const std::string model = document.toJson();
   nlohmann::json manifest = {{"format", "timberlab"},
                              {"formatVersion", 1},
-                             {"createdBy", "TimberLab 0.1.0"},
+                             {"createdBy", "TimberLab 0.2.0"},
                              {"model", "model.json"},
                              {"modelSha256", sha256Hex(model)}};
   const std::string manifestText = manifest.dump(2);

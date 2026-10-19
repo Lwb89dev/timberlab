@@ -4,1658 +4,1537 @@
 <context>
     <name>Inspector</name>
     <message>
-        <location filename="../qml/Inspector.qml" line="75"/>
         <source>Inspector</source>
-        <translation>Ispettore</translation>
+        <translation type="vanished">Ispettore</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="81"/>
         <source>Project</source>
-        <translation>Progetto</translation>
+        <translation type="vanished">Progetto</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="83"/>
         <source>Name</source>
-        <translation>Nome</translation>
+        <translation type="vanished">Nome</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="113"/>
         <source>Select a part to edit its width, height and thickness. Display units do not change the stored size.</source>
-        <translation>Seleziona un pezzo per modificarne larghezza, altezza e spessore. L&apos;unità di visualizzazione non cambia la misura memorizzata.</translation>
+        <translation type="vanished">Seleziona un pezzo per modificarne larghezza, altezza e spessore. L&apos;unità di visualizzazione non cambia la misura memorizzata.</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="231"/>
         <source>Part</source>
-        <translation>Pezzo</translation>
+        <translation type="vanished">Pezzo</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="259"/>
         <source>Apply stock thickness</source>
-        <translation>Applica uno spessore di magazzino</translation>
+        <translation type="vanished">Applica uno spessore di magazzino</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="264"/>
         <source>Width (X)</source>
-        <translation>Larghezza (X)</translation>
+        <translation type="vanished">Larghezza (X)</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="270"/>
         <source>Thickness (Y)</source>
-        <translation>Spessore (Y)</translation>
+        <translation type="vanished">Spessore (Y)</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="276"/>
         <source>Radius</source>
-        <translation>Raggio</translation>
+        <translation type="vanished">Raggio</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="281"/>
         <source>Height (Z)</source>
-        <translation>Altezza (Z)</translation>
+        <translation type="vanished">Altezza (Z)</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="346"/>
         <source>Position</source>
-        <translation>Posizione</translation>
+        <translation type="vanished">Posizione</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="362"/>
         <source>Rotation</source>
-        <translation>Rotazione</translation>
+        <translation type="vanished">Rotazione</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="378"/>
         <source>Parent</source>
-        <translation>Pezzo padre</translation>
+        <translation type="vanished">Pezzo padre</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="398"/>
         <source>Role</source>
-        <translation>Ruolo</translation>
+        <translation type="vanished">Ruolo</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="404"/>
         <source>Visible</source>
-        <translation>Visibile</translation>
+        <translation type="vanished">Visibile</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="409"/>
         <source>Locked</source>
-        <translation>Bloccato</translation>
+        <translation type="vanished">Bloccato</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="417"/>
         <source>Notes</source>
-        <translation>Note</translation>
+        <translation type="vanished">Note</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="423"/>
         <source>A board is a real solid: X width, Y thickness, Z height. Z is up.</source>
-        <translation>Una tavola è un solido vero: X larghezza, Y spessore, Z altezza. Z è verso l&apos;alto.</translation>
+        <translation type="vanished">Una tavola è un solido vero: X larghezza, Y spessore, Z altezza. Z è verso l&apos;alto.</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="92"/>
         <source>Parameters</source>
-        <translation>Parametri</translation>
+        <translation type="vanished">Parametri</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="104"/>
         <source>Changing a parameter updates the parts that depend on it.</source>
-        <translation>Modificare un parametro aggiorna i pezzi che dipendono da esso.</translation>
+        <translation type="vanished">Modificare un parametro aggiorna i pezzi che dipendono da esso.</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="298"/>
         <source>Release</source>
-        <translation>Libera</translation>
+        <translation type="vanished">Libera</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="309"/>
-        <location filename="../qml/Inspector.qml" line="339"/>
         <source>Drive</source>
-        <translation>Vincola</translation>
+        <translation type="vanished">Vincola</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="119"/>
         <source>Library</source>
-        <translation>Libreria</translation>
+        <translation type="vanished">Libreria</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="121"/>
         <source>Custom materials and stock thicknesses are saved on this computer. They are not the project.</source>
-        <translation>I materiali e gli spessori personalizzati restano su questo computer. Non sono il progetto.</translation>
+        <translation type="vanished">I materiali e gli spessori personalizzati restano su questo computer. Non sono il progetto.</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="130"/>
         <source>Material</source>
-        <translation>Materiale</translation>
+        <translation type="vanished">Materiale</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="139"/>
         <source>Shop oak</source>
-        <translation>Rovere di bottega</translation>
+        <translation type="vanished">Rovere di bottega</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="146"/>
         <source>Color</source>
-        <translation>Colore</translation>
+        <translation type="vanished">Colore</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="160"/>
         <source>Add material</source>
-        <translation>Aggiungi materiale</translation>
+        <translation type="vanished">Aggiungi materiale</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="178"/>
-        <location filename="../qml/Inspector.qml" line="219"/>
         <source>Remove</source>
-        <translation>Rimuovi</translation>
+        <translation type="vanished">Rimuovi</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="187"/>
         <source>Thickness</source>
-        <translation>Spessore</translation>
+        <translation type="vanished">Spessore</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="196"/>
         <source>18 mm</source>
-        <translation>18 mm</translation>
+        <translation type="vanished">18 mm</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="201"/>
         <source>Add preset</source>
-        <translation>Aggiungi spessore</translation>
+        <translation type="vanished">Aggiungi spessore</translation>
     </message>
 </context>
 <context>
     <name>JointSection</name>
     <message>
-        <location filename="../qml/JointSection.qml" line="32"/>
-        <location filename="../qml/JointSection.qml" line="102"/>
         <source>Mortise and tenon</source>
-        <translation>Tenone e mortasa</translation>
+        <translation type="vanished">Tenone e mortasa</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="33"/>
-        <location filename="../qml/JointSection.qml" line="103"/>
         <source>Half lap</source>
-        <translation>Mezzo legno</translation>
+        <translation type="vanished">Mezzo legno</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="34"/>
-        <location filename="../qml/JointSection.qml" line="104"/>
         <source>Dado</source>
-        <translation>Canale</translation>
+        <translation type="vanished">Canale</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="35"/>
-        <location filename="../qml/JointSection.qml" line="105"/>
         <source>Groove</source>
-        <translation>Scanalatura</translation>
+        <translation type="vanished">Scanalatura</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="36"/>
-        <location filename="../qml/JointSection.qml" line="106"/>
         <source>Rabbet</source>
-        <translation>Battuta</translation>
+        <translation type="vanished">Battuta</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="37"/>
-        <location filename="../qml/JointSection.qml" line="107"/>
         <source>Bridle</source>
-        <translation>Briglia</translation>
+        <translation type="vanished">Briglia</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="38"/>
-        <location filename="../qml/JointSection.qml" line="108"/>
         <source>Castle</source>
-        <translation>Castello</translation>
+        <translation type="vanished">Castello</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="39"/>
-        <location filename="../qml/JointSection.qml" line="109"/>
         <source>Miter</source>
-        <translation>Mitra</translation>
+        <translation type="vanished">Mitra</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="40"/>
-        <location filename="../qml/JointSection.qml" line="110"/>
         <source>Dovetail</source>
-        <translation>Coda di rondine</translation>
+        <translation type="vanished">Coda di rondine</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="41"/>
-        <location filename="../qml/JointSection.qml" line="111"/>
         <source>Sliding dovetail</source>
-        <translation>Coda di rondine scorrevole</translation>
+        <translation type="vanished">Coda di rondine scorrevole</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="42"/>
-        <location filename="../qml/JointSection.qml" line="112"/>
         <source>Finger joint</source>
-        <translation>Giunto a pettine</translation>
+        <translation type="vanished">Giunto a pettine</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="43"/>
-        <location filename="../qml/JointSection.qml" line="113"/>
         <source>Half-blind dovetail</source>
-        <translation>Coda di rondine semicieca</translation>
+        <translation type="vanished">Coda di rondine semicieca</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="44"/>
-        <location filename="../qml/JointSection.qml" line="114"/>
         <source>Tongue and groove</source>
-        <translation>Linguetta e scanalatura</translation>
+        <translation type="vanished">Linguetta e scanalatura</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="45"/>
-        <location filename="../qml/JointSection.qml" line="115"/>
         <source>Dowel</source>
-        <translation>Tassello</translation>
+        <translation type="vanished">Tassello</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="96"/>
         <source>Joinery</source>
-        <translation>Incastri</translation>
+        <translation type="vanished">Incastri</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="118"/>
         <source>Mate</source>
-        <translation>Pezzo accoppiato</translation>
+        <translation type="vanished">Pezzo accoppiato</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="128"/>
         <source>Starting sizes are not a structural rating.</source>
-        <translation>Le misure iniziali non sono una valutazione strutturale.</translation>
+        <translation type="vanished">Le misure iniziali non sono una valutazione strutturale.</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="134"/>
         <source>Add joint</source>
-        <translation>Aggiungi giunto</translation>
+        <translation type="vanished">Aggiungi giunto</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="155"/>
         <source>Length</source>
-        <translation>Lunghezza</translation>
+        <translation type="vanished">Lunghezza</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="161"/>
         <source>Width</source>
-        <translation>Larghezza</translation>
+        <translation type="vanished">Larghezza</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="167"/>
         <source>Thickness</source>
-        <translation>Spessore</translation>
+        <translation type="vanished">Spessore</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="167"/>
         <source>Diameter</source>
-        <translation>Diametro</translation>
+        <translation type="vanished">Diametro</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="173"/>
         <source>Depth</source>
-        <translation>Profondità</translation>
+        <translation type="vanished">Profondità</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="179"/>
         <source>Offset</source>
-        <translation>Scostamento</translation>
+        <translation type="vanished">Scostamento</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="179"/>
-        <location filename="../qml/JointSection.qml" line="185"/>
         <source>Slope</source>
-        <translation>Pendenza</translation>
+        <translation type="vanished">Pendenza</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="185"/>
         <source>Second offset</source>
-        <translation>Secondo scostamento</translation>
+        <translation type="vanished">Secondo scostamento</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="191"/>
         <source>Count</source>
-        <translation>Numero</translation>
+        <translation type="vanished">Numero</translation>
     </message>
     <message>
-        <location filename="../qml/JointSection.qml" line="196"/>
         <source>Remove joint</source>
-        <translation>Rimuovi giunto</translation>
+        <translation type="vanished">Rimuovi giunto</translation>
     </message>
 </context>
 <context>
     <name>Main</name>
     <message>
-        <location filename="../qml/Main.qml" line="39"/>
         <source>File</source>
-        <translation>File</translation>
+        <translation type="vanished">File</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="40"/>
-        <location filename="../qml/Main.qml" line="104"/>
         <source>New</source>
-        <translation>Nuovo</translation>
+        <translation type="vanished">Nuovo</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="41"/>
         <source>Open…</source>
-        <translation>Apri…</translation>
+        <translation type="vanished">Apri…</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="42"/>
-        <location filename="../qml/Main.qml" line="106"/>
         <source>Save</source>
-        <translation>Salva</translation>
+        <translation type="vanished">Salva</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="43"/>
         <source>Save as…</source>
-        <translation>Salva con nome…</translation>
+        <translation type="vanished">Salva con nome…</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="45"/>
         <source>Export cut list CSV…</source>
-        <translation>Esporta distinta di taglio CSV…</translation>
+        <translation type="vanished">Esporta distinta di taglio CSV…</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="46"/>
         <source>Export cut list JSON…</source>
-        <translation>Esporta distinta di taglio JSON…</translation>
+        <translation type="vanished">Esporta distinta di taglio JSON…</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="47"/>
         <source>Export front view…</source>
-        <translation>Esporta vista frontale…</translation>
+        <translation type="vanished">Esporta vista frontale…</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="48"/>
         <source>Export top view…</source>
-        <translation>Esporta vista dall&apos;alto…</translation>
+        <translation type="vanished">Esporta vista dall&apos;alto…</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="48"/>
         <source>Export top view</source>
-        <translation>Esporta vista dall&apos;alto</translation>
+        <translation type="vanished">Esporta vista dall&apos;alto</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="48"/>
         <source>Top view wire (*.svg)</source>
-        <translation>Filo della vista dall&apos;alto (*.svg)</translation>
+        <translation type="vanished">Filo della vista dall&apos;alto (*.svg)</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="49"/>
         <source>Export right view…</source>
-        <translation>Esporta vista destra…</translation>
+        <translation type="vanished">Esporta vista destra…</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="49"/>
         <source>Export right view</source>
-        <translation>Esporta vista destra</translation>
+        <translation type="vanished">Esporta vista destra</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="49"/>
         <source>Right view wire (*.svg)</source>
-        <translation>Filo della vista destra (*.svg)</translation>
+        <translation type="vanished">Filo della vista destra (*.svg)</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="50"/>
         <source>Export sheet…</source>
-        <translation>Esporta foglio…</translation>
+        <translation type="vanished">Esporta foglio…</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="50"/>
         <source>Export sheet</source>
-        <translation>Esporta foglio</translation>
+        <translation type="vanished">Esporta foglio</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="50"/>
         <source>Sheet wire (*.svg)</source>
-        <translation>Filo del foglio (*.svg)</translation>
+        <translation type="vanished">Filo del foglio (*.svg)</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="51"/>
         <source>Export DXF wire…</source>
-        <translation>Esporta filo DXF…</translation>
+        <translation type="vanished">Esporta filo DXF…</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="51"/>
         <source>Export DXF wire</source>
-        <translation>Esporta filo DXF</translation>
+        <translation type="vanished">Esporta filo DXF</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="51"/>
         <source>DXF wire (*.dxf)</source>
-        <translation>Filo DXF (*.dxf)</translation>
+        <translation type="vanished">Filo DXF (*.dxf)</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="52"/>
         <source>Export PDF wire…</source>
-        <translation>Esporta filo PDF…</translation>
+        <translation type="vanished">Esporta filo PDF…</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="52"/>
         <source>Export PDF wire</source>
-        <translation>Esporta filo PDF</translation>
+        <translation type="vanished">Esporta filo PDF</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="52"/>
         <source>PDF wire (*.pdf)</source>
-        <translation>Filo PDF (*.pdf)</translation>
+        <translation type="vanished">Filo PDF (*.pdf)</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="53"/>
         <source>Export front dimensions…</source>
-        <translation>Esporta quote della vista frontale…</translation>
+        <translation type="vanished">Esporta quote della vista frontale…</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="53"/>
         <source>Export front dimensions</source>
-        <translation>Esporta quote della vista frontale</translation>
+        <translation type="vanished">Esporta quote della vista frontale</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="53"/>
         <source>Front dimensions (*.svg)</source>
-        <translation>Quote della vista frontale (*.svg)</translation>
+        <translation type="vanished">Quote della vista frontale (*.svg)</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="55"/>
         <source>Export library events…</source>
-        <translation>Esporta eventi della libreria…</translation>
+        <translation type="vanished">Esporta eventi della libreria…</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="56"/>
         <source>Import library events…</source>
-        <translation>Importa eventi della libreria…</translation>
+        <translation type="vanished">Importa eventi della libreria…</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="58"/>
         <source>Restore backup…</source>
-        <translation>Ripristina il backup…</translation>
+        <translation type="vanished">Ripristina il backup…</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="61"/>
         <source>Edit</source>
-        <translation>Modifica</translation>
+        <translation type="vanished">Modifica</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="62"/>
-        <location filename="../qml/Main.qml" line="108"/>
         <source>Undo</source>
-        <translation>Annulla</translation>
+        <translation type="vanished">Annulla</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="63"/>
-        <location filename="../qml/Main.qml" line="109"/>
         <source>Redo</source>
-        <translation>Ripeti</translation>
+        <translation type="vanished">Ripeti</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="64"/>
-        <location filename="../qml/Main.qml" line="119"/>
         <source>Duplicate</source>
-        <translation>Duplica</translation>
+        <translation type="vanished">Duplica</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="65"/>
-        <location filename="../qml/Main.qml" line="120"/>
         <source>Delete</source>
-        <translation>Elimina</translation>
+        <translation type="vanished">Elimina</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="68"/>
         <source>Account</source>
-        <translation>Account</translation>
+        <translation type="vanished">Account</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="69"/>
         <source>Sign in with secret key…</source>
-        <translation>Accedi con la chiave segreta…</translation>
+        <translation type="vanished">Accedi con la chiave segreta…</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="70"/>
         <source>Sign in with bunker…</source>
-        <translation>Accedi con un bunker…</translation>
+        <translation type="vanished">Accedi con un bunker…</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="71"/>
         <source>Sign in with Amber</source>
-        <translation>Accedi con Amber</translation>
+        <translation type="vanished">Accedi con Amber</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="73"/>
         <source>Sign out</source>
-        <translation>Esci</translation>
+        <translation type="vanished">Esci</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="76"/>
         <source>View</source>
-        <translation>Vista</translation>
+        <translation type="vanished">Vista</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="77"/>
         <source>Fit all</source>
-        <translation>Inquadra tutto</translation>
+        <translation type="vanished">Inquadra tutto</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="78"/>
         <source>Top</source>
-        <translation>Alto</translation>
+        <translation type="vanished">Alto</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="79"/>
         <source>Front</source>
-        <translation>Fronte</translation>
+        <translation type="vanished">Fronte</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="80"/>
         <source>Right</source>
-        <translation>Destra</translation>
+        <translation type="vanished">Destra</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="81"/>
         <source>Isometric</source>
-        <translation>Isometrica</translation>
+        <translation type="vanished">Isometrica</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="82"/>
         <source>Hide parts</source>
-        <translation>Nascondi pezzi</translation>
+        <translation type="vanished">Nascondi pezzi</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="82"/>
         <source>Show parts</source>
-        <translation>Mostra pezzi</translation>
+        <translation type="vanished">Mostra pezzi</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="83"/>
         <source>Hide inspector</source>
-        <translation>Nascondi ispettore</translation>
+        <translation type="vanished">Nascondi ispettore</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="83"/>
         <source>Show inspector</source>
-        <translation>Mostra ispettore</translation>
+        <translation type="vanished">Mostra ispettore</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="92"/>
         <source>Frame</source>
-        <translation>Telaio</translation>
+        <translation type="vanished">Telaio</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="93"/>
         <source>Shelving</source>
-        <translation>Scaffale</translation>
+        <translation type="vanished">Scaffale</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="94"/>
         <source>Bedside table</source>
-        <translation>Comodino</translation>
+        <translation type="vanished">Comodino</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="105"/>
         <source>Open</source>
-        <translation>Apri</translation>
+        <translation type="vanished">Apri</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="111"/>
         <source>Board</source>
-        <translation>Tavola</translation>
+        <translation type="vanished">Tavola</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="112"/>
         <source>Box</source>
-        <translation>Scatola</translation>
+        <translation type="vanished">Scatola</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="113"/>
         <source>Cylinder</source>
-        <translation>Cilindro</translation>
+        <translation type="vanished">Cilindro</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="116"/>
         <source>Assembly</source>
-        <translation>Assieme</translation>
+        <translation type="vanished">Assieme</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="159"/>
         <source>Not signed in</source>
-        <translation>Accesso non effettuato</translation>
+        <translation type="vanished">Accesso non effettuato</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="234"/>
         <source>Export cut list</source>
-        <translation>Esporta distinta di taglio</translation>
+        <translation type="vanished">Esporta distinta di taglio</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="237"/>
         <source>Cut list (*.csv)</source>
-        <translation>Distinta di taglio (*.csv)</translation>
+        <translation type="vanished">Distinta di taglio (*.csv)</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="242"/>
         <source>Export cut list and bill of materials</source>
-        <translation>Esporta distinta di taglio e distinta base</translation>
+        <translation type="vanished">Esporta distinta di taglio e distinta base</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="245"/>
         <source>Cut list and BOM (*.json)</source>
-        <translation>Distinta di taglio e distinta base (*.json)</translation>
+        <translation type="vanished">Distinta di taglio e distinta base (*.json)</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="259"/>
         <source>Export library events</source>
-        <translation>Esporta eventi della libreria</translation>
+        <translation type="vanished">Esporta eventi della libreria</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="262"/>
-        <location filename="../qml/Main.qml" line="269"/>
         <source>Library events (*.json)</source>
-        <translation>Eventi della libreria (*.json)</translation>
+        <translation type="vanished">Eventi della libreria (*.json)</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="267"/>
         <source>Import library events</source>
-        <translation>Importa eventi della libreria</translation>
+        <translation type="vanished">Importa eventi della libreria</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="274"/>
         <source>Sign in with a secret key</source>
-        <translation>Accedi con la chiave segreta</translation>
+        <translation type="vanished">Accedi con la chiave segreta</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="281"/>
         <source>The key stays in memory for this session. It is not saved and it is not sent to a relay.</source>
-        <translation>La chiave resta in memoria per questa sessione. Non viene salvata e non viene inviata a un relay.</translation>
+        <translation type="vanished">La chiave resta in memoria per questa sessione. Non viene salvata e non viene inviata a un relay.</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="303"/>
         <source>Sign in with a bunker</source>
-        <translation>Accedi con un bunker</translation>
+        <translation type="vanished">Accedi con un bunker</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="310"/>
         <source>Paste a bunker:// link. Its secret is not saved. Sign-in finishes only after the bunker returns your public key.</source>
-        <translation>Incolla un collegamento bunker://. Il segreto non viene salvato. L&apos;accesso si completa solo dopo che il bunker restituisce la chiave pubblica.</translation>
+        <translation type="vanished">Incolla un collegamento bunker://. Il segreto non viene salvato. L&apos;accesso si completa solo dopo che il bunker restituisce la chiave pubblica.</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="332"/>
         <source>Restore backup</source>
-        <translation>Ripristina il backup</translation>
+        <translation type="vanished">Ripristina il backup</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="337"/>
         <source>Replace the project with the backup? The backup is checked first. An invalid backup leaves the project file as it is.</source>
-        <translation>Sostituire il progetto con il backup? Il backup viene controllato prima. Un backup non valido lascia il file com&apos;è.</translation>
+        <translation type="vanished">Sostituire il progetto con il backup? Il backup viene controllato prima. Un backup non valido lascia il file com&apos;è.</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="47"/>
-        <location filename="../qml/Main.qml" line="251"/>
         <source>Export front view</source>
-        <translation>Esporta vista frontale</translation>
+        <translation type="vanished">Esporta vista frontale</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="47"/>
-        <location filename="../qml/Main.qml" line="254"/>
         <source>Front view wire (*.svg)</source>
-        <translation>Filo della vista frontale (*.svg)</translation>
+        <translation type="vanished">Filo della vista frontale (*.svg)</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="89"/>
         <source>Table</source>
-        <translation>Tavolo</translation>
+        <translation type="vanished">Tavolo</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="90"/>
         <source>Cabinet</source>
-        <translation>Carcassa</translation>
+        <translation type="vanished">Carcassa</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="91"/>
         <source>Drawer box</source>
-        <translation>Cassetto</translation>
+        <translation type="vanished">Cassetto</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="122"/>
         <source>Fit</source>
-        <translation>Inquadra</translation>
+        <translation type="vanished">Inquadra</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="178"/>
         <source>Millimetres</source>
-        <translation>Millimetri</translation>
+        <translation type="vanished">Millimetri</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="179"/>
         <source>Centimetres</source>
-        <translation>Centimetri</translation>
+        <translation type="vanished">Centimetri</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="180"/>
         <source>Metres</source>
-        <translation>Metri</translation>
+        <translation type="vanished">Metri</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="181"/>
         <source>Inches</source>
-        <translation>Pollici</translation>
+        <translation type="vanished">Pollici</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="182"/>
         <source>Feet</source>
-        <translation>Piedi</translation>
+        <translation type="vanished">Piedi</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="204"/>
         <source>Draft</source>
-        <translation>Bozza</translation>
+        <translation type="vanished">Bozza</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="205"/>
         <source>Standard</source>
-        <translation>Standard</translation>
+        <translation type="vanished">Standard</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="206"/>
         <source>Fine</source>
-        <translation>Fine</translation>
+        <translation type="vanished">Fine</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="211"/>
         <source>Orbit: drag  ·  Pan: shift-drag or right-drag  ·  Zoom: wheel  ·  Z up</source>
-        <translation>Orbita: trascina  ·  Panoramica: maiusc-trascina o tasto destro  ·  Zoom: rotella  ·  Z in alto</translation>
+        <translation type="vanished">Orbita: trascina  ·  Panoramica: maiusc-trascina o tasto destro  ·  Zoom: rotella  ·  Z in alto</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="219"/>
         <source>Open project</source>
-        <translation>Apri progetto</translation>
+        <translation type="vanished">Apri progetto</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="221"/>
-        <location filename="../qml/Main.qml" line="229"/>
         <source>TimberLab project (*.timberlab)</source>
-        <translation>Progetto TimberLab (*.timberlab)</translation>
+        <translation type="vanished">Progetto TimberLab (*.timberlab)</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="226"/>
         <source>Save project</source>
-        <translation>Salva progetto</translation>
+        <translation type="vanished">Salva progetto</translation>
     </message>
     <message>
         <source>New project</source>
         <translation type="vanished">Nuovo progetto</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="348"/>
         <source>Unsaved changes</source>
-        <translation>Modifiche non salvate</translation>
+        <translation type="vanished">Modifiche non salvate</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="353"/>
         <source>Discard unsaved changes?</source>
-        <translation>Scartare le modifiche non salvate?</translation>
+        <translation type="vanished">Scartare le modifiche non salvate?</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="362"/>
         <source>TimberLab</source>
-        <translation>TimberLab</translation>
+        <translation type="vanished">TimberLab</translation>
     </message>
 </context>
 <context>
     <name>PartsPanel</name>
     <message>
-        <location filename="../qml/PartsPanel.qml" line="10"/>
         <source>Board</source>
-        <translation>Tavola</translation>
+        <translation type="vanished">Tavola</translation>
     </message>
     <message>
-        <location filename="../qml/PartsPanel.qml" line="11"/>
         <source>Box</source>
-        <translation>Scatola</translation>
+        <translation type="vanished">Scatola</translation>
     </message>
     <message>
-        <location filename="../qml/PartsPanel.qml" line="12"/>
         <source>Cylinder</source>
-        <translation>Cilindro</translation>
+        <translation type="vanished">Cilindro</translation>
     </message>
     <message>
-        <location filename="../qml/PartsPanel.qml" line="20"/>
         <source>Parts</source>
-        <translation>Pezzi</translation>
+        <translation type="vanished">Pezzi</translation>
     </message>
     <message>
-        <location filename="../qml/PartsPanel.qml" line="26"/>
         <source>Free parts. No template is required.</source>
-        <translation>Pezzi liberi. Non serve un modello predefinito.</translation>
+        <translation type="vanished">Pezzi liberi. Non serve un modello predefinito.</translation>
     </message>
     <message>
-        <location filename="../qml/PartsPanel.qml" line="75"/>
         <source>Hide</source>
-        <translation>Nascondi</translation>
+        <translation type="vanished">Nascondi</translation>
     </message>
     <message>
-        <location filename="../qml/PartsPanel.qml" line="75"/>
         <source>Show</source>
-        <translation>Mostra</translation>
+        <translation type="vanished">Mostra</translation>
     </message>
     <message>
-        <location filename="../qml/PartsPanel.qml" line="82"/>
         <source>Demo table</source>
-        <translation>Tavolo di prova</translation>
+        <translation type="vanished">Tavolo di prova</translation>
     </message>
 </context>
 <context>
     <name>timberlab::ui::DocumentController</name>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="185"/>
+        <location filename="../src/ui/DocumentController.cpp" line="215"/>
         <source>Ready</source>
         <translation>Pronto</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="338"/>
+        <location filename="../src/ui/DocumentController.cpp" line="368"/>
         <source>None</source>
         <translation>Nessuno</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="444"/>
+        <location filename="../src/ui/DocumentController.cpp" line="474"/>
         <source>Frame width</source>
         <translation>Larghezza telaio</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="445"/>
+        <location filename="../src/ui/DocumentController.cpp" line="475"/>
         <source>Frame height</source>
         <translation>Altezza telaio</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="446"/>
+        <location filename="../src/ui/DocumentController.cpp" line="476"/>
         <source>Frame stock</source>
         <translation>Sezione telaio</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="447"/>
+        <location filename="../src/ui/DocumentController.cpp" line="477"/>
         <source>Frame depth</source>
         <translation>Spessore telaio</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="451"/>
+        <location filename="../src/ui/DocumentController.cpp" line="481"/>
         <source>Shelf width</source>
         <translation>Larghezza scaffale</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="452"/>
+        <location filename="../src/ui/DocumentController.cpp" line="482"/>
         <source>Shelf depth</source>
         <translation>Profondità scaffale</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="453"/>
+        <location filename="../src/ui/DocumentController.cpp" line="483"/>
         <source>Shelf side</source>
         <translation>Fianco scaffale</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="454"/>
+        <location filename="../src/ui/DocumentController.cpp" line="484"/>
         <source>Shelf thickness</source>
         <translation>Spessore ripiano</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="455"/>
+        <location filename="../src/ui/DocumentController.cpp" line="485"/>
         <source>Shelf bay</source>
         <translation>Vano scaffale</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="459"/>
+        <location filename="../src/ui/DocumentController.cpp" line="489"/>
         <source>Bedside width</source>
         <translation>Larghezza comodino</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="460"/>
+        <location filename="../src/ui/DocumentController.cpp" line="490"/>
         <source>Bedside depth</source>
         <translation>Profondità comodino</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="461"/>
+        <location filename="../src/ui/DocumentController.cpp" line="491"/>
         <source>Bedside height</source>
         <translation>Altezza comodino</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="462"/>
+        <location filename="../src/ui/DocumentController.cpp" line="492"/>
         <source>Bedside leg</source>
         <translation>Gamba comodino</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="463"/>
+        <location filename="../src/ui/DocumentController.cpp" line="493"/>
         <source>Bedside top</source>
         <translation>Piano comodino</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="464"/>
+        <location filename="../src/ui/DocumentController.cpp" line="494"/>
         <source>Bedside drawer</source>
         <translation>Cassetto comodino</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="465"/>
+        <location filename="../src/ui/DocumentController.cpp" line="495"/>
         <source>Bedside side</source>
         <translation>Fianco comodino</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="466"/>
+        <location filename="../src/ui/DocumentController.cpp" line="496"/>
         <source>Bedside bottom</source>
         <translation>Fondo comodino</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="521"/>
+        <location filename="../src/ui/DocumentController.cpp" line="553"/>
         <source>New project</source>
         <translation>Nuovo progetto</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="529"/>
+        <location filename="../src/ui/DocumentController.cpp" line="563"/>
         <source>Demo table placed. Its stock sizes are parameters.</source>
         <translation>Tavolo di prova inserito. Le misure di stock sono parametri.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="540"/>
+        <location filename="../src/ui/DocumentController.cpp" line="574"/>
         <source>Board added</source>
         <translation>Tavola aggiunta</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="551"/>
+        <location filename="../src/ui/DocumentController.cpp" line="585"/>
         <source>Box added</source>
         <translation>Scatola aggiunta</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="562"/>
+        <location filename="../src/ui/DocumentController.cpp" line="596"/>
         <source>Cylinder added</source>
         <translation>Cilindro aggiunto</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="579"/>
+        <location filename="../src/ui/DocumentController.cpp" line="613"/>
         <source>Frame added. Its sizes are parameters.</source>
         <translation>Telaio inserito. Le misure sono parametri.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="580"/>
+        <location filename="../src/ui/DocumentController.cpp" line="614"/>
         <source>Shelving added. Its sizes are parameters.</source>
         <translation>Scaffale inserito. Le misure sono parametri.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="581"/>
+        <location filename="../src/ui/DocumentController.cpp" line="615"/>
         <source>Bedside table added. Its sizes are parameters.</source>
         <translation>Comodino inserito. Le misure sono parametri.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="594"/>
+        <location filename="../src/ui/DocumentController.cpp" line="628"/>
         <source>Duplicated</source>
         <translation>Duplicato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="606"/>
+        <location filename="../src/ui/DocumentController.cpp" line="641"/>
         <source>Deleted</source>
         <translation>Eliminato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="620"/>
+        <location filename="../src/ui/DocumentController.cpp" line="656"/>
         <source>Undo</source>
         <translation>Annulla</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="627"/>
+        <location filename="../src/ui/DocumentController.cpp" line="664"/>
         <source>Redo</source>
         <translation>Ripeti</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="645"/>
+        <location filename="../src/ui/DocumentController.cpp" line="683"/>
         <source>Saved</source>
         <translation>Salvato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="668"/>
+        <location filename="../src/ui/DocumentController.cpp" line="708"/>
         <source>Opened</source>
         <translation>Aperto</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="684"/>
+        <location filename="../src/ui/DocumentController.cpp" line="724"/>
         <source>Dimension updated</source>
         <translation>Quota aggiornata</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="738"/>
+        <location filename="../src/ui/DocumentController.cpp" line="778"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1160"/>
         <source>Position updated</source>
         <translation>Posizione aggiornata</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="754"/>
+        <location filename="../src/ui/DocumentController.cpp" line="794"/>
         <source>Rotation updated</source>
         <translation>Rotazione aggiornata</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="774"/>
+        <location filename="../src/ui/DocumentController.cpp" line="807"/>
+        <source>Renamed</source>
+        <translation>Rinominato</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="817"/>
         <source>Material assigned</source>
         <translation>Materiale assegnato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="812"/>
+        <location filename="../src/ui/DocumentController.cpp" line="855"/>
         <source>Display unit changed. Stored geometry is unchanged.</source>
         <translation>Unità di visualizzazione cambiata. La geometria memorizzata non cambia.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="849"/>
+        <location filename="../src/ui/DocumentController.cpp" line="892"/>
         <source>Preset applied</source>
         <translation>Preset applicato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="986"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1083"/>
+        <source>Aligned on X, Y, and Z</source>
+        <translation>Allineato su X, Y e Z</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="1084"/>
+        <source>Aligned on X and Y</source>
+        <translation>Allineato su X e Y</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="1085"/>
+        <source>Aligned on X and Z</source>
+        <translation>Allineato su X e Z</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="1086"/>
+        <source>Aligned on Y and Z</source>
+        <translation>Allineato su Y e Z</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="1087"/>
+        <source>Aligned on X</source>
+        <translation>Allineato su X</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="1088"/>
+        <source>Aligned on Y</source>
+        <translation>Allineato su Y</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="1089"/>
+        <source>Aligned on Z</source>
+        <translation>Allineato su Z</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="1091"/>
+        <source>The snap uses the bounding box.</source>
+        <translation>Lo snap usa il box di ingombro.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="1133"/>
+        <source>Moving</source>
+        <translation>Spostamento</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="1230"/>
+        <source>No joint fits these parts.</source>
+        <translation>Nessun giunto entra in questi pezzi.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="1267"/>
+        <source>Joint added on the contacting faces.</source>
+        <translation>Giunto aggiunto sulle facce a contatto.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="1269"/>
+        <source>Joint added. The faces are the usual defaults, because this overlap is not one flat contact.</source>
+        <translation>Giunto aggiunto. Le facce sono quelle predefinite, perché questa sovrapposizione non è un unico contatto piatto.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="1309"/>
         <source>Parent updated</source>
         <translation>Pezzo padre aggiornato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="996"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1319"/>
         <source>Role updated</source>
         <translation>Ruolo aggiornato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1031"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1354"/>
         <source>Cut list written. Rough size equals finished size.</source>
         <translation>Distinta di taglio scritta. La misura grezza è uguale a quella finita.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1031"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1354"/>
         <source>Cut list written.</source>
         <translation>Distinta di taglio scritta.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1056"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1379"/>
         <source>Front view written. It is a tessellation wire, not a dimensioned drawing.</source>
         <translation>Vista frontale scritta. È il filo della tassellazione, non un disegno quotato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1059"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1382"/>
         <source>Top view written. It is a tessellation wire, not a dimensioned drawing.</source>
         <translation>Vista dall&apos;alto scritta. È il filo della tassellazione, non un disegno quotato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1062"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1385"/>
         <source>Right view written. It is a tessellation wire, not a dimensioned drawing.</source>
         <translation>Vista destra scritta. È il filo della tassellazione, non un disegno quotato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1065"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1388"/>
         <source>Sheet written. It is a tessellation wire, not a dimensioned drawing.</source>
         <translation>Foglio scritto. È il filo della tassellazione, non un disegno quotato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1068"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1391"/>
         <source>DXF wire written. It is a tessellation wire, not a dimensioned drawing.</source>
         <translation>Filo DXF scritto. È il filo della tassellazione, non un disegno quotato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1071"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1394"/>
         <source>PDF wire written. It is a tessellation wire, not a dimensioned drawing.</source>
         <translation>Filo PDF scritto. È il filo della tassellazione, non un disegno quotato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1074"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1397"/>
         <source>Front dimensions written. Width and height are the model sizes. The outline is still a tessellation, not hidden-line removal.</source>
         <translation>Quote della vista frontale scritte. Larghezza e altezza sono le misure del modello. Il contorno resta una tassellazione, non una rimozione delle linee nascoste.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1154"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1477"/>
         <source>Library events written. The project was not published.</source>
         <translation>Eventi della libreria scritti. Il progetto non è stato pubblicato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1200"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1523"/>
         <source>Library events imported. The project file was not changed.</source>
         <translation>Eventi della libreria importati. Il file del progetto non è stato modificato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1219"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1542"/>
         <source>Restored the previous save. The backup was checked before it replaced the project.</source>
         <translation>Ripristinato il salvataggio precedente. Il backup è stato verificato prima di sostituire il progetto.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1329"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1645"/>
         <source>Enter a dimension.</source>
         <translation>Inserisci una quota.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1330"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1646"/>
         <source>Could not read that dimension.</source>
         <translation>Impossibile leggere quella quota.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1331"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1647"/>
         <source>That dimension is too large to store.</source>
         <translation>Quella quota è troppo grande per essere memorizzata.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1332"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1648"/>
         <source>Dimensions must be greater than zero.</source>
         <translation>Le quote devono essere maggiori di zero.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1333"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1649"/>
         <source>That value is outside the supported range.</source>
         <translation>Quel valore è fuori dall&apos;intervallo supportato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1334"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1650"/>
         <source>That dimension does not apply to this part.</source>
         <translation>Quella quota non si applica a questo pezzo.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1335"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1651"/>
         <source>Unlock the part before editing it.</source>
         <translation>Sblocca il pezzo prima di modificarlo.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1336"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1652"/>
         <source>That part is no longer in the project.</source>
         <translation>Quel pezzo non è più nel progetto.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1337"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1653"/>
         <source>That parent would make a loop.</source>
         <translation>Quel pezzo padre creerebbe un ciclo.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1338"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1654"/>
         <source>A role is a short token: letters, digits, dot, underscore, or hyphen.</source>
         <translation>Un ruolo è un token breve: lettere, cifre, punto, trattino basso o trattino.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1339"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1655"/>
         <source>The name cannot be empty.</source>
         <translation>Il nome non può essere vuoto.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1340"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1656"/>
         <source>That name is too long.</source>
         <translation>Quel nome è troppo lungo.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1341"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1657"/>
         <source>Those notes are too long.</source>
         <translation>Quelle note sono troppo lunghe.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1342"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1658"/>
         <source>That text is too long.</source>
         <translation>Quel testo è troppo lungo.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1343"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1659"/>
         <source>Could not read or write the project file.</source>
         <translation>Impossibile leggere o scrivere il file di progetto.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1344"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1660"/>
         <source>Could not update the project backup.</source>
         <translation>Impossibile aggiornare la copia di backup.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1345"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1661"/>
         <source>There is no backup to restore.</source>
         <translation>Non c&apos;è un backup da ripristinare.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1346"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1662"/>
         <source>That drawing is not available.</source>
         <translation>Quel disegno non è disponibile.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1347"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1663"/>
         <source>This file is not a TimberLab project.</source>
         <translation>Questo file non è un progetto TimberLab.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1348"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1664"/>
         <source>The project file failed its integrity check.</source>
         <translation>Il file di progetto non ha superato il controllo di integrità.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1349"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1665"/>
         <source>This project uses a newer file version.</source>
         <translation>Questo progetto usa una versione di file più recente.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1350"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1666"/>
         <source>That project file is too large.</source>
         <translation>Quel file di progetto è troppo grande.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1351"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1667"/>
         <source>That project has too many entries.</source>
         <translation>Quel progetto ha troppe voci.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1352"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1668"/>
         <source>That project contains a duplicate id.</source>
         <translation>Quel progetto contiene un identificatore duplicato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1353"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1669"/>
         <source>Could not read that angle.</source>
         <translation>Impossibile leggere quell&apos;angolo.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1356"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1672"/>
         <source>The solid could not be built.</source>
         <translation>Impossibile costruire il solido.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1358"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1674"/>
         <source>Preferences could not be opened. The project still works.</source>
         <translation>Impossibile aprire le preferenze. Il progetto funziona comunque.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1377"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1693"/>
         <source>That secret key is not a valid nsec.</source>
         <translation>Quella chiave segreta non è un nsec valido.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1378"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1694"/>
         <source>That bunker link is not valid.</source>
         <translation>Quel collegamento bunker non è valido.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1379"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1695"/>
         <source>Amber signs on Android. On this computer, sign in with a secret key or a bunker.</source>
         <translation>Amber firma su Android. Su questo computer accedi con una chiave segreta o un bunker.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1380"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1696"/>
         <source>The relay did not accept the bunker connection.</source>
         <translation>Il relay non ha accettato la connessione al bunker.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1381"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1697"/>
         <source>The bunker did not answer.</source>
         <translation>Il bunker non ha risposto.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1382"/>
-        <location filename="../src/ui/DocumentController.cpp" line="1479"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1698"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1795"/>
         <source>The bunker rejected the connection.</source>
         <translation>Il bunker ha rifiutato la connessione.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1383"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1699"/>
         <source>The bunker response could not be decrypted.</source>
         <translation>La risposta del bunker non può essere decifrata.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1384"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1700"/>
         <source>The sign-in session is no longer valid.</source>
         <translation>La sessione di accesso non è più valida.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1385"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1701"/>
         <source>That library event does not match this library.</source>
         <translation>Quell&apos;evento della libreria non corrisponde a questa libreria.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1386"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1702"/>
         <source>That library event conflicts with the local row.</source>
         <translation>Quell&apos;evento della libreria è in conflitto con la riga locale.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1387"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1703"/>
         <source>That library event could not be opened.</source>
         <translation>Quell&apos;evento della libreria non può essere aperto.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1388"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1704"/>
         <source>That library revision is not valid.</source>
         <translation>Quella revisione della libreria non è valida.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1389"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1705"/>
         <source>Something went wrong.</source>
         <translation>Qualcosa è andato storto.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1494"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1810"/>
         <source>The bunker asked to open this page: %1</source>
         <translation>Il bunker chiede di aprire questa pagina: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1513"/>
-        <location filename="../src/ui/DocumentController.cpp" line="1547"/>
-        <location filename="../src/ui/DocumentController.cpp" line="1610"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1829"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1863"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1926"/>
         <source>Signed in as %1</source>
         <translation>Accesso effettuato come %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1574"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1890"/>
         <source>Waiting for the bunker to approve.</source>
         <translation>In attesa dell&apos;approvazione del bunker.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1589"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1905"/>
         <source>Waiting for Amber to approve.</source>
         <translation>In attesa dell&apos;approvazione di Amber.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1618"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1934"/>
         <source>Signed out. The key was cleared from memory.</source>
         <translation>Accesso terminato. La chiave è stata cancellata dalla memoria.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="947"/>
+        <location filename="../src/ui/DocumentController.cpp" line="990"/>
         <source>Joint added</source>
         <translation>Giunto aggiunto</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="975"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1298"/>
         <source>Joint updated</source>
         <translation>Giunto aggiornato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1230"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1553"/>
         <source>Joint removed</source>
         <translation>Giunto rimosso</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1366"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1682"/>
         <source>A joint needs two different parts.</source>
         <translation>Un giunto richiede due pezzi diversi.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1367"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1683"/>
         <source>Joints cut boards and boxes, not cylinders.</source>
         <translation>Gli incastri tagliano tavole e scatole, non i cilindri.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1368"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1684"/>
         <source>That joint does not fit these parts.</source>
         <translation>Quel giunto non entra in questi pezzi.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1369"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1685"/>
         <source>That joint does not change the solid.</source>
         <translation>Quel giunto non modifica il solido.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1370"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1686"/>
         <source>That joint is no longer in the project.</source>
         <translation>Quel giunto non è più nel progetto.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="700"/>
+        <location filename="../src/ui/DocumentController.cpp" line="740"/>
         <source>Parameter updated</source>
         <translation>Parametro aggiornato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="711"/>
+        <location filename="../src/ui/DocumentController.cpp" line="751"/>
         <source>Field driven</source>
         <translation>Campo guidato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="722"/>
+        <location filename="../src/ui/DocumentController.cpp" line="762"/>
         <source>Field released</source>
         <translation>Campo liberato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1371"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1687"/>
         <source>That parameter is not in the project.</source>
         <translation>Quel parametro non è nel progetto.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1372"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1688"/>
         <source>That dimension follows a parameter. Release it to type a number.</source>
         <translation>Quella misura segue un parametro. Liberala per scrivere un numero.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1373"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1689"/>
         <source>Those dimensions depend on each other.</source>
         <translation>Quelle misure dipendono l&apos;una dall&apos;altra.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1374"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1690"/>
         <source>That value makes a part size invalid.</source>
         <translation>Quel valore rende invalida la misura di un pezzo.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1375"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1691"/>
         <source>That field is not driven.</source>
         <translation>Quel campo non è guidato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="392"/>
-        <location filename="../src/ui/DocumentController.cpp" line="403"/>
-        <location filename="../src/ui/DocumentController.cpp" line="473"/>
+        <location filename="../src/ui/DocumentController.cpp" line="422"/>
+        <location filename="../src/ui/DocumentController.cpp" line="433"/>
+        <location filename="../src/ui/DocumentController.cpp" line="503"/>
         <source>Width</source>
         <translation>Larghezza</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="393"/>
-        <location filename="../src/ui/DocumentController.cpp" line="404"/>
+        <location filename="../src/ui/DocumentController.cpp" line="423"/>
+        <location filename="../src/ui/DocumentController.cpp" line="434"/>
         <source>Thickness</source>
         <translation>Spessore</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="394"/>
-        <location filename="../src/ui/DocumentController.cpp" line="405"/>
+        <location filename="../src/ui/DocumentController.cpp" line="424"/>
+        <location filename="../src/ui/DocumentController.cpp" line="435"/>
         <source>Height</source>
         <translation>Altezza</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="395"/>
-        <location filename="../src/ui/DocumentController.cpp" line="406"/>
+        <location filename="../src/ui/DocumentController.cpp" line="425"/>
+        <location filename="../src/ui/DocumentController.cpp" line="436"/>
         <source>Radius</source>
         <translation>Raggio</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="474"/>
+        <location filename="../src/ui/DocumentController.cpp" line="504"/>
         <source>Depth</source>
         <translation>Profondità</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="475"/>
+        <location filename="../src/ui/DocumentController.cpp" line="505"/>
         <source>Leg</source>
         <translation>Gamba</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="476"/>
+        <location filename="../src/ui/DocumentController.cpp" line="506"/>
         <source>Inset</source>
         <translation>Rientro</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="477"/>
+        <location filename="../src/ui/DocumentController.cpp" line="507"/>
         <source>Leg height</source>
         <translation>Altezza gamba</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="478"/>
+        <location filename="../src/ui/DocumentController.cpp" line="508"/>
         <source>Top thickness</source>
         <translation>Spessore piano</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="479"/>
+        <location filename="../src/ui/DocumentController.cpp" line="509"/>
         <source>Apron height</source>
         <translation>Altezza fascia</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="480"/>
+        <location filename="../src/ui/DocumentController.cpp" line="510"/>
         <source>Apron thickness</source>
         <translation>Spessore fascia</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="481"/>
+        <location filename="../src/ui/DocumentController.cpp" line="511"/>
         <source>Apron drop</source>
         <translation>Calo fascia</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="867"/>
+        <location filename="../src/ui/DocumentController.cpp" line="910"/>
         <source>Material added to the library.</source>
         <translation>Materiale aggiunto alla libreria.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="897"/>
+        <location filename="../src/ui/DocumentController.cpp" line="940"/>
         <source>Preset added to the library.</source>
         <translation>Spessore aggiunto alla libreria.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="918"/>
+        <location filename="../src/ui/DocumentController.cpp" line="961"/>
         <source>Material removed from the library.</source>
         <translation>Materiale rimosso dalla libreria.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="934"/>
+        <location filename="../src/ui/DocumentController.cpp" line="977"/>
         <source>Preset removed from the library.</source>
         <translation>Spessore rimosso dalla libreria.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1359"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1675"/>
         <source>The library could not be opened. The project still works.</source>
         <translation>La libreria non si è aperta. Il progetto funziona comunque.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1360"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1676"/>
         <source>The library database could not be read.</source>
         <translation>Impossibile leggere il database della libreria.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1361"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1677"/>
         <source>This library uses a newer database version.</source>
         <translation>Questa libreria usa una versione di database più recente.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1362"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1678"/>
         <source>That library entry already exists.</source>
         <translation>Quella voce è già nella libreria.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1363"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1679"/>
         <source>That library entry is no longer there.</source>
         <translation>Quella voce non è più nella libreria.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1364"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1680"/>
         <source>That library is full.</source>
         <translation>La libreria è piena.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1365"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1681"/>
         <source>That library value is not valid.</source>
         <translation>Quel valore non è valido per la libreria.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="576"/>
+        <location filename="../src/ui/DocumentController.cpp" line="610"/>
         <source>Table added. Its sizes are parameters.</source>
         <translation>Tavolo inserito. Le misure sono parametri.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="577"/>
+        <location filename="../src/ui/DocumentController.cpp" line="611"/>
         <source>Cabinet added. Its sizes are parameters.</source>
         <translation>Carcassa inserita. Le misure sono parametri.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="578"/>
+        <location filename="../src/ui/DocumentController.cpp" line="612"/>
         <source>Drawer box added. Its sizes are parameters.</source>
         <translation>Cassetto inserito. Le misure sono parametri.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1376"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1692"/>
         <source>That assembly is not available.</source>
         <translation>Quell&apos;assieme non è disponibile.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="415"/>
+        <location filename="../src/ui/DocumentController.cpp" line="445"/>
         <source>Table width</source>
         <translation>Larghezza tavolo</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="416"/>
+        <location filename="../src/ui/DocumentController.cpp" line="446"/>
         <source>Table depth</source>
         <translation>Profondità tavolo</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="417"/>
+        <location filename="../src/ui/DocumentController.cpp" line="447"/>
         <source>Table leg</source>
         <translation>Gamba tavolo</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="418"/>
+        <location filename="../src/ui/DocumentController.cpp" line="448"/>
         <source>Table inset</source>
         <translation>Rientro tavolo</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="419"/>
+        <location filename="../src/ui/DocumentController.cpp" line="449"/>
         <source>Table leg height</source>
         <translation>Altezza gamba tavolo</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="420"/>
+        <location filename="../src/ui/DocumentController.cpp" line="450"/>
         <source>Table top thickness</source>
         <translation>Spessore piano tavolo</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="421"/>
+        <location filename="../src/ui/DocumentController.cpp" line="451"/>
         <source>Table apron height</source>
         <translation>Altezza fascia tavolo</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="422"/>
+        <location filename="../src/ui/DocumentController.cpp" line="452"/>
         <source>Table apron thickness</source>
         <translation>Spessore fascia tavolo</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="423"/>
+        <location filename="../src/ui/DocumentController.cpp" line="453"/>
         <source>Table apron drop</source>
         <translation>Calo fascia tavolo</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="427"/>
+        <location filename="../src/ui/DocumentController.cpp" line="457"/>
         <source>Cabinet width</source>
         <translation>Larghezza carcassa</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="428"/>
+        <location filename="../src/ui/DocumentController.cpp" line="458"/>
         <source>Cabinet depth</source>
         <translation>Profondità carcassa</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="429"/>
+        <location filename="../src/ui/DocumentController.cpp" line="459"/>
         <source>Cabinet height</source>
         <translation>Altezza carcassa</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="430"/>
+        <location filename="../src/ui/DocumentController.cpp" line="460"/>
         <source>Cabinet side</source>
         <translation>Spessore fianco</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="431"/>
+        <location filename="../src/ui/DocumentController.cpp" line="461"/>
         <source>Cabinet panel</source>
         <translation>Spessore piano</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="432"/>
+        <location filename="../src/ui/DocumentController.cpp" line="462"/>
         <source>Cabinet back</source>
         <translation>Spessore schienale</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="436"/>
+        <location filename="../src/ui/DocumentController.cpp" line="466"/>
         <source>Drawer width</source>
         <translation>Larghezza cassetto</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="437"/>
+        <location filename="../src/ui/DocumentController.cpp" line="467"/>
         <source>Drawer depth</source>
         <translation>Profondità cassetto</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="438"/>
+        <location filename="../src/ui/DocumentController.cpp" line="468"/>
         <source>Drawer height</source>
         <translation>Altezza cassetto</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="439"/>
+        <location filename="../src/ui/DocumentController.cpp" line="469"/>
         <source>Drawer side</source>
         <translation>Spessore fianco cassetto</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="440"/>
+        <location filename="../src/ui/DocumentController.cpp" line="470"/>
         <source>Drawer bottom</source>
         <translation>Spessore fondo</translation>
     </message>

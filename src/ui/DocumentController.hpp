@@ -25,6 +25,27 @@
 
 namespace timberlab::ui {
 
+struct DragPreview {
+  bool ok = false;
+  bool snapX = false;
+  bool snapY = false;
+  bool snapZ = false;
+  bool boundingBox = false;
+  double snapTargetX = 0;
+  double snapTargetY = 0;
+  double snapTargetZ = 0;
+  int snapEdgeX = -1;  // 0 min, 1 max, 2 center
+  int snapEdgeY = -1;
+  int snapEdgeZ = -1;
+};
+
+struct ContactZone {
+  QString idA;
+  QString idB;
+  QVector3D minimum;
+  QVector3D maximum;
+};
+
 struct ScenePart {
   QString id;
   std::vector<float> interleaved;
@@ -159,6 +180,26 @@ class DocumentController : public QObject {
   Q_INVOKABLE bool removeUserMaterial(const QString& id);
   Q_INVOKABLE bool removeUserPreset(const QString& id);
   Q_INVOKABLE bool addJoint(const QString& typeKey, const QString& selectedId, const QString& mateId);
+  enum class DragStart { Orbit, Move, Blocked };
+  DragStart classifyDrag(const QString& id) const;
+  QString pickPart(const QVector3D& origin, const QVector3D& direction) const;
+  bool beginPartDrag(const QString& id);
+  bool isDragging() const;
+  QVector3D dragAnchor() const;
+  QVector3D dragCenter() const;
+  bool dragSnapX() const;
+  bool dragSnapY() const;
+  bool dragSnapZ() const;
+  QVector3D dragPositionMm() const;
+  Q_INVOKABLE QString formatLength(double mm) const;
+  DragPreview previewPartDrag(double dxMm, double dyMm, double dzMm);
+  void commitPartDrag();
+  void cancelPartDrag();
+  void reportDragBlocked();
+  std::vector<ContactZone> contactZones() const;
+  bool armContact(const QString& idA, const QString& idB);
+  Q_INVOKABLE QStringList armedJointTypes() const;
+  Q_INVOKABLE bool addArmedJoint(const QString& typeKey);
   Q_INVOKABLE bool setJointFromText(const QString& id, const QString& key, const QString& text);
   Q_INVOKABLE void removeJoint(const QString& id);
   Q_INVOKABLE bool loginWithNsec(const QString& nsec);
@@ -192,6 +233,10 @@ class DocumentController : public QObject {
   QString formulaFor(const constraints::Binding& binding) const;
   units::LengthUnit currentUnit() const;
   void rebuildScene();
+  QString snapStatus(bool x, bool y, bool z, bool boundingBox) const;
+  void showDragMatrix(const QString& id, const QMatrix4x4& matrix);
+  void showDocumentMatrix(const QString& id);
+  void clearContact();
   void rememberPreference(const QString& key, const QString& value);
   void reloadLibrary();
   QString languageName(const materials::CatalogEntry& entry) const;
@@ -222,6 +267,19 @@ class DocumentController : public QObject {
   QString bunkerSub_;
   mutable std::mutex sceneMutex_;
   std::vector<ScenePart> scene_;
+  QString dragId_;
+  std::int64_t dragStartX_ = 0;
+  std::int64_t dragStartY_ = 0;
+  std::int64_t dragStartZ_ = 0;
+  std::int64_t dragX_ = 0;
+  std::int64_t dragY_ = 0;
+  std::int64_t dragZ_ = 0;
+  bool dragSnapped_ = false;
+  DragPreview lastPreview_;
+  bool contactArmed_ = false;
+  std::string armedSelected_;
+  std::string armedMate_;
+  timberlab::ContactFaces armedFaces_;
 };
 
 }  // namespace timberlab::ui

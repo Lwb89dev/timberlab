@@ -1,6 +1,7 @@
 #include "DocumentController.hpp"
 
 #include "AmberBridge.hpp"
+#include "timberlab/core/align.hpp"
 #include "timberlab/core/manufacturing.hpp"
 #include "timberlab/core/transform.hpp"
 #include "timberlab/platform/paths.hpp"
@@ -67,6 +68,35 @@ QString signedTerm(std::int64_t coefficient, const QString& source, bool first) 
   }
   const QString body = QString::number(static_cast<qlonglong>(-coefficient)) + QStringLiteral(" × ") + source;
   return QStringLiteral("− ") + body;
+}
+
+std::int64_t shiftNm(std::int64_t start, double deltaMm, bool& ok) {
+  const double sum = static_cast<double>(start) + deltaMm * 1000000.0;
+  const double limit = static_cast<double>(std::numeric_limits<std::int64_t>::max());
+  if (!std::isfinite(sum) || sum > limit || sum < -limit) {
+    ok = false;
+    return start;
+  }
+  return static_cast<std::int64_t>(std::llround(sum));
+}
+
+bool tryShift(const Document& document, std::int64_t& x, std::int64_t& y, std::int64_t& z, int axis, double deltaMm) {
+  bool ok = true;
+  const std::int64_t current = axis == 0 ? x : axis == 1 ? y : z;
+  const std::int64_t next = shiftNm(current, deltaMm, ok);
+  if (!ok) return false;
+  const std::int64_t nx = axis == 0 ? next : x;
+  const std::int64_t ny = axis == 1 ? next : y;
+  const std::int64_t nz = axis == 2 ? next : z;
+  if (!document.positionInRange(nx, ny, nz)) return false;
+  if (axis == 0) x = next;
+  else if (axis == 1) y = next;
+  else z = next;
+  return true;
+}
+
+bool boundingSnap(const Placement& placement) {
+  return std::abs(placement.rxDeg) > 1e-4 || std::abs(placement.ryDeg) > 1e-4 || std::abs(placement.rzDeg) > 1e-4;
 }
 
 QMatrix4x4 matrixFrom(const Placement& placement) {
@@ -515,6 +545,8 @@ QString DocumentController::formulaFor(const constraints::Binding& binding) cons
 }
 
 void DocumentController::newProject() {
+  cancelPartDrag();
+  clearContact();
   document_.newProject(document_.displayUnit(), document_.fractionPrecision());
   selectedId_.clear();
   projectPath_.clear();
@@ -523,6 +555,8 @@ void DocumentController::newProject() {
 }
 
 void DocumentController::makeDemo() {
+  cancelPartDrag();
+  clearContact();
   document_.makeDemoTable();
   selectedId_.clear();
   projectPath_.clear();
@@ -596,6 +630,7 @@ void DocumentController::duplicateSelected() {
 }
 
 void DocumentController::deleteSelected() {
+  cancelPartDrag();
   if (selectedId_.isEmpty()) return;
   std::string error;
   if (!document_.remove(selectedId_.toStdString(), error)) {
@@ -615,6 +650,7 @@ void DocumentController::select(const QString& id) {
 }
 
 void DocumentController::undo() {
+  cancelPartDrag();
   std::string error;
   if (!document_.undo(error)) return;
   status_ = tr("Undo");
@@ -622,6 +658,7 @@ void DocumentController::undo() {
 }
 
 void DocumentController::redo() {
+  cancelPartDrag();
   std::string error;
   if (!document_.redo(error)) return;
   status_ = tr("Redo");
@@ -629,6 +666,7 @@ void DocumentController::redo() {
 }
 
 bool DocumentController::saveProject(const QUrl& url) {
+  commitPartDrag();
   QString path = url.toLocalFile();
   if (path.isEmpty()) {
     report("storage.io", true);
@@ -654,6 +692,8 @@ bool DocumentController::saveCurrent() {
 }
 
 bool DocumentController::loadProject(const QUrl& url) {
+  cancelPartDrag();
+  clearContact();
   const QString path = url.toLocalFile();
   Document loaded;
   const auto result = storage::loadProject(path.toStdString(), loaded);
@@ -758,10 +798,13 @@ bool DocumentController::setRotationFromText(const QString& id, const QString& a
 
 void DocumentController::setPartName(const QString& id, const QString& name) {
   std::string error;
+  const Component* existing = document_.find(id.toStdString());
+  const bool same = existing != nullptr && existing->name == name.trimmed().toStdString();
   if (!document_.setName(id.toStdString(), name.trimmed().toStdString(), error)) {
     report(error, false);
     return;
   }
+  if (!same) status_ = tr("Renamed");
   touch(false);
 }
 
@@ -945,6 +988,286 @@ bool DocumentController::addJoint(const QString& typeKey, const QString& selecte
     return false;
   }
   status_ = tr("Joint added");
+  touch(false);
+  return true;
+}
+
+DocumentController::DragStart DocumentController::classifyDrag(const QString& id) const {
+  if (id.isEmpty()) return DragStart::Orbit;
+  std::string error;
+  if (document_.canMove(id.toStdString(), error)) return DragStart::Move;
+  if (error == "parameter.driven") return DragStart::Blocked;
+  return DragStart::Orbit;
+}
+
+QString DocumentController::pickPart(const QVector3D& origin, const QVector3D& direction) const {
+  const double rayOrigin[3] = {origin.x(), origin.y(), origin.z()};
+  const double rayDirection[3] = {direction.x(), direction.y(), direction.z()};
+  double best = 1e300;
+  QString hit;
+  for (const Component& component : document_.components()) {
+    if (!component.visible) continue;
+    double enter = 0;
+    if (!rayHitsBox(rayOrigin, rayDirection, worldBox(component), enter)) continue;
+    if (enter >= best) continue;
+    best = enter;
+    hit = QString::fromStdString(component.id);
+  }
+  return hit;
+}
+
+bool DocumentController::beginPartDrag(const QString& id) {
+  cancelPartDrag();
+  std::string error;
+  if (!document_.canMove(id.toStdString(), error)) return false;
+  const Component* part = document_.find(id.toStdString());
+  if (part == nullptr) return false;
+  dragId_ = id;
+  dragStartX_ = dragX_ = part->placement.xNm;
+  dragStartY_ = dragY_ = part->placement.yNm;
+  dragStartZ_ = dragZ_ = part->placement.zNm;
+  dragSnapped_ = false;
+  return true;
+}
+
+QVector3D DocumentController::dragAnchor() const {
+  const Component* part = document_.find(dragId_.toStdString());
+  if (part == nullptr) return {};
+  const timberlab::WorldBox box = timberlab::worldBox(*part);
+  return {static_cast<float>((box.minX + box.maxX) * 0.5), static_cast<float>((box.minY + box.maxY) * 0.5),
+          static_cast<float>((box.minZ + box.maxZ) * 0.5)};
+}
+
+bool DocumentController::isDragging() const { return !dragId_.isEmpty(); }
+
+QVector3D DocumentController::dragCenter() const {
+  const Component* part = document_.find(dragId_.toStdString());
+  if (part == nullptr) return {};
+  Component proposed = *part;
+  proposed.placement.xNm = dragX_;
+  proposed.placement.yNm = dragY_;
+  proposed.placement.zNm = dragZ_;
+  const timberlab::WorldBox box = timberlab::worldBox(proposed);
+  return {static_cast<float>((box.minX + box.maxX) * 0.5), static_cast<float>((box.minY + box.maxY) * 0.5),
+          static_cast<float>((box.minZ + box.maxZ) * 0.5)};
+}
+
+bool DocumentController::dragSnapX() const { return lastPreview_.snapX; }
+bool DocumentController::dragSnapY() const { return lastPreview_.snapY; }
+bool DocumentController::dragSnapZ() const { return lastPreview_.snapZ; }
+
+QVector3D DocumentController::dragPositionMm() const {
+  return {float(dragX_) / 1'000'000.f, float(dragY_) / 1'000'000.f, float(dragZ_) / 1'000'000.f};
+}
+
+QString DocumentController::formatLength(double mm) const {
+  return QString::fromStdString(
+      units::formatLength(static_cast<std::int64_t>(std::llround(mm * 1'000'000.0)), currentUnit(), fractionPrecision()));
+}
+
+void DocumentController::showDragMatrix(const QString& id, const QMatrix4x4& matrix) {
+  std::lock_guard<std::mutex> lock(sceneMutex_);
+  for (ScenePart& part : scene_) {
+    if (part.id == id) part.model = matrix;
+  }
+}
+
+void DocumentController::showDocumentMatrix(const QString& id) {
+  const Component* part = document_.find(id.toStdString());
+  if (part == nullptr) return;
+  showDragMatrix(id, matrixFrom(part->placement));
+}
+
+QString DocumentController::snapStatus(bool x, bool y, bool z, bool boundingBox) const {
+  QString text;
+  if (x && y && z) text = tr("Aligned on X, Y, and Z");
+  else if (x && y) text = tr("Aligned on X and Y");
+  else if (x && z) text = tr("Aligned on X and Z");
+  else if (y && z) text = tr("Aligned on Y and Z");
+  else if (x) text = tr("Aligned on X");
+  else if (y) text = tr("Aligned on Y");
+  else text = tr("Aligned on Z");
+  if (!boundingBox) return text;
+  return text + QStringLiteral(" ") + tr("The snap uses the bounding box.");
+}
+
+DragPreview DocumentController::previewPartDrag(double dxMm, double dyMm, double dzMm) {
+  DragPreview result;
+  if (dragId_.isEmpty()) return result;
+  const Component* part = document_.find(dragId_.toStdString());
+  if (part == nullptr) return result;
+  bool finite = true;
+  std::int64_t x = shiftNm(dragStartX_, dxMm, finite);
+  std::int64_t y = shiftNm(dragStartY_, dyMm, finite);
+  std::int64_t z = shiftNm(dragStartZ_, dzMm, finite);
+  if (!finite || !document_.positionInRange(x, y, z)) return result;
+
+  Component proposed = *part;
+  proposed.placement.xNm = x;
+  proposed.placement.yNm = y;
+  proposed.placement.zNm = z;
+  std::vector<WorldBox> others;
+  others.reserve(document_.components().size());
+  for (const Component& other : document_.components()) {
+    if (!other.visible || other.id == part->id) continue;
+    others.push_back(worldBox(other));
+  }
+  const AxisSnap snap = snapTranslation(worldBox(proposed), others, kAlignMm);
+  const bool snapX = snap.used[0] && tryShift(document_, x, y, z, 0, snap.deltaMm[0]);
+  const bool snapY = snap.used[1] && tryShift(document_, x, y, z, 1, snap.deltaMm[1]);
+  const bool snapZ = snap.used[2] && tryShift(document_, x, y, z, 2, snap.deltaMm[2]);
+  Placement placement = part->placement;
+  placement.xNm = x;
+  placement.yNm = y;
+  placement.zNm = z;
+  showDragMatrix(dragId_, matrixFrom(placement));
+  dragX_ = x;
+  dragY_ = y;
+  dragZ_ = z;
+  dragSnapped_ = snapX || snapY || snapZ;
+  result.ok = true;
+  result.snapX = snapX;
+  result.snapY = snapY;
+  result.snapZ = snapZ;
+  result.boundingBox = boundingSnap(part->placement);
+  const QString next = dragSnapped_ ? snapStatus(snapX, snapY, snapZ, result.boundingBox) : tr("Moving");
+  if (status_ != next) {
+    status_ = next;
+    emit statusChanged();
+  }
+  lastPreview_ = result;
+  return result;
+}
+
+void DocumentController::commitPartDrag() {
+  if (dragId_.isEmpty()) return;
+  const QString id = dragId_;
+  const std::int64_t x = dragX_;
+  const std::int64_t y = dragY_;
+  const std::int64_t z = dragZ_;
+  const bool snapped = dragSnapped_;
+  const bool moved = x != dragStartX_ || y != dragStartY_ || z != dragStartZ_;
+  dragId_.clear();
+  dragSnapped_ = false;
+  lastPreview_ = {};
+  if (!moved) return;
+  std::string error;
+  if (!document_.setPosition(id.toStdString(), x, y, z, error)) {
+    report(error, false);
+    showDocumentMatrix(id);
+    return;
+  }
+  if (!snapped) status_ = tr("Position updated");
+  touch(false);
+}
+
+void DocumentController::cancelPartDrag() {
+  if (dragId_.isEmpty()) return;
+  const QString id = dragId_;
+  dragId_.clear();
+  dragSnapped_ = false;
+  lastPreview_ = {};
+  showDocumentMatrix(id);
+}
+
+void DocumentController::reportDragBlocked() {
+  status_ = messageFor(QStringLiteral("parameter.driven"));
+  emit statusChanged();
+}
+
+std::vector<ContactZone> DocumentController::contactZones() const {
+  std::vector<ContactZone> zones;
+  const std::vector<PartContact> contacts = partContacts(document_.components(), kContactNearMm);
+  zones.reserve(contacts.size());
+  for (const PartContact& contact : contacts) {
+    if (contact.indexA >= document_.components().size() || contact.indexB >= document_.components().size()) continue;
+    ContactZone zone;
+    zone.idA = QString::fromStdString(document_.components()[contact.indexA].id);
+    zone.idB = QString::fromStdString(document_.components()[contact.indexB].id);
+    zone.minimum = QVector3D(static_cast<float>(contact.zone.minX), static_cast<float>(contact.zone.minY),
+                             static_cast<float>(contact.zone.minZ));
+    zone.maximum = QVector3D(static_cast<float>(contact.zone.maxX), static_cast<float>(contact.zone.maxY),
+                             static_cast<float>(contact.zone.maxZ));
+    zones.push_back(std::move(zone));
+  }
+  return zones;
+}
+
+void DocumentController::clearContact() {
+  contactArmed_ = false;
+  armedSelected_.clear();
+  armedMate_.clear();
+  armedFaces_ = {};
+}
+
+bool DocumentController::armContact(const QString& idA, const QString& idB) {
+  clearContact();
+  const std::vector<PartContact> contacts = partContacts(document_.components(), kContactNearMm);
+  const PartContact* found = nullptr;
+  for (const PartContact& contact : contacts) {
+    if (contact.indexA >= document_.components().size() || contact.indexB >= document_.components().size()) continue;
+    const std::string& first = document_.components()[contact.indexA].id;
+    const std::string& second = document_.components()[contact.indexB].id;
+    const bool match = (first == idA.toStdString() && second == idB.toStdString()) ||
+                       (first == idB.toStdString() && second == idA.toStdString());
+    if (!match) continue;
+    found = &contact;
+    break;
+  }
+  if (found == nullptr) return false;
+  const Component& partA = document_.components()[found->indexA];
+  const Component& partB = document_.components()[found->indexB];
+  const bool selectedIsB = selectedId_.toStdString() == partB.id;
+  const Component& selected = selectedIsB ? partB : partA;
+  const Component& mate = selectedIsB ? partA : partB;
+  armedFaces_.known = found->facesKnown;
+  armedFaces_.faceOfSelected = selectedIsB ? found->faceB : found->faceA;
+  armedFaces_.faceOfMate = selectedIsB ? found->faceA : found->faceB;
+  armedSelected_ = selected.id;
+  armedMate_ = mate.id;
+  if (armedJointTypes().isEmpty()) {
+    clearContact();
+    status_ = tr("No joint fits these parts.");
+    emit statusChanged();
+    return false;
+  }
+  contactArmed_ = true;
+  return true;
+}
+
+QStringList DocumentController::armedJointTypes() const {
+  QStringList keys;
+  const Component* selected = document_.find(armedSelected_);
+  const Component* mate = document_.find(armedMate_);
+  if (selected == nullptr || mate == nullptr) return keys;
+  static constexpr timberlab::JointType kTypes[] = {
+      timberlab::JointType::MortiseTenon, timberlab::JointType::HalfLap,     timberlab::JointType::Dado,
+      timberlab::JointType::Groove,       timberlab::JointType::Rabbet,      timberlab::JointType::Bridle,
+      timberlab::JointType::Castle,       timberlab::JointType::Miter,       timberlab::JointType::Dovetail,
+      timberlab::JointType::SlidingDovetail, timberlab::JointType::Finger,   timberlab::JointType::HalfBlindDovetail,
+      timberlab::JointType::TongueGroove, timberlab::JointType::Dowel};
+  for (const timberlab::JointType type : kTypes) {
+    Joint joint;
+    std::string error;
+    if (!prepareContactJoint(type, *selected, *mate, armedFaces_, joint, error)) continue;
+    keys.push_back(QString::fromUtf8(jointTypeKey(type)));
+  }
+  return keys;
+}
+
+bool DocumentController::addArmedJoint(const QString& typeKey) {
+  if (!contactArmed_) return false;
+  std::string error;
+  const std::string id =
+      document_.addContactJoint(typeKey.toStdString(), armedSelected_, armedMate_, armedFaces_, error);
+  if (id.empty()) {
+    report(error, false);
+    return false;
+  }
+  if (armedFaces_.known) status_ = tr("Joint added on the contacting faces.");
+  else {
+    status_ = tr("Joint added. The faces are the usual defaults, because this overlap is not one flat contact.");
+  }
   touch(false);
   return true;
 }
@@ -1241,28 +1564,21 @@ bool DocumentController::worldBounds(const QString& componentId, QVector3D& mini
   for (const Component& component : document_.components()) {
     if (!component.visible) continue;
     if (!componentId.isEmpty() && QString::fromStdString(component.id) != componentId) continue;
-    double matrix[16];
-    placementMatrix(component.placement, matrix);
-    const LocalBox box = localBox(component);
-    for (int corner = 0; corner < 8; ++corner) {
-      const double x = box.originXmm + ((corner & 1) ? box.sizeXmm : 0.0);
-      const double y = box.originYmm + ((corner & 2) ? box.sizeYmm : 0.0);
-      const double z = box.originZmm + ((corner & 4) ? box.sizeZmm : 0.0);
-      double ox = 0, oy = 0, oz = 0;
-      transformPoint(matrix, x, y, z, ox, oy, oz);
-      const QVector3D point(static_cast<float>(ox), static_cast<float>(oy), static_cast<float>(oz));
-      if (!any) {
-        minimum = maximum = point;
-        any = true;
-      } else {
-        minimum.setX(std::min(minimum.x(), point.x()));
-        minimum.setY(std::min(minimum.y(), point.y()));
-        minimum.setZ(std::min(minimum.z(), point.z()));
-        maximum.setX(std::max(maximum.x(), point.x()));
-        maximum.setY(std::max(maximum.y(), point.y()));
-        maximum.setZ(std::max(maximum.z(), point.z()));
-      }
+    const WorldBox box = worldBox(component);
+    const QVector3D low(static_cast<float>(box.minX), static_cast<float>(box.minY), static_cast<float>(box.minZ));
+    const QVector3D high(static_cast<float>(box.maxX), static_cast<float>(box.maxY), static_cast<float>(box.maxZ));
+    if (!any) {
+      minimum = low;
+      maximum = high;
+      any = true;
+      continue;
     }
+    minimum.setX(std::min(minimum.x(), low.x()));
+    minimum.setY(std::min(minimum.y(), low.y()));
+    minimum.setZ(std::min(minimum.z(), low.z()));
+    maximum.setX(std::max(maximum.x(), high.x()));
+    maximum.setY(std::max(maximum.y(), high.y()));
+    maximum.setZ(std::max(maximum.z(), high.z()));
   }
   return any;
 }

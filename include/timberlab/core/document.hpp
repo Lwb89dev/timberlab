@@ -1,6 +1,7 @@
 #pragma once
 
 #include "timberlab/constraints/binding.hpp"
+#include "timberlab/core/align.hpp"
 #include "timberlab/core/component.hpp"
 #include "timberlab/core/joint.hpp"
 
@@ -57,6 +58,11 @@ class Document {
   bool setRole(const std::string& id, const std::string& role, std::string& error);
   bool setDimension(const std::string& id, std::string_view key, std::int64_t nm, std::string& error);
   bool setTranslation(const std::string& id, std::string_view axis, std::int64_t nm, std::string& error);
+  // Writes X, Y, and Z together, so a drag is one undo step. A binding on any
+  // of the three axes rejects the whole move.
+  bool setPosition(const std::string& id, std::int64_t xNm, std::int64_t yNm, std::int64_t zNm, std::string& error);
+  bool canMove(const std::string& id, std::string& error) const;
+  bool positionInRange(std::int64_t xNm, std::int64_t yNm, std::int64_t zNm) const;
   bool setRotation(const std::string& id, std::string_view axis, double degrees, std::string& error);
   bool setDisplayUnit(const std::string& unitKey, std::string& error);
   bool setFractionPrecision(int denom, std::string& error);
@@ -65,6 +71,10 @@ class Document {
   // Starting sizes come from defaultJoint and are not a structural rating.
   std::string addJoint(std::string_view typeKey, const std::string& selectedId, const std::string& mateId,
                        std::string& error);
+  // Same starting sizes as addJoint. When faces.known is set, the contact
+  // faces replace the defaults before the fit is checked again.
+  std::string addContactJoint(std::string_view typeKey, const std::string& selectedId, const std::string& mateId,
+                              const ContactFaces& faces, std::string& error);
   bool removeJoint(const std::string& id, std::string& error);
   bool setJointParameter(const std::string& id, std::string_view key, std::int64_t nm, std::string& error);
 

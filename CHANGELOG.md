@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0 — 2026-10-19
+
+### Interactive alignment and contact joints
+
+- Drag parts in the viewport. Shift-click begins a constrained drag; plain drag first aligns the click to the part surface plane, then moves in that plane. Edges and centers of other visible parts snap within 8 mm per axis; the status bar reports which axes snapped, and a floating overlay shows the live X/Y/Z deltas.
+- Right-click a visible contact overlap to arm the two parts, then pick a joint type from the context menu. The joint uses the actual touching faces when the contact is a single flat overlap; otherwise it falls back to the default face mapping. The usual joint cut is applied to the solids.
+- Rename a part from the parts panel; the change is undoable and stored in the project.
+
 ## 0.1.0 — 2026-10-17
 
 First tagged release. Linux x86_64 is the only platform this version builds and runs. It is a working parametric woodworking baseline, not a finished cabinetmaking tool.

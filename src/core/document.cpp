@@ -919,6 +919,44 @@ bool Document::setTranslation(const std::string& id, std::string_view axis, std:
   return commitComponents(std::move(next), error);
 }
 
+bool Document::canMove(const std::string& id, std::string& error) const {
+  const Component* component = find(id);
+  if (component == nullptr) {
+    error = "component.missing";
+    return false;
+  }
+  if (!editable(*component, error)) return false;
+  if (findBinding(id, "x") != nullptr || findBinding(id, "y") != nullptr || findBinding(id, "z") != nullptr) {
+    error = "parameter.driven";
+    return false;
+  }
+  return true;
+}
+
+bool Document::positionInRange(std::int64_t xNm, std::int64_t yNm, std::int64_t zNm) const {
+  std::string error;
+  return acceptableOffset(xNm, error) && acceptableOffset(yNm, error) && acceptableOffset(zNm, error);
+}
+
+bool Document::setPosition(const std::string& id, std::int64_t xNm, std::int64_t yNm, std::int64_t zNm,
+                           std::string& error) {
+  if (!canMove(id, error)) return false;
+  if (!positionInRange(xNm, yNm, zNm)) {
+    error = "dimension.too_large";
+    return false;
+  }
+  std::vector<Component> next = components_;
+  Component* target = findLoaded(next, id);
+  if (target == nullptr) {
+    error = "component.missing";
+    return false;
+  }
+  target->placement.xNm = xNm;
+  target->placement.yNm = yNm;
+  target->placement.zNm = zNm;
+  return commitComponents(std::move(next), error);
+}
+
 bool Document::setRotation(const std::string& id, std::string_view axis, double degrees, std::string& error) {
   Component* component = findMutable(id);
   if (component == nullptr) {
@@ -1132,6 +1170,37 @@ std::string Document::addJoint(std::string_view typeKey, const std::string& sele
   }
   Joint joint;
   if (!defaultJoint(type, *selected, *mate, joint, error)) return {};
+  joint.id = makeId();
+  const std::string id = joint.id;
+  joints_.push_back(std::move(joint));
+  pushHistory();
+  return id;
+}
+
+std::string Document::addContactJoint(std::string_view typeKey, const std::string& selectedId, const std::string& mateId,
+                                     const ContactFaces& faces, std::string& error) {
+  if (selectedId == mateId) {
+    error = "joint.same_part";
+    return {};
+  }
+  const Component* selected = find(selectedId);
+  const Component* mate = find(mateId);
+  if (selected == nullptr || mate == nullptr) {
+    error = "component.missing";
+    return {};
+  }
+  if (!editable(*selected, error) || !editable(*mate, error)) return {};
+  if (joints_.size() >= kMaxComponents) {
+    error = "storage.too_many";
+    return {};
+  }
+  JointType type;
+  if (!jointTypeFromKey(typeKey, type)) {
+    error = "joint.parameter";
+    return {};
+  }
+  Joint joint;
+  if (!prepareContactJoint(type, *selected, *mate, faces, joint, error)) return {};
   joint.id = makeId();
   const std::string id = joint.id;
   joints_.push_back(std::move(joint));

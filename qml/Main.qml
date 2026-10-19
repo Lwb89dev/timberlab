@@ -28,6 +28,7 @@ ApplicationWindow {
     property bool showInspector: true
     property bool allowDirtyQuit: false
     property string pendingAction: ""
+    property var armedJointTypes: []
     property bool editingText: {
         const item = window.activeFocusItem
         if (!item) return false
@@ -94,6 +95,46 @@ ApplicationWindow {
         MenuItem { text: qsTr("Bedside table"); onTriggered: app.addAssembly("bedside") }
     }
 
+    Menu {
+        id: contactJointMenu
+        property real menuX: 0
+        property real menuY: 0
+        Instantiator {
+            model: window.armedJointTypes
+            delegate: MenuItem {
+                required property string modelData
+                text: window.jointTypeName(modelData)
+                onTriggered: app.addArmedJoint(modelData)
+            }
+            onObjectAdded: (index, object) => contactJointMenu.insertItem(index, object)
+            onObjectRemoved: (index, object) => contactJointMenu.removeItem(object)
+        }
+    }
+
+    Dialog {
+        id: renameDialog
+        title: qsTr("Rename part")
+        modal: true
+        anchors.centerIn: parent
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        property string partId: ""
+        ColumnLayout {
+            width: 320
+            TextField {
+                id: renameField
+                Layout.fillWidth: true
+                selectByMouse: true
+            }
+        }
+        onAccepted: {
+            if (partId.length > 0) app.setPartName(partId, renameField.text)
+        }
+        onOpened: {
+            renameField.forceActiveFocus()
+            renameField.selectAll()
+        }
+    }
+
     header: ToolBar {
         leftPadding: 8
         rightPadding: 8
@@ -132,6 +173,11 @@ ApplicationWindow {
             Layout.preferredWidth: 280
             Layout.fillHeight: true
             onDemoRequested: window.confirmIfDirty("demo")
+            onRenameRequested: function (partId, partName) {
+                renameDialog.partId = partId
+                renameField.text = partName
+                renameDialog.open()
+            }
         }
         Rectangle { visible: window.showParts; width: 1; color: Theme.border; Layout.fillHeight: true }
         Viewport {
@@ -139,6 +185,44 @@ ApplicationWindow {
             Layout.fillWidth: true
             Layout.fillHeight: true
             controller: app
+
+            Rectangle {
+                id: dragOverlay
+                visible: viewport.dragOverlayVisible
+                color: Theme.panelRaised
+                border.color: Theme.accent
+                border.width: 1
+                radius: Theme.radius
+                opacity: 0.92
+                implicitWidth: dragOverlayRow.implicitWidth + 16
+                implicitHeight: dragOverlayRow.implicitHeight + 8
+                z: 1
+                x: viewport.dragOverlayPosition.x - implicitWidth / 2
+                y: viewport.dragOverlayPosition.y - implicitHeight / 2
+                Row {
+                    id: dragOverlayRow
+                    anchors.centerIn: parent
+                    spacing: 8
+                    Label {
+                        text: "X: " + window.formatMm(viewport.dragOverlayX)
+                        color: viewport.dragSnapX ? Theme.accent : Theme.text
+                        font.pixelSize: 12
+                        textFormat: Text.PlainText
+                    }
+                    Label {
+                        text: "Y: " + window.formatMm(viewport.dragOverlayY)
+                        color: viewport.dragSnapY ? Theme.accent : Theme.text
+                        font.pixelSize: 12
+                        textFormat: Text.PlainText
+                    }
+                    Label {
+                        text: "Z: " + window.formatMm(viewport.dragOverlayZ)
+                        color: viewport.dragSnapZ ? Theme.accent : Theme.text
+                        font.pixelSize: 12
+                        textFormat: Text.PlainText
+                    }
+                }
+            }
         }
         Rectangle { visible: window.showInspector; width: 1; color: Theme.border; Layout.fillHeight: true }
         Inspector {
@@ -406,6 +490,30 @@ ApplicationWindow {
         if (app.projectPath.length === 0) saveDialog.open()
         else app.saveCurrent()
     }
+    function jointTypeName(key) {
+        if (key === "joint.mortise_tenon") return qsTr("Mortise and tenon")
+        if (key === "joint.half_lap") return qsTr("Half lap")
+        if (key === "joint.dado") return qsTr("Dado")
+        if (key === "joint.groove") return qsTr("Groove")
+        if (key === "joint.rabbet") return qsTr("Rabbet")
+        if (key === "joint.bridle") return qsTr("Bridle")
+        if (key === "joint.castle") return qsTr("Castle")
+        if (key === "joint.miter") return qsTr("Miter")
+        if (key === "joint.dovetail") return qsTr("Dovetail")
+        if (key === "joint.sliding_dovetail") return qsTr("Sliding dovetail")
+        if (key === "joint.finger") return qsTr("Finger joint")
+        if (key === "joint.half_blind_dovetail") return qsTr("Half-blind dovetail")
+        if (key === "joint.tongue_groove") return qsTr("Tongue and groove")
+        if (key === "joint.dowel") return qsTr("Dowel")
+        return key
+    }
+    function formatMm(value) {
+        return app.formatLength(value)
+    }
+    function openContactMenu(x, y) {
+        armedJointTypes = app.armedJointTypes()
+        contactJointMenu.popup(viewport, x, y)
+    }
     function syncFooter() {
         const unitIndex = unitBox.indexOfValue(app.displayUnit)
         if (unitIndex >= 0 && unitIndex !== unitBox.currentIndex) unitBox.currentIndex = unitIndex
@@ -432,6 +540,10 @@ ApplicationWindow {
             errorDialog.open()
         }
         function onRequestFrameAll() { viewport.frameAll() }
+    }
+    Connections {
+        target: viewport
+        function onContactMenuRequested(x, y) { openContactMenu(x, y) }
     }
 
     Shortcut { sequences: [StandardKey.New]; onActivated: askNew() }

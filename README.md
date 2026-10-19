@@ -2,7 +2,7 @@
 
 **Design. Join. Build.**
 
-TimberLab is a parametric woodworking CAD. Release 0.1.0 is the first tagged Linux desktop build: it constructs real solids, shows them in a workspace, and saves the project. It is not yet a finished cabinetmaking tool. The notes for this version are in `CHANGELOG.md`.
+TimberLab is a parametric woodworking CAD. Release 0.2.0 is the current tagged Linux desktop build: it constructs real solids, shows them in a workspace, and saves the project. It is not yet a finished cabinetmaking tool. The notes for this version are in `CHANGELOG.md`.
 
 ## What works now
 
@@ -32,12 +32,12 @@ A demo table is nine boards (four legs, four aprons, one top). Nine project para
 
 ## Debian package
 
-`.github/workflows/package.yml` runs when a version tag is pushed. For `0.1.0` the asset is `timberlab_0.1.0_amd64.deb`, attached to that GitHub release when the job succeeds. The runner is Ubuntu 24.04. It installs Qt 6.8.3, builds Open CASCADE 7.9.2 with the modeling libraries only, compiles this tree, and runs the test suite, `--check`, and `--accept` before it packs the archive.
+`.github/workflows/package.yml` runs when a version tag is pushed. For `0.2.0` the asset is `timberlab_0.2.0_amd64.deb`, attached to that GitHub release when the job succeeds. The runner is Ubuntu 24.04. It installs Qt 6.8.3, builds Open CASCADE 7.9.2 with the modeling libraries only, compiles this tree, and runs the test suite, `--check`, and `--accept` before it packs the archive.
 
 The package installs `/usr/bin/timberlab`, the desktop file, and the icon. The program and the Qt and Open CASCADE shared libraries live under `/usr/lib/timberlab`. OpenSSL and SQLite stay the system libraries. The dependency names are those of Ubuntu 24.04, including `libssl3t64` and `libglib2.0-0t64`. The xcb platform plugin is included. The Wayland platform plugins are not, so a Wayland session uses XWayland. Android, Windows, and macOS packages are not built.
 
 ```bash
-sudo apt install ./timberlab_0.1.0_amd64.deb
+sudo apt install ./timberlab_0.2.0_amd64.deb
 ```
 
 The TimberLab source for that binary is the git tag. The Qt 6.8.3 and Open CASCADE 7.9.2 source archives are named in `packaging/copyright`, which the package installs under `/usr/share/doc/timberlab/`.
