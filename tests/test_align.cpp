@@ -130,3 +130,39 @@ TEST_CASE("rayHitsBox misses a box behind the ray") {
   double tEnter = 0;
   REQUIRE_FALSE(timberlab::rayHitsBox(origin, direction, box, tEnter));
 }
+
+TEST_CASE("snapTranslation includes ground plane for bottom face") {
+  WorldBox moving{0, 0, 5, 100, 18, 205};
+  const std::vector<WorldBox> others;
+  const timberlab::AxisSnap snap = timberlab::snapTranslation(moving, others, 8.0, /*includeGround=*/true);
+  REQUIRE(snap.used[2]);
+  REQUIRE(snap.ground[2]);
+  REQUIRE(snap.sourceEdge[2] == 0);
+  REQUIRE(nearRelative(snap.deltaMm[2], -5.0, 1e-6));
+}
+
+TEST_CASE("snapTranslation ignores ground plane when not requested") {
+  WorldBox moving{0, 0, 5, 100, 18, 205};
+  const std::vector<WorldBox> others;
+  const timberlab::AxisSnap snap = timberlab::snapTranslation(moving, others, 8.0, /*includeGround=*/false);
+  REQUIRE_FALSE(snap.used[0]);
+  REQUIRE_FALSE(snap.used[1]);
+  REQUIRE_FALSE(snap.used[2]);
+}
+
+TEST_CASE("snapTranslation ground plane only uses bottom face") {
+  WorldBox moving{0, -200, -195, 100, -182, 5};
+  const std::vector<WorldBox> others;
+  const timberlab::AxisSnap snap = timberlab::snapTranslation(moving, others, 8.0, /*includeGround=*/true);
+  REQUIRE_FALSE(snap.used[2]);  // top face near Z=0 is ignored
+}
+
+TEST_CASE("snapTranslation records source and target edges") {
+  WorldBox moving{0, 0, 0, 100, 18, 200};
+  const std::vector<WorldBox> others{{105, 30, 210, 205, 48, 410}};
+  const timberlab::AxisSnap snap = timberlab::snapTranslation(moving, others, 8.0);
+  REQUIRE(snap.used[0]);
+  REQUIRE(snap.sourceEdge[0] == 1);  // moving max X -> other min X
+  REQUIRE(snap.targetEdge[0] == 0);
+  REQUIRE(nearRelative(snap.deltaMm[0], 5.0, 1e-6));
+}

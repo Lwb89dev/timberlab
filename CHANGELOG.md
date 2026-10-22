@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.0 — 2026-10-22
+
+### Selection, deletion, and viewport refresh
+
+- Parts appear and disappear in the viewport immediately when added or removed; no click on the viewport is required.
+- Select multiple parts from the parts panel with Ctrl+click (toggle) and Shift+click (range).
+- Press Delete to remove all selected parts, whether selected in the panel or in the viewport.
+- The inspector hides per-part fields and shows the selection count when multiple parts are selected.
+
+### Magnetic alignment and ground snap
+
+- Dragged parts keep their snap until pulled past a release threshold, giving a magnetic feel.
+- The bottom face of a part can snap to the Z = 0 ground plane during translation.
+
 ## 0.2.0 — 2026-10-19
 
 ### Interactive alignment and contact joints

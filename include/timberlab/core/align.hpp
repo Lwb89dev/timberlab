@@ -22,6 +22,10 @@ struct WorldBox {
 // up to this distance on one axis.
 inline constexpr double kAlignMm = 8.0;
 inline constexpr double kContactNearMm = 8.0;
+// Once a snap has engaged, the moving edge must move farther than this
+// distance away from the target before the snap releases. This creates the
+// "magnetic" feel: the piece stays aligned until the user pulls harder.
+inline constexpr double kMagneticReleaseMm = 16.0;
 
 WorldBox worldBox(const Component& component);
 
@@ -30,12 +34,17 @@ struct AxisSnap {
   bool used[3] = {false, false, false};
   double targetMm[3] = {0, 0, 0};
   int targetEdge[3] = {-1, -1, -1};  // 0 = min, 1 = max, 2 = center
+  int sourceEdge[3] = {-1, -1, -1};  // 0 = min, 1 = max, 2 = center
+  bool ground[3] = {false, false, false};
 };
 
 // Each axis snaps on its own to the nearest edge or center of another box.
 // The first target at an equal distance wins. A zero delta still counts as
-// used when the box is already on a target.
-AxisSnap snapTranslation(const WorldBox& moving, const std::vector<WorldBox>& others, double thresholdMm);
+// used when the box is already on a target. When includeGround is true the
+// bottom face (min Z) of the moving box can also snap to the Z = 0 ground
+// plane.
+AxisSnap snapTranslation(const WorldBox& moving, const std::vector<WorldBox>& others, double thresholdMm,
+                         bool includeGround = false);
 
 struct PartContact {
   std::size_t indexA = 0;
@@ -65,6 +74,9 @@ struct ContactFaces {
 // sizes. This does not cut a solid.
 bool prepareContactJoint(JointType type, const Component& selected, const Component& mate,
                          const ContactFaces& faces, Joint& out, std::string& error);
+
+// Value of one box edge: axis 0/1/2, which 0=min, 1=max, 2=center.
+double boxEdge(const WorldBox& box, int axis, int which);
 
 // tEnter is the entry distance along direction. A ray that starts inside the
 // box reports 0. A miss, or a box entirely behind the origin, returns false.

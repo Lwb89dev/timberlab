@@ -139,7 +139,7 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
     } else {
       projection_.perspective(kFov, aspect, nearPlane, farPlane);
     }
-    selectedId_ = view->selectedId();
+    selectedIds_ = view->selectedIds();
     if (view->controller() != nullptr) {
       parts_ = view->controller()->copyScene();
       const auto* controller = view->controller();
@@ -159,6 +159,7 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
     dpr_ = view->window() != nullptr ? float(view->window()->devicePixelRatio()) : 1.f;
     if (view->pickPending() && view->pickSerial() != consumedPick_) {
       pick_ = true;
+      pickModifiers_ = view->pickModifiers();
       consumedPick_ = view->pickSerial();
       pickX_ = int(view->pickPoint().x() * dpr_);
       pickY_ = int(view->pickPoint().y() * dpr_);
@@ -183,7 +184,8 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
       pick_ = false;
       const QString picked = readPickId();
       if (controller_ != nullptr) {
-        QMetaObject::invokeMethod(controller_, "deliverPick", Qt::QueuedConnection, Q_ARG(QString, picked));
+        QMetaObject::invokeMethod(controller_, "deliverPick", Qt::QueuedConnection, Q_ARG(QString, picked),
+                                  Q_ARG(Qt::KeyboardModifiers, pickModifiers_));
       }
       framebufferObject()->bind();
     }
@@ -345,7 +347,7 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
       } else {
         program.setUniformValue("uModel", part->model);
         program.setUniformValue("uColor", part->color);
-        program.setUniformValue("uSelected", part->id == selectedId_ ? 1.f : 0.f);
+        program.setUniformValue("uSelected", selectedIds_.contains(part->id) ? 1.f : 0.f);
       }
       part->vao.bind();
       glDrawElements(GL_TRIANGLES, part->indexCount, GL_UNSIGNED_INT, nullptr);
@@ -412,13 +414,14 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
   QQuickFramebufferObject* controller_ = nullptr;
   QMatrix4x4 view_;
   QMatrix4x4 projection_;
-  QString selectedId_;
+  QStringList selectedIds_;
   std::vector<ScenePart> parts_;
   std::vector<std::unique_ptr<DrawPart>> gpu_;
   std::vector<QString> pickIds_;
   QString pickedId_;
   bool geometryDirty_ = false;
   bool pick_ = false;
+  Qt::KeyboardModifiers pickModifiers_ = Qt::NoModifier;
   int consumedPick_ = 0;
   int pickX_ = 0;
   int pickY_ = 0;
@@ -463,13 +466,25 @@ QQuickFramebufferObject::Renderer* ViewportItem::createRenderer() const { return
 
 void ViewportItem::setController(DocumentController* controller) {
   if (controller_ == controller) return;
+  if (controller_ != nullptr) {
+    disconnect(controller_, &DocumentController::documentChanged, this, &ViewportItem::update);
+    disconnect(controller_, &DocumentController::selectionChanged, this, &ViewportItem::update);
+  }
   controller_ = controller;
+  if (controller_ != nullptr) {
+    connect(controller_, &DocumentController::documentChanged, this, &ViewportItem::update, Qt::UniqueConnection);
+    connect(controller_, &DocumentController::selectionChanged, this, &ViewportItem::update, Qt::UniqueConnection);
+  }
   emit controllerChanged();
   update();
 }
 
 QString ViewportItem::selectedId() const {
   return controller_ != nullptr ? controller_->selectedId() : QString();
+}
+
+QStringList ViewportItem::selectedIds() const {
+  return controller_ != nullptr ? controller_->selectedIds() : QStringList();
 }
 
 QVector3D ViewportItem::eye() const {
@@ -508,8 +523,9 @@ void ViewportItem::zoomBy(float factor) {
   update();
 }
 
-void ViewportItem::requestPick(QPointF position) {
+void ViewportItem::requestPick(QPointF position, Qt::KeyboardModifiers modifiers) {
   pickPoint_ = position;
+  pickModifiers_ = modifiers;
   pickPending_ = true;
   ++pickSerial_;
   update();
@@ -736,7 +752,7 @@ void ViewportItem::finishPress(bool commitMove) {
     else
       controller_->cancelPartDrag();
   } else if (pressKind_ == PressKind::Orbit && !moveStarted_ && !dragging_) {
-    requestPick(pressPos_);
+    requestPick(pressPos_, pressModifiers_);
   }
   pressKind_ = PressKind::Orbit;
   moveStarted_ = false;
@@ -770,20 +786,21 @@ void ViewportItem::setStandardView(const QString& name) {
   fit(false);
 }
 
-void ViewportItem::deliverPick(const QString& id) {
+void ViewportItem::deliverPick(const QString& id, Qt::KeyboardModifiers modifiers) {
   if (controller_ == nullptr) return;
+  const int flags = static_cast<int>(modifiers);
   if (id.isEmpty()) {
-    controller_->select(QString());
+    controller_->select(QString(), flags);
     return;
   }
   const auto scene = controller_->copyScene();
   for (const ScenePart& part : scene) {
     if (part.id == id) {
-      controller_->select(id);
+      controller_->select(id, flags);
       return;
     }
   }
-  controller_->select(QString());
+  controller_->select(QString(), flags);
 }
 
 void ViewportItem::mousePressEvent(QMouseEvent* event) {
@@ -792,9 +809,10 @@ void ViewportItem::mousePressEvent(QMouseEvent* event) {
   pressPos_ = event->position();
   lastPos_ = pressPos_;
   pressButton_ = event->button();
+  pressModifiers_ = event->modifiers();
   dragging_ = false;
   if (pressButton_ == Qt::LeftButton)
-    beginLeftPress(pressPos_, event->modifiers() & Qt::ShiftModifier);
+    beginLeftPress(pressPos_, pressModifiers_ & Qt::ShiftModifier);
   else
     pressKind_ = PressKind::Orbit;
   event->accept();
@@ -825,7 +843,7 @@ void ViewportItem::mouseReleaseEvent(QMouseEvent* event) {
   } else if (pressButton_ == Qt::LeftButton) {
     finishPress(dragging_);
   } else if (!dragging_) {
-    requestPick(event->position());
+    requestPick(event->position(), event->modifiers());
   }
   dragging_ = false;
   pressButton_ = Qt::NoButton;
@@ -868,7 +886,7 @@ void ViewportItem::touchEvent(QTouchEvent* event) {
       if (touchMoved_) orbit(point.position() - lastPos_);
       lastPos_ = point.position();
     } else if (point.state() == QEventPoint::Released && !touchMoved_ && !pinchActive_) {
-      requestPick(point.position());
+      requestPick(point.position(), event->modifiers());
     }
   }
   if (points.size() < 2 && event->isEndEvent()) pinchActive_ = false;

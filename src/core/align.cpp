@@ -53,7 +53,7 @@ double edge(const WorldBox& box, int axis, int which) {
 }
 
 void considerSnap(const WorldBox& moving, const WorldBox& other, int axis, double& best, double& delta, bool& used,
-                  double& targetMm, int& targetEdge) {
+                  double& targetMm, int& targetEdge, int& sourceEdge) {
   for (int source = 0; source < 3; ++source) {
     const double from = edge(moving, axis, source);
     for (int target = 0; target < 3; ++target) {
@@ -66,8 +66,28 @@ void considerSnap(const WorldBox& moving, const WorldBox& other, int axis, doubl
       used = true;
       targetMm = to;
       targetEdge = target;
+      sourceEdge = source;
     }
   }
+}
+
+void considerGroundSnap(const WorldBox& moving, int axis, double& best, double& delta, bool& used, double& targetMm,
+                        int& targetEdge, int& sourceEdge, bool& ground) {
+  if (axis != 2) return;
+  constexpr int source = 0;  // bottom face (min Z)
+  constexpr int target = 0;  // ground plane Z = 0
+  const double from = edge(moving, axis, source);
+  const double to = 0.0;
+  const double step = to - from;
+  const double distance = std::abs(step);
+  if (distance >= best) return;
+  best = distance;
+  delta = step;
+  used = true;
+  targetMm = to;
+  targetEdge = target;
+  sourceEdge = source;
+  ground = true;
 }
 
 bool boardOrBox(const Component& component) {
@@ -160,6 +180,8 @@ bool clipSlab(double origin, double direction, double lo, double hi, double& tMi
 
 }  // namespace
 
+double boxEdge(const WorldBox& box, int axis, int which) { return edge(box, axis, which); }
+
 WorldBox worldBox(const Component& component) {
   double matrix[16];
   placementMatrix(component.placement, matrix);
@@ -191,13 +213,18 @@ WorldBox worldBox(const Component& component) {
   return box;
 }
 
-AxisSnap snapTranslation(const WorldBox& moving, const std::vector<WorldBox>& others, double thresholdMm) {
+AxisSnap snapTranslation(const WorldBox& moving, const std::vector<WorldBox>& others, double thresholdMm,
+                         bool includeGround) {
   AxisSnap snap;
   for (int axis = 0; axis < 3; ++axis) {
     double best = thresholdMm + 1e-9;
     for (const WorldBox& other : others) {
       considerSnap(moving, other, axis, best, snap.deltaMm[axis], snap.used[axis], snap.targetMm[axis],
-                   snap.targetEdge[axis]);
+                   snap.targetEdge[axis], snap.sourceEdge[axis]);
+    }
+    if (includeGround) {
+      considerGroundSnap(moving, axis, best, snap.deltaMm[axis], snap.used[axis], snap.targetMm[axis],
+                         snap.targetEdge[axis], snap.sourceEdge[axis], snap.ground[axis]);
     }
   }
   return snap;

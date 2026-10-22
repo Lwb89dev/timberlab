@@ -52,8 +52,10 @@ class ViewportItem : public QQuickFramebufferObject {
   float elevation() const { return elevation_; }
   bool orthographic() const { return orthographic_; }
   QString selectedId() const;
+  QStringList selectedIds() const;
   int pickSerial() const { return pickSerial_; }
   QPointF pickPoint() const { return pickPoint_; }
+  Qt::KeyboardModifiers pickModifiers() const { return pickModifiers_; }
   bool pickPending() const { return pickPending_; }
   void clearPick() { pickPending_ = false; }
 
@@ -62,7 +64,7 @@ class ViewportItem : public QQuickFramebufferObject {
   Q_INVOKABLE void setStandardView(const QString& name);
 
  public slots:
-  void deliverPick(const QString& id);
+  void deliverPick(const QString& id, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
 
  signals:
   void controllerChanged();
@@ -83,7 +85,7 @@ class ViewportItem : public QQuickFramebufferObject {
   void orbit(QPointF delta);
   void pan(QPointF delta);
   void zoomBy(float factor);
-  void requestPick(QPointF position);
+  void requestPick(QPointF position, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
   void fit(bool selectionOnly);
   void viewProjection(QMatrix4x4& view, QMatrix4x4& projection) const;
   bool rayThrough(QPointF position, QVector3D& origin, QVector3D& direction) const;
@@ -105,6 +107,8 @@ class ViewportItem : public QQuickFramebufferObject {
   QPointF pressPos_;
   QPointF lastPos_;
   Qt::MouseButton pressButton_ = Qt::NoButton;
+  Qt::KeyboardModifiers pressModifiers_ = Qt::NoModifier;
+  Qt::KeyboardModifiers pickModifiers_ = Qt::NoModifier;
   bool dragging_ = false;
   bool pickPending_ = false;
   int pickSerial_ = 0;

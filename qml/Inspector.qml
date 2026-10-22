@@ -109,10 +109,17 @@ Rectangle {
         }
 
         Label {
-            visible: app.selection.id === undefined
+            visible: app.selection.id === undefined && app.selection.multi !== true
             text: qsTr("Select a part to edit its width, height and thickness. Display units do not change the stored size.")
             wrapMode: Text.WordWrap
             color: Theme.muted
+            Layout.fillWidth: true
+        }
+        Label {
+            visible: app.selection.multi === true
+            text: qsTr("%1 parts selected").arg(app.selection.count)
+            wrapMode: Text.WordWrap
+            color: Theme.text
             Layout.fillWidth: true
         }
 
@@ -224,7 +231,7 @@ Rectangle {
         }
 
         ColumnLayout {
-            visible: app.selection.id !== undefined
+            visible: app.selection.id !== undefined && app.selection.multi !== true
             Layout.fillWidth: true
             spacing: 8
             ValueField {

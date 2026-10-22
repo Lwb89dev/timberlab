@@ -82,14 +82,16 @@ class DocumentController : public QObject {
   Q_PROPERTY(bool canRedo READ canRedo NOTIFY documentChanged)
   Q_PROPERTY(bool dirty READ dirty NOTIFY documentChanged)
   Q_PROPERTY(QString status READ status NOTIFY statusChanged)
-  Q_PROPERTY(QString selectedId READ selectedId NOTIFY documentChanged)
+  Q_PROPERTY(QString selectedId READ selectedId NOTIFY selectionChanged)
+  Q_PROPERTY(QStringList selectedIds READ selectedIds NOTIFY selectionChanged)
+  Q_PROPERTY(bool hasSelection READ hasSelection NOTIFY selectionChanged)
   Q_PROPERTY(QString projectPath READ projectPath NOTIFY documentChanged)
   Q_PROPERTY(ComponentListModel* components READ components CONSTANT)
   Q_PROPERTY(QVariantList materialChoices READ materialChoices NOTIFY documentChanged)
   Q_PROPERTY(QVariantList thicknessPresets READ thicknessPresets NOTIFY documentChanged)
   Q_PROPERTY(QVariantList userMaterials READ userMaterials NOTIFY documentChanged)
   Q_PROPERTY(QVariantList userPresets READ userPresets NOTIFY documentChanged)
-  Q_PROPERTY(QVariantMap selection READ selection NOTIFY documentChanged)
+  Q_PROPERTY(QVariantMap selection READ selection NOTIFY selectionChanged)
   Q_PROPERTY(QVariantList partChoices READ partChoices NOTIFY documentChanged)
   Q_PROPERTY(QVariantList parentChoices READ parentChoices NOTIFY documentChanged)
   Q_PROPERTY(QVariantList joints READ joints NOTIFY documentChanged)
@@ -114,6 +116,9 @@ class DocumentController : public QObject {
   bool dirty() const;
   QString status() const { return status_; }
   QString selectedId() const { return selectedId_; }
+  QStringList selectedIds() const { return selectedIds_; }
+  bool hasSelection() const { return !selectedIds_.isEmpty(); }
+  bool isSelected(const QString& id) const { return selectedIds_.contains(id); }
   QString projectPath() const { return projectPath_; }
   ComponentListModel* components() { return &components_; }
   QVariantList materialChoices() const;
@@ -147,7 +152,9 @@ class DocumentController : public QObject {
   Q_INVOKABLE void addAssembly(const QString& kind);
   Q_INVOKABLE void duplicateSelected();
   Q_INVOKABLE void deleteSelected();
-  Q_INVOKABLE void select(const QString& id);
+  Q_INVOKABLE void select(const QString& id, int modifiers = 0);
+  Q_INVOKABLE void selectRange(const QString& fromId, const QString& toId);
+  Q_INVOKABLE void clearSelection();
   Q_INVOKABLE void undo();
   Q_INVOKABLE void redo();
   Q_INVOKABLE bool saveProject(const QUrl& url);
@@ -210,6 +217,7 @@ class DocumentController : public QObject {
 
  signals:
   void documentChanged();
+  void selectionChanged();
   void statusChanged();
   void accountChanged();
   void errorRaised(const QString& message);
@@ -251,6 +259,7 @@ class DocumentController : public QObject {
   std::unique_ptr<storage::Library> library_;
   ComponentListModel components_;
   QString selectedId_;
+  QStringList selectedIds_;
   QString projectPath_;
   QString status_;
   int revision_ = 0;
@@ -276,6 +285,10 @@ class DocumentController : public QObject {
   std::int64_t dragZ_ = 0;
   bool dragSnapped_ = false;
   DragPreview lastPreview_;
+  bool magneticSnap_[3] = {false, false, false};
+  double magneticTargetMm_[3] = {0, 0, 0};
+  int magneticSourceEdge_[3] = {-1, -1, -1};
+  bool magneticGround_[3] = {false, false, false};
   bool contactArmed_ = false;
   std::string armedSelected_;
   std::string armedMate_;

@@ -6,7 +6,7 @@ import TimberLab
 ColumnLayout {
     id: section
     spacing: 8
-    visible: app.selection.id !== undefined && (app.partChoices.length > 0 || app.joints.length > 0)
+    visible: app.selection.id !== undefined && app.selection.multi !== true && (app.partChoices.length > 0 || app.joints.length > 0)
 
     readonly property var typeKeys: [
         "joint.mortise_tenon",

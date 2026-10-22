@@ -315,6 +315,9 @@ QVariantList DocumentController::thicknessPresets() const {
 }
 
 QVariantMap DocumentController::selection() const {
+  if (selectedIds_.size() > 1) {
+    return {{QStringLiteral("multi"), true}, {QStringLiteral("count"), selectedIds_.size()}};
+  }
   const Component* component = document_.find(selectedId_.toStdString());
   if (component == nullptr) return {};
   const units::LengthUnit unit = currentUnit();
@@ -548,7 +551,7 @@ void DocumentController::newProject() {
   cancelPartDrag();
   clearContact();
   document_.newProject(document_.displayUnit(), document_.fractionPrecision());
-  selectedId_.clear();
+  clearSelection();
   projectPath_.clear();
   status_ = tr("New project");
   touch(true);
@@ -558,7 +561,7 @@ void DocumentController::makeDemo() {
   cancelPartDrag();
   clearContact();
   document_.makeDemoTable();
-  selectedId_.clear();
+  clearSelection();
   projectPath_.clear();
   status_ = tr("Demo table placed. Its stock sizes are parameters.");
   touch(true);
@@ -571,6 +574,7 @@ void DocumentController::addBoard() {
     return;
   }
   selectedId_ = QString::fromStdString(id);
+  selectedIds_ = {selectedId_};
   status_ = tr("Board added");
   touch(false);
 }
@@ -582,6 +586,7 @@ void DocumentController::addBox() {
     return;
   }
   selectedId_ = QString::fromStdString(id);
+  selectedIds_ = {selectedId_};
   status_ = tr("Box added");
   touch(false);
 }
@@ -593,6 +598,7 @@ void DocumentController::addCylinder() {
     return;
   }
   selectedId_ = QString::fromStdString(id);
+  selectedIds_ = {selectedId_};
   status_ = tr("Cylinder added");
   touch(false);
 }
@@ -606,6 +612,7 @@ void DocumentController::addAssembly(const QString& kind) {
   }
   if (before < document_.components().size()) {
     selectedId_ = QString::fromStdString(document_.components()[before].id);
+    selectedIds_ = {selectedId_};
   }
   if (kind == QStringLiteral("table")) status_ = tr("Table added. Its sizes are parameters.");
   else if (kind == QStringLiteral("carcass")) status_ = tr("Cabinet added. Its sizes are parameters.");
@@ -625,28 +632,86 @@ void DocumentController::duplicateSelected() {
     return;
   }
   selectedId_ = QString::fromStdString(created);
+  selectedIds_ = {selectedId_};
   status_ = tr("Duplicated");
   touch(false);
 }
 
 void DocumentController::deleteSelected() {
   cancelPartDrag();
-  if (selectedId_.isEmpty()) return;
-  std::string error;
-  if (!document_.remove(selectedId_.toStdString(), error)) {
-    report(error, false);
-    return;
+  if (selectedIds_.isEmpty()) return;
+  const QStringList ids = selectedIds_;
+  for (const QString& id : ids) {
+    std::string error;
+    if (!document_.remove(id.toStdString(), error)) {
+      report(error, false);
+    }
   }
   selectedId_.clear();
+  selectedIds_.clear();
   status_ = tr("Deleted");
   touch(false);
 }
 
-void DocumentController::select(const QString& id) {
-  if (id == selectedId_) return;
+void DocumentController::select(const QString& id, int modifiers) {
   if (!id.isEmpty() && document_.find(id.toStdString()) == nullptr) return;
-  selectedId_ = id;
-  emit documentChanged();
+
+  if (modifiers & Qt::ShiftModifier) {
+    if (selectedId_.isEmpty() || selectedId_ == id) {
+      if (!id.isEmpty()) {
+        selectedId_ = id;
+        selectedIds_ = {id};
+      }
+    } else {
+      selectRange(selectedId_, id);
+    }
+  } else if (modifiers & Qt::ControlModifier) {
+    if (id.isEmpty()) return;
+    if (selectedIds_.contains(id)) {
+      selectedIds_.removeAll(id);
+      selectedId_ = selectedIds_.isEmpty() ? QString() : selectedIds_.last();
+    } else {
+      selectedIds_.append(id);
+      selectedId_ = id;
+    }
+  } else {
+    if (id.isEmpty()) {
+      selectedIds_.clear();
+    } else {
+      selectedIds_ = {id};
+    }
+    selectedId_ = id;
+  }
+
+  emit selectionChanged();
+}
+
+void DocumentController::selectRange(const QString& fromId, const QString& toId) {
+  if (fromId.isEmpty() || toId.isEmpty()) return;
+  int fromIndex = -1;
+  int toIndex = -1;
+  const auto& components = document_.components();
+  for (int i = 0; i < static_cast<int>(components.size()); ++i) {
+    const QString id = QString::fromStdString(components[static_cast<std::size_t>(i)].id);
+    if (id == fromId) fromIndex = i;
+    if (id == toId) toIndex = i;
+  }
+  if (fromIndex < 0 || toIndex < 0) {
+    select(toId, Qt::NoModifier);
+    return;
+  }
+  if (fromIndex > toIndex) std::swap(fromIndex, toIndex);
+  selectedIds_.clear();
+  for (int i = fromIndex; i <= toIndex; ++i) {
+    selectedIds_.append(QString::fromStdString(components[static_cast<std::size_t>(i)].id));
+  }
+  selectedId_ = toId;
+}
+
+void DocumentController::clearSelection() {
+  selectedId_.clear();
+  selectedIds_.clear();
+  emit selectionChanged();
 }
 
 void DocumentController::undo() {
@@ -704,7 +769,7 @@ bool DocumentController::loadProject(const QUrl& url) {
   document_ = std::move(loaded);
   document_.markSaved();
   projectPath_ = path;
-  selectedId_.clear();
+  clearSelection();
   status_ = tr("Opened");
   touch(true);
   return true;
@@ -1027,6 +1092,12 @@ bool DocumentController::beginPartDrag(const QString& id) {
   dragStartY_ = dragY_ = part->placement.yNm;
   dragStartZ_ = dragZ_ = part->placement.zNm;
   dragSnapped_ = false;
+  for (int i = 0; i < 3; ++i) {
+    magneticSnap_[i] = false;
+    magneticTargetMm_[i] = 0;
+    magneticSourceEdge_[i] = -1;
+    magneticGround_[i] = false;
+  }
   return true;
 }
 
@@ -1106,16 +1177,45 @@ DragPreview DocumentController::previewPartDrag(double dxMm, double dyMm, double
   proposed.placement.xNm = x;
   proposed.placement.yNm = y;
   proposed.placement.zNm = z;
+  const WorldBox proposedBox = worldBox(proposed);
   std::vector<WorldBox> others;
   others.reserve(document_.components().size());
   for (const Component& other : document_.components()) {
     if (!other.visible || other.id == part->id) continue;
     others.push_back(worldBox(other));
   }
-  const AxisSnap snap = snapTranslation(worldBox(proposed), others, kAlignMm);
-  const bool snapX = snap.used[0] && tryShift(document_, x, y, z, 0, snap.deltaMm[0]);
-  const bool snapY = snap.used[1] && tryShift(document_, x, y, z, 1, snap.deltaMm[1]);
-  const bool snapZ = snap.used[2] && tryShift(document_, x, y, z, 2, snap.deltaMm[2]);
+  const AxisSnap snap = snapTranslation(proposedBox, others, kAlignMm, /*includeGround=*/true);
+
+  bool snapX = false;
+  bool snapY = false;
+  bool snapZ = false;
+  const auto applyAxis = [&](int axis, bool& snapped) {
+    if (magneticSnap_[axis]) {
+      const double sourceMm = boxEdge(proposedBox, axis, magneticSourceEdge_[axis]);
+      const double dist = std::abs(sourceMm - magneticTargetMm_[axis]);
+      if (dist <= kMagneticReleaseMm + 1e-9) {
+        const double delta = magneticTargetMm_[axis] - sourceMm;
+        if (tryShift(document_, x, y, z, axis, delta)) {
+          snapped = true;
+          return;
+        }
+      }
+      magneticSnap_[axis] = false;
+    }
+    if (snap.used[axis] && std::abs(snap.deltaMm[axis]) <= kAlignMm + 1e-9) {
+      if (tryShift(document_, x, y, z, axis, snap.deltaMm[axis])) {
+        magneticSnap_[axis] = true;
+        magneticTargetMm_[axis] = snap.targetMm[axis];
+        magneticSourceEdge_[axis] = snap.sourceEdge[axis];
+        magneticGround_[axis] = snap.ground[axis];
+        snapped = true;
+      }
+    }
+  };
+  applyAxis(0, snapX);
+  applyAxis(1, snapY);
+  applyAxis(2, snapZ);
+
   Placement placement = part->placement;
   placement.xNm = x;
   placement.yNm = y;
@@ -1585,10 +1685,16 @@ bool DocumentController::worldBounds(const QString& componentId, QVector3D& mini
 
 void DocumentController::touch(bool frame) {
   if (!selectedId_.isEmpty() && document_.find(selectedId_.toStdString()) == nullptr) selectedId_.clear();
+  selectedIds_.erase(std::remove_if(selectedIds_.begin(), selectedIds_.end(),
+                                    [&](const QString& id) { return document_.find(id.toStdString()) == nullptr; }),
+                     selectedIds_.end());
+  if (selectedIds_.isEmpty() && !selectedId_.isEmpty()) selectedId_.clear();
+  else if (!selectedIds_.isEmpty() && !selectedIds_.contains(selectedId_)) selectedId_ = selectedIds_.last();
   components_.refresh();
   rebuildScene();
   ++revision_;
   emit documentChanged();
+  emit selectionChanged();
   emit statusChanged();
   if (frame) emit requestFrameAll();
 }

@@ -31,11 +31,15 @@ Rectangle {
             Layout.fillWidth: true
         }
         ListView {
+            id: partsList
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
             model: app.components
             spacing: 4
+            focus: true
+            activeFocusOnTab: true
+            Keys.onDeletePressed: app.deleteSelected()
             delegate: Rectangle {
                 required property string partId
                 required property string name
@@ -45,8 +49,8 @@ Rectangle {
                 width: ListView.view.width
                 height: 48
                 radius: Theme.radius
-                color: partId === app.selectedId ? "#3a3128" : Theme.panelRaised
-                border.color: partId === app.selectedId ? Theme.accent : Theme.border
+                color: app.selectedIds.indexOf(partId) >= 0 ? "#3a3128" : Theme.panelRaised
+                border.color: app.selectedIds.indexOf(partId) >= 0 ? Theme.accent : Theme.border
                 border.width: 1
                 MouseArea {
                     id: rowMouse
@@ -58,7 +62,8 @@ Rectangle {
                             partMenu.partName = name
                             partMenu.popup(rowMouse, mouse.x, mouse.y)
                         } else {
-                            app.select(partId)
+                            partsList.forceActiveFocus()
+                            app.select(partId, mouse.modifiers)
                         }
                     }
                 }
