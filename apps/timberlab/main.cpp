@@ -89,7 +89,7 @@ int main(int argc, char* argv[]) {
   QCoreApplication::setOrganizationName("TimberLab");
   QCoreApplication::setOrganizationDomain("timberlab.local");
   QCoreApplication::setApplicationName("TimberLab");
-  QCoreApplication::setApplicationVersion("0.4.0");
+  QCoreApplication::setApplicationVersion("0.4.1");
   QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/icons/icon.png")));
   QGuiApplication::setDesktopFileName(QStringLiteral("timberlab"));
   QQuickStyle::setStyle("Material");

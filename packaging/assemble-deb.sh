@@ -141,6 +141,10 @@ install_plugin xcbglintegrations/libqxcb-egl-integration.so
 install_plugin platforminputcontexts/libcomposeplatforminputcontextplugin.so
 install_plugin platformthemes/libqxdgdesktopportal.so
 install_plugin tls/libqopensslbackend.so
+# Material previews are JPEGs. The developer Qt installation can decode them
+# through its plugin, but the packaged qt.conf deliberately isolates the
+# application from the host plugin directory.
+install_plugin imageformats/libqjpeg.so
 
 mkdir -p "$QML/QtQuick"
 for name in qmldir plugins.qmltypes libqtquick2plugin.so; do

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1 — 2026-10-24
+
+### Packaging
+
+- The Debian bundle now ships Qt's JPEG image plugin, so the isolated packaged runtime can load the material textures during its acceptance check and in the material selector.
+
 ## 0.4.0 — 2026-10-24
 
 ### Materials
