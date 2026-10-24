@@ -279,12 +279,16 @@ QVariantList DocumentController::materialChoices() const {
   for (const auto& entry : catalog_.entries()) {
     list.push_back(QVariantMap{{"id", QString::fromStdString(entry.id)},
                                {"name", languageName(entry)},
-                               {"category", QString::fromStdString(entry.category)}});
+                               {"category", QString::fromStdString(entry.category)},
+                               {"faceTexture", QStringLiteral("qrc:") + QString::fromStdString(entry.faceTexture)},
+                               {"endTexture", QStringLiteral("qrc:") + QString::fromStdString(entry.endTexture)}});
   }
   for (const storage::UserMaterial& material : userMaterials_) {
     list.push_back(QVariantMap{{"id", QString::fromStdString(material.id)},
                                {"name", QString::fromStdString(material.name)},
-                               {"category", QStringLiteral("user")}});
+                               {"category", QStringLiteral("user")},
+                               {"faceTexture", QString()},
+                               {"endTexture", QString()}});
   }
   return list;
 }
@@ -1755,6 +1759,11 @@ void DocumentController::rebuildScene() {
     part.interleaved = std::move(mesh.interleaved);
     part.indices = std::move(mesh.indices);
     part.color = colorForMaterial(component.materialId);
+    if (const materials::CatalogEntry* entry = catalog_.find(component.materialId)) {
+      part.faceTexture = QStringLiteral(":") + QString::fromStdString(entry->faceTexture);
+      part.endTexture = QStringLiteral(":") + QString::fromStdString(entry->endTexture);
+      part.engineered = entry->category == "engineered";
+    }
     part.model = matrixFrom(component.placement);
     part.visible = component.visible;
     next.push_back(std::move(part));

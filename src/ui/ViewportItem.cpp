@@ -5,6 +5,8 @@
 
 #include <QByteArray>
 #include <QDebug>
+#include <QHash>
+#include <QImage>
 #include <QLineF>
 #include <QOpenGLBuffer>
 #include <QOpenGLContext>
@@ -34,24 +36,86 @@ layout(location = 1) in vec3 aNormal;
 uniform mat4 uMvp;
 uniform mat4 uModel;
 out vec3 vNormal;
+out vec3 vLocalNormal;
+out vec3 vLocalPos;
 void main() {
   vNormal = mat3(uModel) * aNormal;
+  vLocalNormal = aNormal;
+  vLocalPos = aPos;
   gl_Position = uMvp * vec4(aPos, 1.0);
 }
 )";
 
 const char* kMeshFragmentBody = R"(
 in vec3 vNormal;
+in vec3 vLocalNormal;
+in vec3 vLocalPos;
 out vec4 fragColor;
 uniform vec3 uColor;
 uniform float uSelected;
+uniform float uHasTextures;
+uniform float uEngineered;
+uniform int uAxis;
+uniform vec3 uLocalMin;
+uniform vec3 uExtent;
+uniform sampler2D uFaceTexture;
+uniform sampler2D uEndTexture;
+
+float axisValue(vec3 value, int axis) {
+  if (axis == 0) return value.x;
+  if (axis == 1) return value.y;
+  return value.z;
+}
+
+vec2 solidFaceUv(vec3 p, vec3 n, int axis) {
+  if (axis == 0) return abs(n.y) > abs(n.z) ? vec2(p.x / 900.0, p.z / 360.0)
+                                                : vec2(p.x / 900.0, p.y / 360.0);
+  if (axis == 1) return abs(n.x) > abs(n.z) ? vec2(p.y / 900.0, p.z / 360.0)
+                                                : vec2(p.y / 900.0, p.x / 360.0);
+  return abs(n.x) > abs(n.y) ? vec2(p.z / 900.0, p.y / 360.0)
+                              : vec2(p.z / 900.0, p.x / 360.0);
+}
+
+vec2 orthogonalUv(vec3 p, int axis) {
+  if (axis == 0) return p.yz;
+  if (axis == 1) return p.xz;
+  return p.xy;
+}
+
+vec2 engineeredEdgeUv(vec3 q, vec3 n, int axis) {
+  if (axis == 0) return abs(n.y) > abs(n.z) ? vec2(q.z, q.x) : vec2(q.y, q.x);
+  if (axis == 1) return abs(n.x) > abs(n.z) ? vec2(q.z, q.y) : vec2(q.x, q.y);
+  return abs(n.x) > abs(n.y) ? vec2(q.y, q.z) : vec2(q.x, q.z);
+}
+
 void main() {
   vec3 normal = normalize(vNormal);
+  vec3 localNormal = normalize(vLocalNormal);
   vec3 light = normalize(vec3(0.35, -0.45, 0.82));
   float wrap = dot(normal, light) * 0.5 + 0.5;
-  vec3 lit = uColor * (0.30 + 0.70 * wrap);
+  vec3 albedo = uColor;
+  if (uHasTextures > 0.5) {
+    vec3 safeExtent = max(uExtent, vec3(0.001));
+    vec3 q = (vLocalPos - uLocalMin) / safeExtent;
+    vec2 endUv;
+    vec2 faceUv;
+    float endWeight;
+    if (uEngineered > 0.5) {
+      faceUv = orthogonalUv(q, uAxis);
+      endUv = engineeredEdgeUv(q, localNormal, uAxis);
+      endWeight = 1.0 - pow(clamp(abs(axisValue(localNormal, uAxis)), 0.0, 1.0), 10.0);
+    } else {
+      faceUv = solidFaceUv(vLocalPos, localNormal, uAxis);
+      endUv = orthogonalUv(q, uAxis);
+      endWeight = pow(clamp(abs(axisValue(localNormal, uAxis)), 0.0, 1.0), 10.0);
+    }
+    vec3 faceColor = texture(uFaceTexture, faceUv).rgb;
+    vec3 endColor = texture(uEndTexture, endUv).rgb;
+    albedo = mix(faceColor, endColor, endWeight);
+  }
+  vec3 lit = albedo * (0.36 + 0.64 * wrap);
   vec3 amber = vec3(0.878, 0.627, 0.353);
-  lit = mix(lit, amber, 0.62 * uSelected);
+  lit = mix(lit, amber, 0.48 * uSelected);
   fragColor = vec4(lit, 1.0);
 }
 )";
@@ -110,6 +174,12 @@ struct DrawPart {
   QString id;
   QMatrix4x4 model;
   QVector3D color;
+  QVector3D localMin;
+  QVector3D extent;
+  GLuint faceTexture = 0;
+  GLuint endTexture = 0;
+  int axis = 0;
+  bool engineered = false;
   int indexCount = 0;
   QOpenGLVertexArrayObject vao;
   QOpenGLBuffer vbo{QOpenGLBuffer::VertexBuffer};
@@ -119,7 +189,17 @@ struct DrawPart {
 class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOpenGLExtraFunctions {
  public:
   ViewportRenderer() { initializeOpenGLFunctions(); }
-  ~ViewportRenderer() override { destroyPickTarget(); }
+  ~ViewportRenderer() override {
+    destroyPickTarget();
+    if (!textures_.isEmpty()) {
+      std::vector<GLuint> ids;
+      ids.reserve(textures_.size());
+      for (GLuint id : textures_) {
+        if (id != 0) ids.push_back(id);
+      }
+      if (!ids.empty()) glDeleteTextures(GLsizei(ids.size()), ids.data());
+    }
+  }
 
   void synchronize(QQuickFramebufferObject* item) override {
     auto* view = static_cast<ViewportItem*>(item);
@@ -252,7 +332,31 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
       draw->id = part.id;
       draw->model = part.model;
       draw->color = part.color;
+      draw->engineered = part.engineered;
+      draw->faceTexture = textureFor(part.faceTexture);
+      draw->endTexture = textureFor(part.endTexture);
       draw->indexCount = int(part.indices.size());
+      if (part.interleaved.size() >= 3) {
+        QVector3D minimum(part.interleaved[0], part.interleaved[1], part.interleaved[2]);
+        QVector3D maximum = minimum;
+        for (std::size_t i = 6; i + 2 < part.interleaved.size(); i += 6) {
+          const QVector3D point(part.interleaved[i], part.interleaved[i + 1], part.interleaved[i + 2]);
+          minimum.setX(std::min(minimum.x(), point.x()));
+          minimum.setY(std::min(minimum.y(), point.y()));
+          minimum.setZ(std::min(minimum.z(), point.z()));
+          maximum.setX(std::max(maximum.x(), point.x()));
+          maximum.setY(std::max(maximum.y(), point.y()));
+          maximum.setZ(std::max(maximum.z(), point.z()));
+        }
+        draw->localMin = minimum;
+        draw->extent = maximum - minimum;
+        draw->axis = 0;
+        for (int axis = 1; axis < 3; ++axis) {
+          const float candidate = axis == 1 ? draw->extent.y() : draw->extent.z();
+          const float chosen = draw->axis == 0 ? draw->extent.x() : (draw->axis == 1 ? draw->extent.y() : draw->extent.z());
+          if ((draw->engineered && candidate < chosen) || (!draw->engineered && candidate > chosen)) draw->axis = axis;
+        }
+      }
       draw->vao.create();
       draw->vao.bind();
       draw->vbo.create();
@@ -347,6 +451,10 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
     QOpenGLShaderProgram& program = picking ? pickProgram_ : meshProgram_;
     if (!program.isLinked()) return;
     program.bind();
+    if (!picking) {
+      program.setUniformValue("uFaceTexture", 0);
+      program.setUniformValue("uEndTexture", 1);
+    }
     int id = 1;
     for (const auto& part : gpu_) {
       const QMatrix4x4 mvp = projection_ * view_ * part->model;
@@ -357,13 +465,55 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
         program.setUniformValue("uModel", part->model);
         program.setUniformValue("uColor", part->color);
         program.setUniformValue("uSelected", selectedIds_.contains(part->id) ? 1.f : 0.f);
+        program.setUniformValue("uHasTextures", part->faceTexture != 0 && part->endTexture != 0 ? 1.f : 0.f);
+        program.setUniformValue("uEngineered", part->engineered ? 1.f : 0.f);
+        program.setUniformValue("uAxis", part->axis);
+        program.setUniformValue("uLocalMin", part->localMin);
+        program.setUniformValue("uExtent", part->extent);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, part->faceTexture);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, part->endTexture);
       }
       part->vao.bind();
       glDrawElements(GL_TRIANGLES, part->indexCount, GL_UNSIGNED_INT, nullptr);
       part->vao.release();
       ++id;
     }
+    if (!picking) {
+      glActiveTexture(GL_TEXTURE1);
+      glBindTexture(GL_TEXTURE_2D, 0);
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, 0);
+    }
     program.release();
+  }
+
+  GLuint textureFor(const QString& path) {
+    if (path.isEmpty()) return 0;
+    const auto cached = textures_.constFind(path);
+    if (cached != textures_.cend()) return cached.value();
+    QImage image(path);
+    if (image.isNull()) {
+      qWarning("TimberLab could not load material texture: %s", qPrintable(path));
+      textures_.insert(path, 0);
+      return 0;
+    }
+    image = image.convertToFormat(QImage::Format_RGBA8888).mirrored(false, true);
+    GLuint texture = 0;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width(), image.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 image.constBits());
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    textures_.insert(path, texture);
+    return texture;
   }
 
   void ensurePickTarget(int width, int height) {
@@ -427,6 +577,7 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
   std::vector<ScenePart> parts_;
   std::vector<std::unique_ptr<DrawPart>> gpu_;
   std::vector<QString> pickIds_;
+  QHash<QString, GLuint> textures_;
   QString pickedId_;
   bool geometryDirty_ = false;
   bool pick_ = false;

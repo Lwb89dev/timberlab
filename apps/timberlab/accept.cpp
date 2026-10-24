@@ -6,6 +6,7 @@
 #include "timberlab/units/units.hpp"
 
 #include <QCoreApplication>
+#include <QImage>
 #include <QUrl>
 
 #include <cmath>
@@ -88,7 +89,19 @@ int runAccept() {
 
   ui::DocumentController editor;
   editor.initialise();
-  if (editor.materialChoices().isEmpty()) return failStatus("catalog", editor);
+  const QVariantList shippedMaterials = editor.materialChoices();
+  if (shippedMaterials.isEmpty()) return failStatus("catalog", editor);
+  for (const QVariant& choice : shippedMaterials) {
+    const QVariantMap material = choice.toMap();
+    if (material.value("category").toString() == QStringLiteral("user")) continue;
+    const QString facePath =
+        material.value("faceTexture").toString().replace(QStringLiteral("qrc:"), QStringLiteral(":"));
+    const QString endPath =
+        material.value("endTexture").toString().replace(QStringLiteral("qrc:"), QStringLiteral(":"));
+    const QImage face(facePath);
+    const QImage end(endPath);
+    if (face.size() != QSize(512, 512) || end.size() != QSize(512, 512)) return fail("material texture");
+  }
   // A previous run may have stored inches. The metric checks below need millimetres.
   editor.setDisplayUnit("mm");
   if (editor.displayUnit() != "mm") return failStatus("unit", editor);
@@ -101,6 +114,12 @@ int runAccept() {
   if (!editor.setParameterFromText(shelf, "thickness", "18 mm")) return failStatus("thickness", editor);
   if (!editor.setParameterFromText(shelf, "height", "400 mm")) return failStatus("height", editor);
   editor.setMaterial(shelf, "european-oak");
+  const std::vector<ui::ScenePart> texturedScene = editor.copyScene();
+  const ui::ScenePart* texturedShelf = findPart(texturedScene, shelf);
+  if (texturedShelf == nullptr || texturedShelf->faceTexture != ":/materials/european-oak-face.jpg" ||
+      texturedShelf->endTexture != ":/materials/european-oak-end.jpg" || texturedShelf->engineered) {
+    return fail("solid texture mapping");
+  }
   editor.setLocked(shelf, true);
   if (editor.setParameterFromText(shelf, "width", "10 mm")) return fail("locked edit accepted");
   editor.setLocked(shelf, false);

@@ -289,10 +289,98 @@ Rectangle {
             ComboBox {
                 id: materialBox
                 Layout.fillWidth: true
-                implicitHeight: Theme.controlHeight
+                implicitHeight: 48
                 textRole: "name"
                 valueRole: "id"
                 model: app.materialChoices
+                property var currentMaterial: currentIndex >= 0 && currentIndex < model.length ? model[currentIndex] : null
+                delegate: ItemDelegate {
+                    required property var modelData
+                    required property int index
+                    width: materialBox.width
+                    height: 58
+                    highlighted: materialBox.highlightedIndex === index
+                    contentItem: RowLayout {
+                        spacing: 9
+                        Rectangle {
+                            Layout.preferredWidth: 46
+                            Layout.preferredHeight: 38
+                            radius: 6
+                            clip: true
+                            color: Theme.field
+                            border.width: 1
+                            border.color: Theme.border
+                            Image {
+                                anchors.fill: parent
+                                source: modelData.faceTexture || ""
+                                fillMode: Image.PreserveAspectCrop
+                                asynchronous: true
+                                mipmap: true
+                            }
+                        }
+                        Rectangle {
+                            Layout.preferredWidth: 38
+                            Layout.preferredHeight: 38
+                            radius: 6
+                            clip: true
+                            color: Theme.field
+                            border.width: 1
+                            border.color: Theme.border
+                            Image {
+                                anchors.fill: parent
+                                source: modelData.endTexture || ""
+                                fillMode: Image.PreserveAspectCrop
+                                asynchronous: true
+                                mipmap: true
+                            }
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 1
+                            Label {
+                                Layout.fillWidth: true
+                                text: modelData.name
+                                textFormat: Text.PlainText
+                                elide: Text.ElideRight
+                                color: Theme.text
+                                font.weight: Font.Medium
+                            }
+                            Label {
+                                Layout.fillWidth: true
+                                text: modelData.category
+                                textFormat: Text.PlainText
+                                elide: Text.ElideRight
+                                color: Theme.muted
+                                font.pixelSize: 10
+                            }
+                        }
+                    }
+                }
+                contentItem: RowLayout {
+                    spacing: 9
+                    Rectangle {
+                        Layout.preferredWidth: 34
+                        Layout.preferredHeight: 30
+                        radius: 5
+                        clip: true
+                        color: Theme.field
+                        Image {
+                            anchors.fill: parent
+                            source: materialBox.currentMaterial ? materialBox.currentMaterial.faceTexture : ""
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                            mipmap: true
+                        }
+                    }
+                    Label {
+                        Layout.fillWidth: true
+                        text: materialBox.displayText
+                        textFormat: Text.PlainText
+                        elide: Text.ElideRight
+                        color: Theme.text
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
                 onActivated: app.setMaterial(app.selectedId, currentValue)
                 Component.onCompleted: syncMaterial()
                 function syncMaterial() {
@@ -302,6 +390,49 @@ Rectangle {
                 Connections {
                     target: app
                     function onDocumentChanged() { materialBox.syncMaterial() }
+                }
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+                Repeater {
+                    model: [
+                        { label: qsTr("Long grain"), source: materialBox.currentMaterial ? materialBox.currentMaterial.faceTexture : "" },
+                        { label: qsTr("End grain"), source: materialBox.currentMaterial ? materialBox.currentMaterial.endTexture : "" }
+                    ]
+                    delegate: Rectangle {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 82
+                        radius: 9
+                        color: Theme.field
+                        border.width: 1
+                        border.color: Theme.border
+                        clip: true
+                        Image {
+                            anchors.fill: parent
+                            source: modelData.source
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                            mipmap: true
+                        }
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            height: 24
+                            color: Theme.darkMode ? "#b3121513" : "#c9fffdf8"
+                            Label {
+                                anchors.fill: parent
+                                anchors.leftMargin: 8
+                                text: modelData.label
+                                color: Theme.text
+                                font.pixelSize: 10
+                                font.weight: Font.DemiBold
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                        }
+                    }
                 }
             }
             ComboBox {

@@ -14,6 +14,8 @@ struct CatalogEntry {
   std::string category;
   std::string scientificName;
   std::string visualHex;
+  std::string faceTexture;
+  std::string endTexture;
   bool identityAmbiguous = false;
   std::vector<std::pair<std::string, std::string>> commonNames;
   // Empty when the record does not state a grain class. Do not invent one.

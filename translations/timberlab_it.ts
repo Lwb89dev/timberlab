@@ -39,67 +39,77 @@
         <translation>Pezzo</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="313"/>
+        <location filename="../qml/Inspector.qml" line="400"/>
+        <source>Long grain</source>
+        <translation>Vena longitudinale</translation>
+    </message>
+    <message>
+        <location filename="../qml/Inspector.qml" line="401"/>
+        <source>End grain</source>
+        <translation>Legno di testa</translation>
+    </message>
+    <message>
+        <location filename="../qml/Inspector.qml" line="444"/>
         <source>Apply stock thickness</source>
         <translation>Applica uno spessore di magazzino</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="318"/>
+        <location filename="../qml/Inspector.qml" line="449"/>
         <source>Width (X)</source>
         <translation>Larghezza (X)</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="324"/>
+        <location filename="../qml/Inspector.qml" line="455"/>
         <source>Thickness (Y)</source>
         <translation>Spessore (Y)</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="330"/>
+        <location filename="../qml/Inspector.qml" line="461"/>
         <source>Radius</source>
         <translation>Raggio</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="335"/>
+        <location filename="../qml/Inspector.qml" line="466"/>
         <source>Height (Z)</source>
         <translation>Altezza (Z)</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="404"/>
+        <location filename="../qml/Inspector.qml" line="535"/>
         <source>Position</source>
         <translation>Posizione</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="420"/>
+        <location filename="../qml/Inspector.qml" line="551"/>
         <source>Rotation</source>
         <translation>Rotazione</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="436"/>
+        <location filename="../qml/Inspector.qml" line="567"/>
         <source>Parent</source>
         <translation>Pezzo padre</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="456"/>
+        <location filename="../qml/Inspector.qml" line="587"/>
         <source>Role</source>
         <translation>Ruolo</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="462"/>
+        <location filename="../qml/Inspector.qml" line="593"/>
         <source>Visible</source>
         <translation>Visibile</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="467"/>
+        <location filename="../qml/Inspector.qml" line="598"/>
         <source>Locked</source>
         <translation>Bloccato</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="475"/>
+        <location filename="../qml/Inspector.qml" line="606"/>
         <source>Notes</source>
         <translation>Note</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="482"/>
+        <location filename="../qml/Inspector.qml" line="613"/>
         <source>A board is a real solid: X width, Y thickness, Z height. Z is up.</source>
         <translation>Una tavola è un solido vero: X larghezza, Y spessore, Z altezza. Z è verso l&apos;alto.</translation>
     </message>
@@ -114,13 +124,13 @@
         <translation>Modificare un parametro aggiorna i pezzi che dipendono da esso.</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="353"/>
+        <location filename="../qml/Inspector.qml" line="484"/>
         <source>Release</source>
         <translation>Libera</translation>
     </message>
     <message>
-        <location filename="../qml/Inspector.qml" line="365"/>
-        <location filename="../qml/Inspector.qml" line="395"/>
+        <location filename="../qml/Inspector.qml" line="496"/>
+        <location filename="../qml/Inspector.qml" line="526"/>
         <source>Drive</source>
         <translation>Vincola</translation>
     </message>
@@ -1019,880 +1029,880 @@
         <translation>Pronto</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="381"/>
+        <location filename="../src/ui/DocumentController.cpp" line="385"/>
         <source>None</source>
         <translation>Nessuno</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="487"/>
+        <location filename="../src/ui/DocumentController.cpp" line="491"/>
         <source>Frame width</source>
         <translation>Larghezza telaio</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="488"/>
+        <location filename="../src/ui/DocumentController.cpp" line="492"/>
         <source>Frame height</source>
         <translation>Altezza telaio</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="489"/>
+        <location filename="../src/ui/DocumentController.cpp" line="493"/>
         <source>Frame stock</source>
         <translation>Sezione telaio</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="490"/>
+        <location filename="../src/ui/DocumentController.cpp" line="494"/>
         <source>Frame depth</source>
         <translation>Spessore telaio</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="494"/>
+        <location filename="../src/ui/DocumentController.cpp" line="498"/>
         <source>Shelf width</source>
         <translation>Larghezza scaffale</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="495"/>
+        <location filename="../src/ui/DocumentController.cpp" line="499"/>
         <source>Shelf depth</source>
         <translation>Profondità scaffale</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="496"/>
+        <location filename="../src/ui/DocumentController.cpp" line="500"/>
         <source>Shelf side</source>
         <translation>Fianco scaffale</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="497"/>
+        <location filename="../src/ui/DocumentController.cpp" line="501"/>
         <source>Shelf thickness</source>
         <translation>Spessore ripiano</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="498"/>
+        <location filename="../src/ui/DocumentController.cpp" line="502"/>
         <source>Shelf bay</source>
         <translation>Vano scaffale</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="502"/>
+        <location filename="../src/ui/DocumentController.cpp" line="506"/>
         <source>Bedside width</source>
         <translation>Larghezza comodino</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="503"/>
+        <location filename="../src/ui/DocumentController.cpp" line="507"/>
         <source>Bedside depth</source>
         <translation>Profondità comodino</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="504"/>
+        <location filename="../src/ui/DocumentController.cpp" line="508"/>
         <source>Bedside height</source>
         <translation>Altezza comodino</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="505"/>
+        <location filename="../src/ui/DocumentController.cpp" line="509"/>
         <source>Bedside leg</source>
         <translation>Gamba comodino</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="506"/>
+        <location filename="../src/ui/DocumentController.cpp" line="510"/>
         <source>Bedside top</source>
         <translation>Piano comodino</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="507"/>
+        <location filename="../src/ui/DocumentController.cpp" line="511"/>
         <source>Bedside drawer</source>
         <translation>Cassetto comodino</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="508"/>
+        <location filename="../src/ui/DocumentController.cpp" line="512"/>
         <source>Bedside side</source>
         <translation>Fianco comodino</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="509"/>
+        <location filename="../src/ui/DocumentController.cpp" line="513"/>
         <source>Bedside bottom</source>
         <translation>Fondo comodino</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="566"/>
+        <location filename="../src/ui/DocumentController.cpp" line="570"/>
         <source>New project</source>
         <translation>Nuovo progetto</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="576"/>
+        <location filename="../src/ui/DocumentController.cpp" line="580"/>
         <source>Demo table placed. Its stock sizes are parameters.</source>
         <translation>Tavolo di prova inserito. Le misure di stock sono parametri.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="588"/>
+        <location filename="../src/ui/DocumentController.cpp" line="592"/>
         <source>Board added</source>
         <translation>Tavola aggiunta</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="600"/>
+        <location filename="../src/ui/DocumentController.cpp" line="604"/>
         <source>Box added</source>
         <translation>Scatola aggiunta</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="612"/>
+        <location filename="../src/ui/DocumentController.cpp" line="616"/>
         <source>Cylinder added</source>
         <translation>Cilindro aggiunto</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="630"/>
+        <location filename="../src/ui/DocumentController.cpp" line="634"/>
         <source>Frame added. Its sizes are parameters.</source>
         <translation>Telaio inserito. Le misure sono parametri.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="631"/>
+        <location filename="../src/ui/DocumentController.cpp" line="635"/>
         <source>Shelving added. Its sizes are parameters.</source>
         <translation>Scaffale inserito. Le misure sono parametri.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="632"/>
+        <location filename="../src/ui/DocumentController.cpp" line="636"/>
         <source>Bedside table added. Its sizes are parameters.</source>
         <translation>Comodino inserito. Le misure sono parametri.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="646"/>
+        <location filename="../src/ui/DocumentController.cpp" line="650"/>
         <source>Duplicated</source>
         <translation>Duplicato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="662"/>
+        <location filename="../src/ui/DocumentController.cpp" line="666"/>
         <source>Deleted</source>
         <translation>Eliminato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="731"/>
+        <location filename="../src/ui/DocumentController.cpp" line="735"/>
         <source>Undo</source>
         <translation>Annulla</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="739"/>
+        <location filename="../src/ui/DocumentController.cpp" line="743"/>
         <source>Redo</source>
         <translation>Ripeti</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="758"/>
+        <location filename="../src/ui/DocumentController.cpp" line="762"/>
         <source>Saved</source>
         <translation>Salvato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="783"/>
+        <location filename="../src/ui/DocumentController.cpp" line="787"/>
         <source>Opened</source>
         <translation>Aperto</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="799"/>
+        <location filename="../src/ui/DocumentController.cpp" line="803"/>
         <source>Dimension updated</source>
         <translation>Quota aggiornata</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="853"/>
-        <location filename="../src/ui/DocumentController.cpp" line="1270"/>
+        <location filename="../src/ui/DocumentController.cpp" line="857"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1274"/>
         <source>Position updated</source>
         <translation>Posizione aggiornata</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="869"/>
+        <location filename="../src/ui/DocumentController.cpp" line="873"/>
         <source>Rotation updated</source>
         <translation>Rotazione aggiornata</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="882"/>
+        <location filename="../src/ui/DocumentController.cpp" line="886"/>
         <source>Renamed</source>
         <translation>Rinominato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="892"/>
+        <location filename="../src/ui/DocumentController.cpp" line="896"/>
         <source>Material assigned</source>
         <translation>Materiale assegnato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="930"/>
+        <location filename="../src/ui/DocumentController.cpp" line="934"/>
         <source>Display unit changed. Stored geometry is unchanged.</source>
         <translation>Unità di visualizzazione cambiata. La geometria memorizzata non cambia.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="967"/>
+        <location filename="../src/ui/DocumentController.cpp" line="971"/>
         <source>Preset applied</source>
         <translation>Preset applicato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1164"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1168"/>
         <source>Aligned on X, Y, and Z</source>
         <translation>Allineato su X, Y e Z</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1165"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1169"/>
         <source>Aligned on X and Y</source>
         <translation>Allineato su X e Y</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1166"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1170"/>
         <source>Aligned on X and Z</source>
         <translation>Allineato su X e Z</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1167"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1171"/>
         <source>Aligned on Y and Z</source>
         <translation>Allineato su Y e Z</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1168"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1172"/>
         <source>Aligned on X</source>
         <translation>Allineato su X</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1169"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1173"/>
         <source>Aligned on Y</source>
         <translation>Allineato su Y</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1170"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1174"/>
         <source>Aligned on Z</source>
         <translation>Allineato su Z</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1172"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1176"/>
         <source>The snap uses the bounding box.</source>
         <translation>Lo snap usa il box di ingombro.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1243"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1247"/>
         <source>Moving</source>
         <translation>Spostamento</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1340"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1344"/>
         <source>No joint fits these parts.</source>
         <translation>Nessun giunto entra in questi pezzi.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1377"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1381"/>
         <source>Joint added on the contacting faces.</source>
         <translation>Giunto aggiunto sulle facce a contatto.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1379"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1383"/>
         <source>Joint added. The faces are the usual defaults, because this overlap is not one flat contact.</source>
         <translation>Giunto aggiunto. Le facce sono quelle predefinite, perché questa sovrapposizione non è un unico contatto piatto.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1419"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1423"/>
         <source>Parent updated</source>
         <translation>Pezzo padre aggiornato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1429"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1433"/>
         <source>Role updated</source>
         <translation>Ruolo aggiornato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1464"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1468"/>
         <source>Cut list written. Rough size equals finished size.</source>
         <translation>Distinta di taglio scritta. La misura grezza è uguale a quella finita.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1464"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1468"/>
         <source>Cut list written.</source>
         <translation>Distinta di taglio scritta.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1489"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1493"/>
         <source>Front view written. It is a tessellation wire, not a dimensioned drawing.</source>
         <translation>Vista frontale scritta. È il filo della tassellazione, non un disegno quotato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1492"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1496"/>
         <source>Top view written. It is a tessellation wire, not a dimensioned drawing.</source>
         <translation>Vista dall&apos;alto scritta. È il filo della tassellazione, non un disegno quotato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1495"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1499"/>
         <source>Right view written. It is a tessellation wire, not a dimensioned drawing.</source>
         <translation>Vista destra scritta. È il filo della tassellazione, non un disegno quotato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1498"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1502"/>
         <source>Sheet written. It is a tessellation wire, not a dimensioned drawing.</source>
         <translation>Foglio scritto. È il filo della tassellazione, non un disegno quotato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1501"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1505"/>
         <source>DXF wire written. It is a tessellation wire, not a dimensioned drawing.</source>
         <translation>Filo DXF scritto. È il filo della tassellazione, non un disegno quotato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1504"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1508"/>
         <source>PDF wire written. It is a tessellation wire, not a dimensioned drawing.</source>
         <translation>Filo PDF scritto. È il filo della tassellazione, non un disegno quotato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1507"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1511"/>
         <source>Front dimensions written. Width and height are the model sizes. The outline is still a tessellation, not hidden-line removal.</source>
         <translation>Quote della vista frontale scritte. Larghezza e altezza sono le misure del modello. Il contorno resta una tassellazione, non una rimozione delle linee nascoste.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1587"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1591"/>
         <source>Library events written. The project was not published.</source>
         <translation>Eventi della libreria scritti. Il progetto non è stato pubblicato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1639"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1643"/>
         <source>Library events imported. The project file was not changed.</source>
         <translation>Eventi della libreria importati. Il file del progetto non è stato modificato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1658"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1662"/>
         <source>Restored the previous save. The backup was checked before it replaced the project.</source>
         <translation>Ripristinato il salvataggio precedente. Il backup è stato verificato prima di sostituire il progetto.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1767"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1776"/>
         <source>Enter a dimension.</source>
         <translation>Inserisci una quota.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1768"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1777"/>
         <source>Could not read that dimension.</source>
         <translation>Impossibile leggere quella quota.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1769"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1778"/>
         <source>That dimension is too large to store.</source>
         <translation>Quella quota è troppo grande per essere memorizzata.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1770"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1779"/>
         <source>Dimensions must be greater than zero.</source>
         <translation>Le quote devono essere maggiori di zero.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1771"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1780"/>
         <source>That value is outside the supported range.</source>
         <translation>Quel valore è fuori dall&apos;intervallo supportato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1772"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1781"/>
         <source>That dimension does not apply to this part.</source>
         <translation>Quella quota non si applica a questo pezzo.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1773"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1782"/>
         <source>Unlock the part before editing it.</source>
         <translation>Sblocca il pezzo prima di modificarlo.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1774"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1783"/>
         <source>That part is no longer in the project.</source>
         <translation>Quel pezzo non è più nel progetto.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1775"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1784"/>
         <source>That parent would make a loop.</source>
         <translation>Quel pezzo padre creerebbe un ciclo.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1776"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1785"/>
         <source>A role is a short token: letters, digits, dot, underscore, or hyphen.</source>
         <translation>Un ruolo è un token breve: lettere, cifre, punto, trattino basso o trattino.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1777"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1786"/>
         <source>The name cannot be empty.</source>
         <translation>Il nome non può essere vuoto.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1778"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1787"/>
         <source>That name is too long.</source>
         <translation>Quel nome è troppo lungo.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1779"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1788"/>
         <source>Those notes are too long.</source>
         <translation>Quelle note sono troppo lunghe.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1780"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1789"/>
         <source>That text is too long.</source>
         <translation>Quel testo è troppo lungo.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1781"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1790"/>
         <source>Could not read or write the project file.</source>
         <translation>Impossibile leggere o scrivere il file di progetto.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1782"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1791"/>
         <source>Could not update the project backup.</source>
         <translation>Impossibile aggiornare la copia di backup.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1783"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1792"/>
         <source>There is no backup to restore.</source>
         <translation>Non c&apos;è un backup da ripristinare.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1784"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1793"/>
         <source>That drawing is not available.</source>
         <translation>Quel disegno non è disponibile.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1785"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1794"/>
         <source>This file is not a TimberLab project.</source>
         <translation>Questo file non è un progetto TimberLab.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1786"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1795"/>
         <source>The project file failed its integrity check.</source>
         <translation>Il file di progetto non ha superato il controllo di integrità.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1787"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1796"/>
         <source>This project uses a newer file version.</source>
         <translation>Questo progetto usa una versione di file più recente.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1788"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1797"/>
         <source>That project file is too large.</source>
         <translation>Quel file di progetto è troppo grande.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1789"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1798"/>
         <source>That project has too many entries.</source>
         <translation>Quel progetto ha troppe voci.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1790"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1799"/>
         <source>That project contains a duplicate id.</source>
         <translation>Quel progetto contiene un identificatore duplicato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1791"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1800"/>
         <source>Could not read that angle.</source>
         <translation>Impossibile leggere quell&apos;angolo.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1794"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1803"/>
         <source>The solid could not be built.</source>
         <translation>Impossibile costruire il solido.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1796"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1805"/>
         <source>Preferences could not be opened. The project still works.</source>
         <translation>Impossibile aprire le preferenze. Il progetto funziona comunque.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1815"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1824"/>
         <source>That secret key is not a valid nsec.</source>
         <translation>Quella chiave segreta non è un nsec valido.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1816"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1825"/>
         <source>That bunker link is not valid.</source>
         <translation>Quel collegamento bunker non è valido.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1817"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1826"/>
         <source>Amber signs on Android. On this computer, sign in with a secret key or a bunker.</source>
         <translation>Amber firma su Android. Su questo computer accedi con una chiave segreta o un bunker.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1818"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1827"/>
         <source>The relay did not accept the bunker connection.</source>
         <translation>Il relay non ha accettato la connessione al bunker.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1819"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1828"/>
         <source>The bunker did not answer.</source>
         <translation>Il bunker non ha risposto.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1820"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1829"/>
         <source>The bunker rejected the connection.</source>
         <translation>Il bunker ha rifiutato la connessione.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1821"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1830"/>
         <source>The bunker response could not be decrypted.</source>
         <translation>La risposta del bunker non può essere decifrata.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1822"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1831"/>
         <source>The sign-in session is no longer valid.</source>
         <translation>La sessione di accesso non è più valida.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1823"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1832"/>
         <source>That library event does not match this library.</source>
         <translation>Quell&apos;evento della libreria non corrisponde a questa libreria.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1824"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1833"/>
         <source>That library event conflicts with the local row.</source>
         <translation>Quell&apos;evento della libreria è in conflitto con la riga locale.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1825"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1834"/>
         <source>That library event could not be opened.</source>
         <translation>Quell&apos;evento della libreria non può essere aperto.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1826"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1835"/>
         <source>That library revision is not valid.</source>
         <translation>Quella revisione della libreria non è valida.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1827"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1836"/>
         <source>That library events file is too large.</source>
         <translation>Quel file di eventi della libreria è troppo grande.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1828"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1837"/>
         <source>Something went wrong.</source>
         <translation>Qualcosa è andato storto.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1988"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1997"/>
         <source>The bunker asked to open this page: %1</source>
         <translation>Il bunker chiede di aprire questa pagina: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="2008"/>
-        <location filename="../src/ui/DocumentController.cpp" line="2043"/>
-        <location filename="../src/ui/DocumentController.cpp" line="2107"/>
+        <location filename="../src/ui/DocumentController.cpp" line="2017"/>
+        <location filename="../src/ui/DocumentController.cpp" line="2052"/>
+        <location filename="../src/ui/DocumentController.cpp" line="2116"/>
         <source>Signed in as %1</source>
         <translation>Accesso effettuato come %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="2071"/>
+        <location filename="../src/ui/DocumentController.cpp" line="2080"/>
         <source>Waiting for the bunker to approve.</source>
         <translation>In attesa dell&apos;approvazione del bunker.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="2086"/>
+        <location filename="../src/ui/DocumentController.cpp" line="2095"/>
         <source>Waiting for Amber to approve.</source>
         <translation>In attesa dell&apos;approvazione di Amber.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="2115"/>
+        <location filename="../src/ui/DocumentController.cpp" line="2124"/>
         <source>Signed out. The key was cleared from memory.</source>
         <translation>Accesso terminato. La chiave è stata cancellata dalla memoria.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1065"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1069"/>
         <source>Joint added</source>
         <translation>Giunto aggiunto</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1408"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1412"/>
         <source>Joint updated</source>
         <translation>Giunto aggiornato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1669"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1673"/>
         <source>Joint removed</source>
         <translation>Giunto rimosso</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1804"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1813"/>
         <source>A joint needs two different parts.</source>
         <translation>Un giunto richiede due pezzi diversi.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1805"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1814"/>
         <source>Joints cut boards and boxes, not cylinders.</source>
         <translation>Gli incastri tagliano tavole e scatole, non i cilindri.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1806"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1815"/>
         <source>That joint does not fit these parts.</source>
         <translation>Quel giunto non entra in questi pezzi.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1807"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1816"/>
         <source>That joint does not change the solid.</source>
         <translation>Quel giunto non modifica il solido.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1808"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1817"/>
         <source>That joint is no longer in the project.</source>
         <translation>Quel giunto non è più nel progetto.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="815"/>
+        <location filename="../src/ui/DocumentController.cpp" line="819"/>
         <source>Parameter updated</source>
         <translation>Parametro aggiornato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="826"/>
+        <location filename="../src/ui/DocumentController.cpp" line="830"/>
         <source>Field driven</source>
         <translation>Campo guidato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="837"/>
+        <location filename="../src/ui/DocumentController.cpp" line="841"/>
         <source>Field released</source>
         <translation>Campo liberato</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1809"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1818"/>
         <source>That parameter is not in the project.</source>
         <translation>Quel parametro non è nel progetto.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1810"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1819"/>
         <source>That dimension follows a parameter. Release it to type a number.</source>
         <translation>Quella misura segue un parametro. Liberala per scrivere un numero.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1811"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1820"/>
         <source>Those dimensions depend on each other.</source>
         <translation>Quelle misure dipendono l&apos;una dall&apos;altra.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1812"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1821"/>
         <source>That value makes a part size invalid.</source>
         <translation>Quel valore rende invalida la misura di un pezzo.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1813"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1822"/>
         <source>That field is not driven.</source>
         <translation>Quel campo non è guidato.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="435"/>
-        <location filename="../src/ui/DocumentController.cpp" line="446"/>
-        <location filename="../src/ui/DocumentController.cpp" line="516"/>
+        <location filename="../src/ui/DocumentController.cpp" line="439"/>
+        <location filename="../src/ui/DocumentController.cpp" line="450"/>
+        <location filename="../src/ui/DocumentController.cpp" line="520"/>
         <source>Width</source>
         <translation>Larghezza</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="436"/>
-        <location filename="../src/ui/DocumentController.cpp" line="447"/>
+        <location filename="../src/ui/DocumentController.cpp" line="440"/>
+        <location filename="../src/ui/DocumentController.cpp" line="451"/>
         <source>Thickness</source>
         <translation>Spessore</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="437"/>
-        <location filename="../src/ui/DocumentController.cpp" line="448"/>
+        <location filename="../src/ui/DocumentController.cpp" line="441"/>
+        <location filename="../src/ui/DocumentController.cpp" line="452"/>
         <source>Height</source>
         <translation>Altezza</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="438"/>
-        <location filename="../src/ui/DocumentController.cpp" line="449"/>
+        <location filename="../src/ui/DocumentController.cpp" line="442"/>
+        <location filename="../src/ui/DocumentController.cpp" line="453"/>
         <source>Radius</source>
         <translation>Raggio</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="517"/>
+        <location filename="../src/ui/DocumentController.cpp" line="521"/>
         <source>Depth</source>
         <translation>Profondità</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="518"/>
+        <location filename="../src/ui/DocumentController.cpp" line="522"/>
         <source>Leg</source>
         <translation>Gamba</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="519"/>
+        <location filename="../src/ui/DocumentController.cpp" line="523"/>
         <source>Inset</source>
         <translation>Rientro</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="520"/>
+        <location filename="../src/ui/DocumentController.cpp" line="524"/>
         <source>Leg height</source>
         <translation>Altezza gamba</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="521"/>
+        <location filename="../src/ui/DocumentController.cpp" line="525"/>
         <source>Top thickness</source>
         <translation>Spessore piano</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="522"/>
+        <location filename="../src/ui/DocumentController.cpp" line="526"/>
         <source>Apron height</source>
         <translation>Altezza fascia</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="523"/>
+        <location filename="../src/ui/DocumentController.cpp" line="527"/>
         <source>Apron thickness</source>
         <translation>Spessore fascia</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="524"/>
+        <location filename="../src/ui/DocumentController.cpp" line="528"/>
         <source>Apron drop</source>
         <translation>Calo fascia</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="985"/>
+        <location filename="../src/ui/DocumentController.cpp" line="989"/>
         <source>Material added to the library.</source>
         <translation>Materiale aggiunto alla libreria.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1015"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1019"/>
         <source>Preset added to the library.</source>
         <translation>Spessore aggiunto alla libreria.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1036"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1040"/>
         <source>Material removed from the library.</source>
         <translation>Materiale rimosso dalla libreria.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1052"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1056"/>
         <source>Preset removed from the library.</source>
         <translation>Spessore rimosso dalla libreria.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1797"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1806"/>
         <source>The library could not be opened. The project still works.</source>
         <translation>La libreria non si è aperta. Il progetto funziona comunque.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1798"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1807"/>
         <source>The library database could not be read.</source>
         <translation>Impossibile leggere il database della libreria.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1799"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1808"/>
         <source>This library uses a newer database version.</source>
         <translation>Questa libreria usa una versione di database più recente.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1800"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1809"/>
         <source>That library entry already exists.</source>
         <translation>Quella voce è già nella libreria.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1801"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1810"/>
         <source>That library entry is no longer there.</source>
         <translation>Quella voce non è più nella libreria.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1802"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1811"/>
         <source>That library is full.</source>
         <translation>La libreria è piena.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1803"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1812"/>
         <source>That library value is not valid.</source>
         <translation>Quel valore non è valido per la libreria.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="627"/>
+        <location filename="../src/ui/DocumentController.cpp" line="631"/>
         <source>Table added. Its sizes are parameters.</source>
         <translation>Tavolo inserito. Le misure sono parametri.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="628"/>
+        <location filename="../src/ui/DocumentController.cpp" line="632"/>
         <source>Cabinet added. Its sizes are parameters.</source>
         <translation>Carcassa inserita. Le misure sono parametri.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="629"/>
+        <location filename="../src/ui/DocumentController.cpp" line="633"/>
         <source>Drawer box added. Its sizes are parameters.</source>
         <translation>Cassetto inserito. Le misure sono parametri.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="1814"/>
+        <location filename="../src/ui/DocumentController.cpp" line="1823"/>
         <source>That assembly is not available.</source>
         <translation>Quell&apos;assieme non è disponibile.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="458"/>
+        <location filename="../src/ui/DocumentController.cpp" line="462"/>
         <source>Table width</source>
         <translation>Larghezza tavolo</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="459"/>
+        <location filename="../src/ui/DocumentController.cpp" line="463"/>
         <source>Table depth</source>
         <translation>Profondità tavolo</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="460"/>
+        <location filename="../src/ui/DocumentController.cpp" line="464"/>
         <source>Table leg</source>
         <translation>Gamba tavolo</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="461"/>
+        <location filename="../src/ui/DocumentController.cpp" line="465"/>
         <source>Table inset</source>
         <translation>Rientro tavolo</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="462"/>
+        <location filename="../src/ui/DocumentController.cpp" line="466"/>
         <source>Table leg height</source>
         <translation>Altezza gamba tavolo</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="463"/>
+        <location filename="../src/ui/DocumentController.cpp" line="467"/>
         <source>Table top thickness</source>
         <translation>Spessore piano tavolo</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="464"/>
+        <location filename="../src/ui/DocumentController.cpp" line="468"/>
         <source>Table apron height</source>
         <translation>Altezza fascia tavolo</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="465"/>
+        <location filename="../src/ui/DocumentController.cpp" line="469"/>
         <source>Table apron thickness</source>
         <translation>Spessore fascia tavolo</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="466"/>
+        <location filename="../src/ui/DocumentController.cpp" line="470"/>
         <source>Table apron drop</source>
         <translation>Calo fascia tavolo</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="470"/>
+        <location filename="../src/ui/DocumentController.cpp" line="474"/>
         <source>Cabinet width</source>
         <translation>Larghezza carcassa</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="471"/>
+        <location filename="../src/ui/DocumentController.cpp" line="475"/>
         <source>Cabinet depth</source>
         <translation>Profondità carcassa</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="472"/>
+        <location filename="../src/ui/DocumentController.cpp" line="476"/>
         <source>Cabinet height</source>
         <translation>Altezza carcassa</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="473"/>
+        <location filename="../src/ui/DocumentController.cpp" line="477"/>
         <source>Cabinet side</source>
         <translation>Spessore fianco</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="474"/>
+        <location filename="../src/ui/DocumentController.cpp" line="478"/>
         <source>Cabinet panel</source>
         <translation>Spessore piano</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="475"/>
+        <location filename="../src/ui/DocumentController.cpp" line="479"/>
         <source>Cabinet back</source>
         <translation>Spessore schienale</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="479"/>
+        <location filename="../src/ui/DocumentController.cpp" line="483"/>
         <source>Drawer width</source>
         <translation>Larghezza cassetto</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="480"/>
+        <location filename="../src/ui/DocumentController.cpp" line="484"/>
         <source>Drawer depth</source>
         <translation>Profondità cassetto</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="481"/>
+        <location filename="../src/ui/DocumentController.cpp" line="485"/>
         <source>Drawer height</source>
         <translation>Altezza cassetto</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="482"/>
+        <location filename="../src/ui/DocumentController.cpp" line="486"/>
         <source>Drawer side</source>
         <translation>Spessore fianco cassetto</translation>
     </message>
     <message>
-        <location filename="../src/ui/DocumentController.cpp" line="483"/>
+        <location filename="../src/ui/DocumentController.cpp" line="487"/>
         <source>Drawer bottom</source>
         <translation>Spessore fondo</translation>
     </message>

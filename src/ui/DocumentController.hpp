@@ -51,6 +51,9 @@ struct ScenePart {
   std::vector<float> interleaved;
   std::vector<std::uint32_t> indices;
   QVector3D color;
+  QString faceTexture;
+  QString endTexture;
+  bool engineered = false;
   QMatrix4x4 model;
   bool visible = true;
 };

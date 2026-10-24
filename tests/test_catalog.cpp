@@ -20,6 +20,7 @@ TEST_CASE("the shipped catalog names at least forty species and invents no numbe
 
   int species = 0;
   bool sawOak = false;
+  const std::filesystem::path sourceRoot = TIMBERLAB_SOURCE_DIR;
   for (const auto& entry : catalog.entries()) {
     if (entry.category == "hardwood" || entry.category == "softwood") ++species;
     if (!entry.identityAmbiguous && entry.category != "engineered") {
@@ -28,6 +29,10 @@ TEST_CASE("the shipped catalog names at least forty species and invents no numbe
     REQUIRE_FALSE(entry.densityKgM3.has_value());
     REQUIRE_FALSE(entry.jankaN.has_value());
     REQUIRE(entry.visualHex.size() == 7);
+    REQUIRE(entry.faceTexture == "/materials/" + entry.id + "-face.jpg");
+    REQUIRE(entry.endTexture == "/materials/" + entry.id + "-end.jpg");
+    REQUIRE(std::filesystem::exists(sourceRoot / "assets" / entry.faceTexture.substr(1)));
+    REQUIRE(std::filesystem::exists(sourceRoot / "assets" / entry.endTexture.substr(1)));
     if (entry.id == "european-oak") {
       sawOak = true;
       REQUIRE(entry.grain == "ring-porous");

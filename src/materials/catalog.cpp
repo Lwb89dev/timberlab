@@ -29,7 +29,7 @@ bool Catalog::load(const std::string& json, std::string& error) {
     error = "material.format";
     return false;
   }
-  if (root.value("schemaVersion", 0) != 1 || !root.contains("entries") || !root["entries"].is_array()) {
+  if (root.value("schemaVersion", 0) != 2 || !root.contains("entries") || !root["entries"].is_array()) {
     error = "material.format";
     return false;
   }
@@ -41,11 +41,14 @@ bool Catalog::load(const std::string& json, std::string& error) {
     entry.category = item.value("category", "");
     entry.scientificName = item.value("scientificName", "");
     entry.visualHex = item.value("visualHex", "");
+    entry.faceTexture = item.value("faceTexture", "");
+    entry.endTexture = item.value("endTexture", "");
     entry.identityAmbiguous = item.value("identityAmbiguous", false);
     entry.grain = item.value("grain", "");
     entry.source = item.value("source", "");
     entry.notes = item.value("notes", "");
-    if (entry.id.empty() || entry.category.empty() || entry.visualHex.size() != 7 || entry.visualHex[0] != '#') {
+    if (entry.id.empty() || entry.category.empty() || entry.visualHex.size() != 7 || entry.visualHex[0] != '#' ||
+        entry.faceTexture.empty() || entry.endTexture.empty()) {
       error = "material.json";
       return false;
     }

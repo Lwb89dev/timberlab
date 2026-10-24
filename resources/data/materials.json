@@ -1,6 +1,6 @@
 {
   "schema": "timberlab.materials",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "entries": [
     {
       "id": "european-oak",
@@ -16,7 +16,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/european-oak-face.jpg",
+      "endTexture": "/materials/european-oak-end.jpg"
     },
     {
       "id": "sessile-oak",
@@ -32,7 +34,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/sessile-oak-face.jpg",
+      "endTexture": "/materials/sessile-oak-end.jpg"
     },
     {
       "id": "white-oak",
@@ -48,7 +52,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/white-oak-face.jpg",
+      "endTexture": "/materials/white-oak-end.jpg"
     },
     {
       "id": "red-oak",
@@ -64,7 +70,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/red-oak-face.jpg",
+      "endTexture": "/materials/red-oak-end.jpg"
     },
     {
       "id": "european-walnut",
@@ -80,7 +88,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/european-walnut-face.jpg",
+      "endTexture": "/materials/european-walnut-end.jpg"
     },
     {
       "id": "black-walnut",
@@ -96,7 +106,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/black-walnut-face.jpg",
+      "endTexture": "/materials/black-walnut-end.jpg"
     },
     {
       "id": "hard-maple",
@@ -112,7 +124,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/hard-maple-face.jpg",
+      "endTexture": "/materials/hard-maple-end.jpg"
     },
     {
       "id": "red-maple",
@@ -128,7 +142,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/red-maple-face.jpg",
+      "endTexture": "/materials/red-maple-end.jpg"
     },
     {
       "id": "european-beech",
@@ -144,7 +160,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/european-beech-face.jpg",
+      "endTexture": "/materials/european-beech-end.jpg"
     },
     {
       "id": "european-ash",
@@ -160,7 +178,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/european-ash-face.jpg",
+      "endTexture": "/materials/european-ash-end.jpg"
     },
     {
       "id": "black-cherry",
@@ -176,7 +196,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/black-cherry-face.jpg",
+      "endTexture": "/materials/black-cherry-end.jpg"
     },
     {
       "id": "sweet-cherry",
@@ -192,7 +214,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/sweet-cherry-face.jpg",
+      "endTexture": "/materials/sweet-cherry-end.jpg"
     },
     {
       "id": "silver-birch",
@@ -208,7 +232,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/silver-birch-face.jpg",
+      "endTexture": "/materials/silver-birch-end.jpg"
     },
     {
       "id": "black-poplar",
@@ -224,7 +250,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/black-poplar-face.jpg",
+      "endTexture": "/materials/black-poplar-end.jpg"
     },
     {
       "id": "black-alder",
@@ -240,7 +268,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/black-alder-face.jpg",
+      "endTexture": "/materials/black-alder-end.jpg"
     },
     {
       "id": "wych-elm",
@@ -256,7 +286,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/wych-elm-face.jpg",
+      "endTexture": "/materials/wych-elm-end.jpg"
     },
     {
       "id": "sweet-chestnut",
@@ -272,7 +304,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/sweet-chestnut-face.jpg",
+      "endTexture": "/materials/sweet-chestnut-end.jpg"
     },
     {
       "id": "black-locust",
@@ -288,7 +322,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/black-locust-face.jpg",
+      "endTexture": "/materials/black-locust-end.jpg"
     },
     {
       "id": "teak",
@@ -304,7 +340,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/teak-face.jpg",
+      "endTexture": "/materials/teak-end.jpg"
     },
     {
       "id": "sapele",
@@ -320,7 +358,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/sapele-face.jpg",
+      "endTexture": "/materials/sapele-end.jpg"
     },
     {
       "id": "iroko",
@@ -336,7 +376,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/iroko-face.jpg",
+      "endTexture": "/materials/iroko-end.jpg"
     },
     {
       "id": "wenge",
@@ -352,7 +394,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/wenge-face.jpg",
+      "endTexture": "/materials/wenge-end.jpg"
     },
     {
       "id": "zebrano",
@@ -368,7 +412,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/zebrano-face.jpg",
+      "endTexture": "/materials/zebrano-end.jpg"
     },
     {
       "id": "rubberwood",
@@ -384,7 +430,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/rubberwood-face.jpg",
+      "endTexture": "/materials/rubberwood-end.jpg"
     },
     {
       "id": "shagbark-hickory",
@@ -400,7 +448,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/shagbark-hickory-face.jpg",
+      "endTexture": "/materials/shagbark-hickory-end.jpg"
     },
     {
       "id": "sycamore-maple",
@@ -416,7 +466,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/sycamore-maple-face.jpg",
+      "endTexture": "/materials/sycamore-maple-end.jpg"
     },
     {
       "id": "american-sycamore",
@@ -432,7 +484,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/american-sycamore-face.jpg",
+      "endTexture": "/materials/american-sycamore-end.jpg"
     },
     {
       "id": "hornbeam",
@@ -448,7 +502,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/hornbeam-face.jpg",
+      "endTexture": "/materials/hornbeam-end.jpg"
     },
     {
       "id": "okoume",
@@ -464,7 +520,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/okoume-face.jpg",
+      "endTexture": "/materials/okoume-end.jpg"
     },
     {
       "id": "african-padauk",
@@ -480,7 +538,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/african-padauk-face.jpg",
+      "endTexture": "/materials/african-padauk-end.jpg"
     },
     {
       "id": "honduran-mahogany",
@@ -496,7 +556,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/honduran-mahogany-face.jpg",
+      "endTexture": "/materials/honduran-mahogany-end.jpg"
     },
     {
       "id": "european-olive",
@@ -512,7 +574,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/european-olive-face.jpg",
+      "endTexture": "/materials/european-olive-end.jpg"
     },
     {
       "id": "norway-maple",
@@ -528,7 +592,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/norway-maple-face.jpg",
+      "endTexture": "/materials/norway-maple-end.jpg"
     },
     {
       "id": "yellow-poplar",
@@ -544,7 +610,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/yellow-poplar-face.jpg",
+      "endTexture": "/materials/yellow-poplar-end.jpg"
     },
     {
       "id": "purpleheart",
@@ -560,7 +628,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": "This commercial name covers more than one species. It is not a single botanical identity."
+      "notes": "This commercial name covers more than one species. It is not a single botanical identity.",
+      "faceTexture": "/materials/purpleheart-face.jpg",
+      "endTexture": "/materials/purpleheart-end.jpg"
     },
     {
       "id": "ebony",
@@ -576,7 +646,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": "This commercial name covers more than one species. It is not a single botanical identity."
+      "notes": "This commercial name covers more than one species. It is not a single botanical identity.",
+      "faceTexture": "/materials/ebony-face.jpg",
+      "endTexture": "/materials/ebony-end.jpg"
     },
     {
       "id": "meranti",
@@ -592,7 +664,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": "This commercial name covers more than one species. It is not a single botanical identity."
+      "notes": "This commercial name covers more than one species. It is not a single botanical identity.",
+      "faceTexture": "/materials/meranti-face.jpg",
+      "endTexture": "/materials/meranti-end.jpg"
     },
     {
       "id": "scots-pine",
@@ -608,7 +682,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/scots-pine-face.jpg",
+      "endTexture": "/materials/scots-pine-end.jpg"
     },
     {
       "id": "norway-spruce",
@@ -624,7 +700,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/norway-spruce-face.jpg",
+      "endTexture": "/materials/norway-spruce-end.jpg"
     },
     {
       "id": "douglas-fir",
@@ -640,7 +718,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/douglas-fir-face.jpg",
+      "endTexture": "/materials/douglas-fir-end.jpg"
     },
     {
       "id": "european-larch",
@@ -656,7 +736,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/european-larch-face.jpg",
+      "endTexture": "/materials/european-larch-end.jpg"
     },
     {
       "id": "western-red-cedar",
@@ -672,7 +754,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/western-red-cedar-face.jpg",
+      "endTexture": "/materials/western-red-cedar-end.jpg"
     },
     {
       "id": "silver-fir",
@@ -688,7 +772,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/silver-fir-face.jpg",
+      "endTexture": "/materials/silver-fir-end.jpg"
     },
     {
       "id": "eastern-white-pine",
@@ -704,7 +790,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/eastern-white-pine-face.jpg",
+      "endTexture": "/materials/eastern-white-pine-end.jpg"
     },
     {
       "id": "european-yew",
@@ -720,7 +808,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/european-yew-face.jpg",
+      "endTexture": "/materials/european-yew-end.jpg"
     },
     {
       "id": "mediterranean-cypress",
@@ -736,7 +826,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Botanical name is the species identity used by this record. Density and Janka hardness are omitted until a cited measurement is attached. visualHex is a stylized display color, not a measured reflectance.",
-      "notes": ""
+      "notes": "",
+      "faceTexture": "/materials/mediterranean-cypress-face.jpg",
+      "endTexture": "/materials/mediterranean-cypress-end.jpg"
     },
     {
       "id": "birch-plywood",
@@ -752,7 +844,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
-      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee.",
+      "faceTexture": "/materials/birch-plywood-face.jpg",
+      "endTexture": "/materials/birch-plywood-end.jpg"
     },
     {
       "id": "poplar-plywood",
@@ -768,7 +862,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
-      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee.",
+      "faceTexture": "/materials/poplar-plywood-face.jpg",
+      "endTexture": "/materials/poplar-plywood-end.jpg"
     },
     {
       "id": "softwood-plywood",
@@ -784,7 +880,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
-      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee.",
+      "faceTexture": "/materials/softwood-plywood-face.jpg",
+      "endTexture": "/materials/softwood-plywood-end.jpg"
     },
     {
       "id": "hardwood-plywood",
@@ -800,7 +898,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
-      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee.",
+      "faceTexture": "/materials/hardwood-plywood-face.jpg",
+      "endTexture": "/materials/hardwood-plywood-end.jpg"
     },
     {
       "id": "marine-plywood",
@@ -816,7 +916,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
-      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee.",
+      "faceTexture": "/materials/marine-plywood-face.jpg",
+      "endTexture": "/materials/marine-plywood-end.jpg"
     },
     {
       "id": "mdf",
@@ -832,7 +934,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
-      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee.",
+      "faceTexture": "/materials/mdf-face.jpg",
+      "endTexture": "/materials/mdf-end.jpg"
     },
     {
       "id": "hdf",
@@ -848,7 +952,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
-      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee.",
+      "faceTexture": "/materials/hdf-face.jpg",
+      "endTexture": "/materials/hdf-end.jpg"
     },
     {
       "id": "particleboard",
@@ -864,7 +970,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
-      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee.",
+      "faceTexture": "/materials/particleboard-face.jpg",
+      "endTexture": "/materials/particleboard-end.jpg"
     },
     {
       "id": "melamine-white",
@@ -880,7 +988,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
-      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee.",
+      "faceTexture": "/materials/melamine-white-face.jpg",
+      "endTexture": "/materials/melamine-white-end.jpg"
     },
     {
       "id": "osb",
@@ -896,7 +1006,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
-      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee.",
+      "faceTexture": "/materials/osb-face.jpg",
+      "endTexture": "/materials/osb-end.jpg"
     },
     {
       "id": "engineered-bamboo",
@@ -912,7 +1024,9 @@
       "densityKgM3": null,
       "jankaN": null,
       "source": "Sheet good. Composition and coating are described by the common name, not by a single tree species.",
-      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee."
+      "notes": "Stock thicknesses live in the preset library. They are starting sizes, not a supplier guarantee.",
+      "faceTexture": "/materials/engineered-bamboo-face.jpg",
+      "endTexture": "/materials/engineered-bamboo-end.jpg"
     }
   ]
 }

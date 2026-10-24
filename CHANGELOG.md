@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0 — 2026-10-24
+
+### Materials
+
+- All 57 shipped materials now include a researched, photorealistic 512 px texture for the longitudinal face and a separate 512 px texture for end grain or manufactured-panel edge construction.
+- The 3D viewport maps solid-wood end grain only onto faces transverse to the detected fibre axis. Sheet goods use their face texture on the broad surfaces and their layered or composite edge texture on the sides.
+- The material selector now includes paired face/end previews. Custom materials without images keep their existing colour fallback.
+
+### Quality
+
+- The catalog schema validates both texture references and the test suite verifies that every referenced asset is shipped.
+- Texture research, generation constraints, and limitations are documented with the assets.
+
 ## 0.3.1 — 2026-10-24
 
 ### Appearance
