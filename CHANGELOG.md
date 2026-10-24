@@ -1,5 +1,35 @@
 # Changelog
 
+## Unreleased
+
+### Appearance
+
+- The workspace now follows the saw-blade icon's graphite-and-brass visual language, with a branded command bar, rounded panels, clearer hierarchy, compact viewport controls, animated interactions, and a persistent light/dark theme. The OpenGL canvas and grid switch palette with the interface.
+- Parts, inspector sections, joinery cards, project state, account state, and empty states have been redesigned for faster scanning. Native controls now use the Qt Material style, and every new interface string is available in Italian.
+
+### Security and privacy
+
+- Opening a project whose manifest has a field of the wrong JSON type no longer terminates the application; it is a format error. The same holds for a library envelope whose payload id or kind is not a string.
+- Saves write through a randomly named, owner-only temporary file (`O_EXCL | O_NOFOLLOW`) that is synced before the rename. A symlink planted at `project.timberlab.bak` or at the old fixed `.tmp` name can no longer redirect a save onto another file. Restore uses the same path. The zip is parsed from the bytes that passed the size check.
+- A bunker relay address can no longer carry CR/LF, spaces, control bytes, or a fragment into the WebSocket upgrade request. The upgrade answer must start with `HTTP/1.1 101`.
+- Bunker sign-in now has a connect timeout per relay, an overall five-minute deadline, and per-relay limits on AUTH challenges and messages. Previously a relay that accepted TCP and never answered held the sign-in open indefinitely.
+- NIP-42: after AUTH the subscription and the request are sent again, and `auth-required:` refusals no longer abort the sign-in. A refusal from one relay moves on to the next relay. Relay `OK` and `CLOSED` messages are matched to our event id and subscription.
+- `auth_url` is accepted only as a printable `https://` address. Relay and bunker text is stripped of control and bidirectional-format characters before it reaches the status line.
+- Labels that show part and parameter names from a project file render plain text. The QML engine can no longer make network requests: only `qrc:`, `file:`, and `data:` URLs load.
+- Secret hygiene: bech32 decoding, HKDF, Schnorr nonce derivation, and NIP-44 decryption clear every intermediate buffer on every return path, and the scalar is flagged constant-time. A bunker link is cleared after parsing.
+- The relay socket requires TLS 1.2 or later and caps its read buffer. The data folder is created owner-only. Importing a library events file is capped at 64 MiB.
+
+### Fixes
+
+- Italian: 160 interface strings from the QML files had been marked vanished since 0.2.0 and were missing from the compiled catalog. lupdate now scans the QML files; three strings that had never been translated are translated.
+- Amber may answer with an npub instead of hex. A bunker may answer connect with the echoed secret instead of `ack` (NIP-46).
+- `createdBy` in the manifest said 0.2.0; it now carries the build version.
+
+### Performance
+
+- The WebSocket reader parses a burst of frames at an offset and trims its buffer once, instead of erasing from the front after every frame.
+- A relay message reaches the parser as bytes, without a round trip through a UTF-16 `QString`.
+
 ## 0.3.0 — 2026-10-22
 
 ### Selection, deletion, and viewport refresh

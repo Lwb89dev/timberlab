@@ -20,6 +20,7 @@ class DocumentController;
 class ViewportItem : public QQuickFramebufferObject {
   Q_OBJECT
   Q_PROPERTY(DocumentController* controller READ controller WRITE setController NOTIFY controllerChanged)
+  Q_PROPERTY(bool darkMode READ darkMode WRITE setDarkMode NOTIFY darkModeChanged)
   Q_PROPERTY(bool dragOverlayVisible READ dragOverlayVisible NOTIFY dragOverlayChanged)
   Q_PROPERTY(qreal dragOverlayX READ dragOverlayX NOTIFY dragOverlayChanged)
   Q_PROPERTY(qreal dragOverlayY READ dragOverlayY NOTIFY dragOverlayChanged)
@@ -35,6 +36,8 @@ class ViewportItem : public QQuickFramebufferObject {
 
   DocumentController* controller() const { return controller_; }
   void setController(DocumentController* controller);
+  bool darkMode() const { return darkMode_; }
+  void setDarkMode(bool darkMode);
 
   bool dragOverlayVisible() const { return dragOverlayVisible_; }
   qreal dragOverlayX() const { return dragOverlayX_; }
@@ -68,6 +71,7 @@ class ViewportItem : public QQuickFramebufferObject {
 
  signals:
   void controllerChanged();
+  void darkModeChanged();
   void contactMenuRequested(qreal x, qreal y);
   void dragOverlayChanged();
 
@@ -99,6 +103,7 @@ class ViewportItem : public QQuickFramebufferObject {
   void finishPress(bool commitMove);
 
   DocumentController* controller_ = nullptr;
+  bool darkMode_ = true;
   QVector3D target_{400.f, 250.f, 200.f};
   float distance_ = 1800.f;
   float azimuth_ = 40.f;

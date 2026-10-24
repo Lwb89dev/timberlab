@@ -9,6 +9,7 @@
 
 #include <cctype>
 #include <cstring>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -601,4 +602,200 @@ TEST_CASE("a library event is kind 30078 sealed to the author's own key") {
   REQUIRE(error == "signer.state");
   OPENSSL_cleanse(secret, sizeof(secret));
   OPENSSL_cleanse(other, sizeof(other));
+}
+
+TEST_CASE("a relay address cannot carry header bytes, a fragment, or a bad host") {
+  using timberlab::storage::parseRelayUrl;
+  using timberlab::storage::RelayLocation;
+  RelayLocation location;
+  std::string error;
+  REQUIRE(parseRelayUrl("wss://relay.example.com", location, error));
+  REQUIRE(location.host == "relay.example.com");
+  REQUIRE(location.pathAndQuery == "/");
+  REQUIRE(parseRelayUrl("wss://relay.example.com:8443/v1?x=1&y=%2F", location, error));
+  REQUIRE(location.port == 8443);
+  REQUIRE(location.hostHeader == "relay.example.com:8443");
+  REQUIRE(location.pathAndQuery == "/v1?x=1&y=%2F");
+  REQUIRE(parseRelayUrl("wss://[2001:db8::1]/", location, error));
+  REQUIRE(location.hostHeader == "[2001:db8::1]");
+
+  const std::vector<std::string> refused = {
+      "wss://relay.example.com\r\nX-Injected: 1",
+      "wss://relay.example.com/\r\nX-Injected: 1",
+      "wss://relay.example.com/a b",
+      "wss://relay.example.com/#frag",
+      "wss://relay.example.com/\x7f",
+      "wss://rel\xc3\xa9y.example.com/",
+      "wss://-relay.example.com/",
+      "wss://[zz::1]/",
+      "wss://[::1\r\n]/",
+      "wss://relay.example.com:0/",
+      "wss://relay.example.com:65536/",
+      "wss://user@relay.example.com/",
+      "ws://relay.example.com/",
+  };
+  for (const std::string& url : refused) REQUIRE_FALSE(parseRelayUrl(url, location, error));
+
+  unsigned char bunkerSecret[32] = {};
+  bunkerSecret[31] = 2;
+  unsigned char bunkerPub[32];
+  REQUIRE(publicKeyFromSecret(bunkerSecret, bunkerPub, error));
+  const std::string hex = hexEncode(bunkerPub, 32);
+  BunkerUri parsed;
+  REQUIRE(parseBunkerUri("bunker://" + hex + "?relay=wss%3A%2F%2Fevil.example%2F%0D%0AHost%3A%20x&relay=wss%3A%2F%2Fok.example",
+                         parsed, error));
+  REQUIRE(parsed.relays.size() == 1);
+  REQUIRE(parsed.relays[0] == "wss://ok.example");
+  REQUIRE_FALSE(parseBunkerUri("bunker://" + hex + "?relay=wss%3A%2F%2Fevil.example%0A", parsed, error));
+  REQUIRE(parsed.relays.empty());
+  REQUIRE(parsed.secret.empty());
+}
+
+TEST_CASE("the upgrade answer must be a 101 status line") {
+  const std::string headers =
+      "\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo= \r\n\r\n";
+  std::size_t used = 0;
+  std::string error;
+  REQUIRE(readHandshake("HTTP/1.1 101 Switching Protocols" + headers, "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", used, error) ==
+          HandshakeStatus::Ok);
+  REQUIRE(readHandshake("HTTP/1.1 400 101 trick" + headers, "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", used, error) ==
+          HandshakeStatus::Failed);
+  REQUIRE(readHandshake("HTTP/1.1 1010 Nope" + headers, "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", used, error) ==
+          HandshakeStatus::Failed);
+}
+
+TEST_CASE("a burst of frames in one read is split in order and a bad frame resets the reader") {
+  WebsocketReader reader;
+  std::vector<unsigned char> burst;
+  for (int index = 0; index < 500; ++index) {
+    const auto frame = serverFrame(0x1, true, std::to_string(index));
+    burst.insert(burst.end(), frame.begin(), frame.end());
+  }
+  const auto tail = serverFrame(0x1, true, "tail");
+  burst.insert(burst.end(), tail.begin(), tail.end() - 2);
+  std::vector<timberlab::storage::WsIncoming> incoming;
+  std::string error;
+  REQUIRE(reader.consume(burst.data(), burst.size(), incoming, error));
+  REQUIRE(incoming.size() == 500);
+  REQUIRE(incoming.front().data == "0");
+  REQUIRE(incoming.back().data == "499");
+  incoming.clear();
+  REQUIRE(reader.consume(tail.data() + tail.size() - 2, 2, incoming, error));
+  REQUIRE(incoming.size() == 1);
+  REQUIRE(incoming[0].data == "tail");
+
+  incoming.clear();
+  const auto binary = serverFrame(0x2, true, "x");
+  REQUIRE_FALSE(reader.consume(binary.data(), binary.size(), incoming, error));
+  const auto after = serverFrame(0x1, true, "fresh");
+  REQUIRE(reader.consume(after.data(), after.size(), incoming, error));
+  REQUIRE(incoming.size() == 1);
+  REQUIRE(incoming[0].data == "fresh");
+}
+
+TEST_CASE("a bunker may echo the secret, and an auth page must be a plain https address") {
+  unsigned char bunkerSecret[32] = {};
+  bunkerSecret[31] = 2;
+  unsigned char bunkerPub[32];
+  std::string error;
+  REQUIRE(publicKeyFromSecret(bunkerSecret, bunkerPub, error));
+  const std::string uri = "bunker://" + hexEncode(bunkerPub, 32) + "?relay=wss%3A%2F%2Frelay.example.com&secret=alpha";
+
+  SignerSession echoed;
+  REQUIRE(echoed.beginBunker(uri, 1700000100, error));
+  Event connect;
+  REQUIRE(echoed.pendingEvent(connect));
+  REQUIRE(echoed.acceptRemoteEvent(bunkerReply(bunkerSecret, connect, "alpha", "", 1700000101), 1700000101, error) ==
+          RemoteResult::Continue);
+  REQUIRE(echoed.state() == SignerState::WaitPublicKey);
+
+  SignerSession wrong;
+  REQUIRE(wrong.beginBunker(uri, 1700000100, error));
+  REQUIRE(wrong.pendingEvent(connect));
+  REQUIRE(wrong.acceptRemoteEvent(bunkerReply(bunkerSecret, connect, "alphb", "", 1700000101), 1700000101, error) ==
+          RemoteResult::Failed);
+  REQUIRE(error == "signer.rejected");
+
+  const std::vector<std::string> badPages = {"http://example.com/approve", "javascript:alert(1)",
+                                             "https://example.com/\r\napprove", "https://" + std::string(600, 'a')};
+  for (const std::string& page : badPages) {
+    SignerSession session;
+    REQUIRE(session.beginBunker(uri, 1700000100, error));
+    REQUIRE(session.pendingEvent(connect));
+    REQUIRE(session.acceptRemoteEvent(bunkerReply(bunkerSecret, connect, "auth_url", page, 1700000101), 1700000101,
+                                      error) == RemoteResult::Failed);
+    REQUIRE_FALSE(session.signedIn());
+    REQUIRE(session.detail().empty());
+  }
+  OPENSSL_cleanse(bunkerSecret, sizeof(bunkerSecret));
+}
+
+TEST_CASE("Amber may return the key as an npub") {
+  SignerSession session;
+  std::string error;
+  REQUIRE(session.loginWithPublicKey("npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6",
+                                     SignerMethod::Amber, error));
+  REQUIRE(session.npub() == "npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6");
+  REQUIRE_FALSE(session.loginWithPublicKey("npub1notakey", SignerMethod::Amber, error));
+  REQUIRE_FALSE(session.signedIn());
+}
+
+TEST_CASE("random and mutated network input never crashes the parsers") {
+  using timberlab::storage::parseLibraryEvents;
+  using timberlab::storage::parseRelayUrl;
+  using timberlab::storage::RelayLocation;
+  std::mt19937 rng(20261024);
+  const auto randomBytes = [&](std::size_t size) {
+    std::string out(size, '\0');
+    for (char& c : out) c = static_cast<char>(rng() & 0xff);
+    return out;
+  };
+  const auto mutate = [&](std::string text) {
+    const int edits = 1 + static_cast<int>(rng() % 4);
+    for (int edit = 0; edit < edits && !text.empty(); ++edit) {
+      text[rng() % text.size()] = static_cast<char>(rng() & 0xff);
+    }
+    if (rng() % 3 == 0) text.resize(rng() % (text.size() + 1));
+    return text;
+  };
+
+  unsigned char secret[32];
+  fill32(secret, "0000000000000000000000000000000000000000000000000000000000000003");
+  std::string error;
+  Event event;
+  event.kind = 1;
+  event.content = "fuzz";
+  unsigned char aux[32] = {};
+  REQUIRE(signEvent(event, secret, 20, aux, error));
+  const std::string relayEvent = nlohmann::json::array({"EVENT", "s", nlohmann::json::parse(relayEventMessage(event))[1]}).dump();
+  unsigned char key[32] = {};
+  unsigned char nonce[32] = {};
+  std::string payload;
+  REQUIRE(nip44Encrypt(key, "hello there", nonce, payload, error));
+  const std::string bunker =
+      "bunker://" + event.pubkey + "?relay=wss%3A%2F%2Frelay.example.com%2Fp&secret=s3cr3t";
+  const std::string events = timberlab::storage::libraryEventsToJson({event});
+
+  for (int round = 0; round < 1500; ++round) {
+    RelayMessage message;
+    std::string plain;
+    BunkerUri uri;
+    RelayLocation location;
+    std::vector<Event> parsed;
+    unsigned char out[32];
+    std::size_t used = 0;
+    const std::string noise = randomBytes(rng() % 300);
+    REQUIRE_NOTHROW(parseRelayMessage(noise, message, error));
+    REQUIRE_NOTHROW(parseRelayMessage(mutate(relayEvent), message, error));
+    REQUIRE_NOTHROW(nip44Decrypt(key, mutate(payload), plain, error));
+    REQUIRE_NOTHROW(decodeNsec(mutate("nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5"), out, error));
+    REQUIRE_NOTHROW(parseBunkerUri(mutate(bunker), uri, error));
+    REQUIRE_NOTHROW(parseRelayUrl(mutate("wss://relay.example.com:443/path?q=1"), location, error));
+    REQUIRE_NOTHROW(parseLibraryEvents(mutate(events), parsed, error));
+    REQUIRE_NOTHROW(readHandshake(mutate("HTTP/1.1 101 OK\r\nUpgrade: websocket\r\n\r\n"), "x", used, error));
+    WebsocketReader reader;
+    std::vector<timberlab::storage::WsIncoming> incoming;
+    REQUIRE_NOTHROW(reader.consume(reinterpret_cast<const unsigned char*>(noise.data()), noise.size(), incoming, error));
+  }
+  OPENSSL_cleanse(secret, sizeof(secret));
 }

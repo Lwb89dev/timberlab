@@ -2,6 +2,7 @@
 #include "timberlab/core/document.hpp"
 #include "timberlab/storage/archive.hpp"
 #include "timberlab/storage/preferences.hpp"
+#include "timberlab/storage/sha256.hpp"
 
 #include <miniz.h>
 #include <nlohmann/json.hpp>
@@ -10,7 +11,11 @@
 
 #include <filesystem>
 #include <fstream>
+#include <random>
 #include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
 TEST_CASE("a project archive round trips") {
   timberlab::Document document;
@@ -204,4 +209,100 @@ TEST_CASE("a preferences path that cannot be opened stays a stable code") {
   timberlab::storage::Preferences preferences(dir.string());
   REQUIRE_FALSE(preferences.ok());
   REQUIRE(preferences.error() == "preferences.open");
+}
+
+namespace {
+
+std::filesystem::path writeZip(const std::string& name, const std::string& manifestText, const std::string& model) {
+  const auto path = testDirectory() / name;
+  mz_zip_archive zip;
+  mz_zip_zero_struct(&zip);
+  REQUIRE(mz_zip_writer_init_file(&zip, path.string().c_str(), 0));
+  REQUIRE(mz_zip_writer_add_mem(&zip, "manifest.json", manifestText.data(), manifestText.size(), MZ_BEST_COMPRESSION));
+  REQUIRE(mz_zip_writer_add_mem(&zip, "model.json", model.data(), model.size(), MZ_BEST_COMPRESSION));
+  REQUIRE(mz_zip_writer_finalize_archive(&zip));
+  mz_zip_writer_end(&zip);
+  return path;
+}
+
+}  // namespace
+
+TEST_CASE("a manifest with the wrong types is a format error, not an exception") {
+  timberlab::Document document;
+  document.addBoard();
+  const std::string model = document.toJson();
+  const std::string hash = timberlab::storage::sha256Hex(model);
+  const std::vector<std::pair<std::string, std::string>> cases = {
+      {"[]", "storage.format"},
+      {"\"timberlab\"", "storage.format"},
+      {"{\"format\":5,\"formatVersion\":1}", "storage.format"},
+      {"{\"format\":\"timberlab\",\"formatVersion\":\"1\"}", "storage.format"},
+      {"{\"format\":\"timberlab\",\"formatVersion\":1.5}", "storage.format"},
+      {"{\"format\":\"timberlab\",\"formatVersion\":1,\"modelSha256\":7}", "storage.checksum"},
+      {"{\"format\":\"timberlab\",\"formatVersion\":1}", "storage.checksum"},
+  };
+  for (const auto& [manifest, code] : cases) {
+    const auto path = writeZip("typed.timberlab", manifest, model);
+    timberlab::Document loaded;
+    timberlab::storage::IoResult result;
+    REQUIRE_NOTHROW(result = timberlab::storage::loadProject(path.string(), loaded));
+    REQUIRE_FALSE(result.ok);
+    REQUIRE(result.error == code);
+  }
+  const nlohmann::json good = {{"format", "timberlab"}, {"formatVersion", 1}, {"modelSha256", hash}};
+  const auto path = writeZip("typed.timberlab", good.dump(), model);
+  timberlab::Document loaded;
+  REQUIRE(timberlab::storage::loadProject(path.string(), loaded).ok);
+  REQUIRE(loaded.components().size() == 1);
+}
+
+TEST_CASE("a save does not write through a planted backup symlink and leaves no temporary file") {
+  const auto folder = testDirectory() / "planted";
+  std::filesystem::remove_all(folder);
+  std::filesystem::create_directories(folder);
+  const auto victim = folder / "victim.txt";
+  {
+    std::ofstream output(victim, std::ios::binary);
+    output << "keep";
+  }
+  timberlab::Document document;
+  document.addBoard();
+  const auto path = folder / "shared.timberlab";
+  REQUIRE(timberlab::storage::saveProject(path.string(), document).ok);
+  const auto backup = std::filesystem::path(path.string() + ".bak");
+  std::filesystem::create_symlink(victim, backup);
+  REQUIRE(timberlab::storage::saveProject(path.string(), document).ok);
+
+  REQUIRE(fileBytes(victim) == "keep");
+  REQUIRE_FALSE(std::filesystem::is_symlink(backup));
+  REQUIRE(ownerOnly(backup));
+  REQUIRE(ownerOnly(path));
+  timberlab::Document loaded;
+  REQUIRE(timberlab::storage::loadProject(backup.string(), loaded).ok);
+  for (const auto& entry : std::filesystem::directory_iterator(folder)) {
+    REQUIRE(entry.path().extension() != ".tmp");
+  }
+}
+
+TEST_CASE("mutated project archives are rejected without a crash") {
+  timberlab::Document document;
+  document.addBoard();
+  document.addBox();
+  const auto source = testDirectory() / "fuzz-source.timberlab";
+  REQUIRE(timberlab::storage::saveProject(source.string(), document).ok);
+  const std::string original = fileBytes(source);
+  std::mt19937 rng(7);
+  const auto target = testDirectory() / "fuzz.timberlab";
+  for (int round = 0; round < 300; ++round) {
+    std::string bytes = original;
+    const int edits = 1 + static_cast<int>(rng() % 8);
+    for (int edit = 0; edit < edits; ++edit) bytes[rng() % bytes.size()] = static_cast<char>(rng() & 0xff);
+    if (rng() % 4 == 0) bytes.resize(rng() % bytes.size());
+    {
+      std::ofstream output(target, std::ios::binary | std::ios::trunc);
+      output << bytes;
+    }
+    timberlab::Document loaded;
+    REQUIRE_NOTHROW(timberlab::storage::loadProject(target.string(), loaded));
+  }
 }

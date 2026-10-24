@@ -21,7 +21,7 @@ class RelaySocket : public QObject {
 
  signals:
   void connected();
-  void textMessage(const QString& text);
+  void textMessage(const QByteArray& text);
   void failed(const QString& code);
   void disconnected();
 

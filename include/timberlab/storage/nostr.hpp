@@ -123,6 +123,8 @@ class WebsocketReader {
   bool consume(const unsigned char* data, std::size_t size, std::vector<WsIncoming>& out, std::string& error);
 
  private:
+  bool accept(WebsocketFrame& frame, std::vector<WsIncoming>& out, std::string& error);
+
   std::vector<unsigned char> buffer_;
   std::string fragment_;
   bool assembling_ = false;

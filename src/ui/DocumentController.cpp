@@ -173,9 +173,13 @@ void ComponentListModel::refresh() {
 }
 
 DocumentController::DocumentController(QObject* parent)
-    : QObject(parent), components_(this), relay_(this), bunkerTimer_(this) {
+    : QObject(parent), components_(this), relay_(this), bunkerTimer_(this), bunkerDeadline_(this) {
   bunkerTimer_.setSingleShot(true);
   connect(&bunkerTimer_, &QTimer::timeout, this, [this] { openNextBunker(); });
+  bunkerDeadline_.setSingleShot(true);
+  connect(&bunkerDeadline_, &QTimer::timeout, this, [this] {
+    if (bunkerActive_) finishBunker("signer.timeout");
+  });
   connect(&relay_, &RelaySocket::connected, this, &DocumentController::onBunkerConnected);
   connect(&relay_, &RelaySocket::textMessage, this, &DocumentController::onBunkerText);
   connect(&relay_, &RelaySocket::failed, this, [this](const QString&) { onBunkerSocketFailed(); });
@@ -192,7 +196,13 @@ void DocumentController::initialise() {
     report(error.empty() ? "preset.json" : error, false);
   }
   const std::string dir = platform::userDataDir();
-  std::filesystem::create_directories(dir);
+  // The library and the preferences are private, so a folder created here is
+  // owner-only. A failure is reported by the databases that cannot open.
+  std::error_code dirError;
+  if (std::filesystem::create_directories(dir, dirError)) {
+    std::filesystem::permissions(dir, std::filesystem::perms::owner_all, std::filesystem::perm_options::replace,
+                                 dirError);
+  }
   preferences_ = std::make_unique<storage::Preferences>(dir + "/timberlab.sqlite");
   if (!preferences_->ok()) report("preferences.open", false);
   library_ = std::make_unique<storage::Library>(dir + "/library.sqlite");
@@ -1593,12 +1603,18 @@ bool DocumentController::importLibraryEvents(const QUrl& url) {
     report(library_ && !library_->error().empty() ? library_->error() : "library.open", false);
     return false;
   }
+  // A full library is 4000 rows of at most a few kilobytes each.
+  constexpr qint64 kMaxEventFileBytes = 64 * 1024 * 1024;
   QFile file(path);
   if (!file.open(QIODevice::ReadOnly)) {
     report("storage.io", false);
     return false;
   }
-  const QByteArray bytes = file.readAll();
+  const QByteArray bytes = file.read(kMaxEventFileBytes + 1);
+  if (bytes.size() > kMaxEventFileBytes) {
+    report("sync.too_large", false);
+    return false;
+  }
   std::vector<storage::Event> events;
   std::string error;
   const std::string_view view(bytes.constData(), static_cast<std::size_t>(bytes.size()));
@@ -1808,10 +1824,24 @@ QString DocumentController::messageFor(const QString& code) const {
   if (code == "sync.conflict") return tr("That library event conflicts with the local row.");
   if (code == "sync.crypto") return tr("That library event could not be opened.");
   if (code == "sync.range") return tr("That library revision is not valid.");
+  if (code == "sync.too_large") return tr("That library events file is too large.");
   return tr("Something went wrong.");
 }
 
 namespace {
+
+// Bunker timing, in milliseconds. A relay gets a bounded time to finish TLS
+// and the upgrade, then to answer. Approving an auth_url page in a browser
+// takes longer. The whole sign-in has a hard deadline, so a relay or a bunker
+// cannot keep it open by sending traffic.
+constexpr int kRelayConnectMs = 15000;
+constexpr int kRelayAnswerMs = 20000;
+constexpr int kBunkerApproveMs = 120000;
+constexpr int kBunkerDeadlineMs = 300000;
+// A sign-in exchanges a handful of messages. A relay that sends more, or
+// asks for AUTH again and again, is dropped and the next relay is tried.
+constexpr int kRelayMessageBudget = 256;
+constexpr int kRelayAuthBudget = 3;
 
 void wipeBytes(QByteArray& bytes, std::string& text) {
   if (!text.empty()) OPENSSL_cleanse(text.data(), text.size());
@@ -1821,11 +1851,29 @@ void wipeBytes(QByteArray& bytes, std::string& text) {
   bytes.clear();
 }
 
+// Text from a relay or a bunker, made safe for the status line: control and
+// format characters (bidirectional overrides included) become spaces, and the
+// length is capped.
+QString untrustedText(const std::string& text, int limit) {
+  QString out = QString::fromUtf8(text.data(), static_cast<qsizetype>(text.size()));
+  for (QChar& c : out) {
+    const QChar::Category category = c.category();
+    if (category == QChar::Other_Control || category == QChar::Other_Format || category == QChar::Separator_Line ||
+        category == QChar::Separator_Paragraph) {
+      c = QLatin1Char(' ');
+    }
+  }
+  return out.simplified().left(limit);
+}
+
+bool authRequired(const std::string& text) { return text.rfind("auth-required:", 0) == 0; }
+
 }  // namespace
 
 void DocumentController::abortBunker() {
   bunkerActive_ = false;
   bunkerTimer_.stop();
+  bunkerDeadline_.stop();
   relay_.close();
   bunkerRelays_.clear();
   bunkerRelayIndex_ = -1;
@@ -1841,18 +1889,27 @@ void DocumentController::openNextBunker() {
     return;
   }
   bunkerHelloSent_ = false;
+  bunkerMessages_ = 0;
+  bunkerAuths_ = 0;
   bunkerRelayUrl_ = bunkerRelays_.at(bunkerRelayIndex_);
+  // TLS and the upgrade have their own limit. Without it a relay that accepts
+  // TCP and never answers would hold the sign-in open.
+  bunkerTimer_.start(kRelayConnectMs);
   relay_.open(bunkerRelayUrl_);
 }
 
 void DocumentController::sendBunkerHello() {
   std::string error;
-  std::string sub;
-  if (!storage::randomHex(8, sub, error)) {
+  if (!storage::randomHex(8, bunkerSub_, error)) {
     finishBunker("signer.crypto");
     return;
   }
-  bunkerSub_ = QString::fromStdString(sub);
+  sendBunkerRequest();
+}
+
+// The subscription and the pending request. After AUTH both are sent again,
+// because a relay that wants AUTH refuses them until it has it.
+void DocumentController::sendBunkerRequest() {
   storage::Event event;
   if (!signer_.pendingEvent(event)) {
     finishBunker("signer.state");
@@ -1860,10 +1917,10 @@ void DocumentController::sendBunkerHello() {
   }
   const auto now = std::time(nullptr);
   const std::int64_t since = now > 600 ? static_cast<std::int64_t>(now) - 600 : 0;
-  relay_.sendText(QString::fromStdString(storage::relayReqMessage(sub, event.pubkey, since)));
+  relay_.sendText(QString::fromStdString(storage::relayReqMessage(bunkerSub_, event.pubkey, since)));
   relay_.sendText(QString::fromStdString(storage::relayEventMessage(event)));
   bunkerHelloSent_ = true;
-  bunkerTimer_.start(20000);
+  bunkerTimer_.start(kRelayAnswerMs);
 }
 
 void DocumentController::onBunkerConnected() {
@@ -1877,45 +1934,60 @@ void DocumentController::onBunkerSocketFailed() {
   openNextBunker();
 }
 
-void DocumentController::onBunkerText(const QString& text) {
+void DocumentController::onBunkerText(const QByteArray& text) {
   if (!bunkerActive_) return;
+  if (++bunkerMessages_ > kRelayMessageBudget) {
+    openNextBunker();
+    return;
+  }
   storage::RelayMessage message;
   std::string error;
-  if (!storage::parseRelayMessage(text.toStdString(), message, error)) return;
+  if (!storage::parseRelayMessage(std::string_view(text.constData(), static_cast<std::size_t>(text.size())), message,
+                                  error)) {
+    return;
+  }
   if (message.type == "AUTH") {
-    storage::Event auth;
-    const auto now = static_cast<std::int64_t>(std::time(nullptr));
-    if (!signer_.signAuth(bunkerRelayUrl_.toStdString(), message.text, now, auth, error)) return;
-    relay_.sendText(QString::fromStdString(storage::relayAuthMessage(auth)));
-    storage::Event pending;
-    if (bunkerHelloSent_ && signer_.pendingEvent(pending)) {
-      relay_.sendText(QString::fromStdString(storage::relayEventMessage(pending)));
-    }
-    bunkerTimer_.start(20000);
+    onBunkerAuth(message.text);
     return;
   }
-  if (message.type == "OK" && !message.accepted) {
-    const QString detail = QString::fromStdString(message.text).left(180);
-    finishBunker("signer.rejected");
-    if (!detail.isEmpty()) {
-      status_ = tr("The bunker rejected the connection.") + QStringLiteral(" ") + detail;
-      emit statusChanged();
-    }
+  storage::Event pending;
+  const bool ours = signer_.pendingEvent(pending) && message.eventId == pending.id;
+  // A refusal that only asks for AUTH is answered by the AUTH handler. Any
+  // other refusal of our request, or of our subscription, means this relay
+  // will not carry the sign-in, so the next relay is tried.
+  if (message.type == "OK" && ours && !message.accepted && !authRequired(message.text)) {
+    openNextBunker();
     return;
   }
-  if (message.type == "CLOSED") {
-    finishBunker("signer.relay");
+  if (message.type == "CLOSED" && message.sub == bunkerSub_ && !authRequired(message.text)) {
+    openNextBunker();
     return;
   }
-  if (message.type != "EVENT") return;
-  if (message.sub != bunkerSub_.toStdString()) return;
+  if (message.type == "EVENT" && message.sub == bunkerSub_) onBunkerEvent(message.event);
+}
+
+void DocumentController::onBunkerAuth(const std::string& challenge) {
+  if (++bunkerAuths_ > kRelayAuthBudget) {
+    openNextBunker();
+    return;
+  }
+  storage::Event auth;
+  std::string error;
   const auto now = static_cast<std::int64_t>(std::time(nullptr));
-  const auto result = signer_.acceptRemoteEvent(message.event, now, error);
+  if (!signer_.signAuth(bunkerRelayUrl_.toStdString(), challenge, now, auth, error)) return;
+  relay_.sendText(QString::fromStdString(storage::relayAuthMessage(auth)));
+  if (bunkerHelloSent_) sendBunkerRequest();
+}
+
+void DocumentController::onBunkerEvent(const storage::Event& event) {
+  std::string error;
+  const auto now = static_cast<std::int64_t>(std::time(nullptr));
+  const auto result = signer_.acceptRemoteEvent(event, now, error);
   if (result == storage::RemoteResult::Ignored) return;
   if (result == storage::RemoteResult::AuthRequired) {
-    status_ = tr("The bunker asked to open this page: %1").arg(QString::fromStdString(signer_.detail()));
+    status_ = tr("The bunker asked to open this page: %1").arg(untrustedText(signer_.detail(), 512));
     emit statusChanged();
-    bunkerTimer_.start(20000);
+    bunkerTimer_.start(kBunkerApproveMs);
     return;
   }
   if (result == storage::RemoteResult::Continue) {
@@ -1925,19 +1997,20 @@ void DocumentController::onBunkerText(const QString& text) {
       return;
     }
     relay_.sendText(QString::fromStdString(storage::relayEventMessage(pending)));
-    bunkerTimer_.start(20000);
+    bunkerTimer_.start(kRelayAnswerMs);
     return;
   }
   if (result == storage::RemoteResult::SignedIn) {
     bunkerActive_ = false;
     bunkerTimer_.stop();
+    bunkerDeadline_.stop();
     relay_.close();
     status_ = tr("Signed in as %1").arg(QString::fromStdString(signer_.npub()));
     emit statusChanged();
     emit accountChanged();
     return;
   }
-  const QString detail = QString::fromStdString(signer_.detail()).left(180);
+  const QString detail = untrustedText(signer_.detail(), 180);
   finishBunker(error.empty() ? std::string("signer.rejected") : error);
   if (!detail.isEmpty()) {
     status_ = messageFor(QStringLiteral("signer.rejected")) + QStringLiteral(" ") + detail;
@@ -1948,6 +2021,7 @@ void DocumentController::onBunkerText(const QString& text) {
 void DocumentController::finishBunker(const std::string& code) {
   bunkerActive_ = false;
   bunkerTimer_.stop();
+  bunkerDeadline_.stop();
   relay_.close();
   if (!signer_.signedIn()) signer_.logout();
   report(code, false);
@@ -1993,6 +2067,7 @@ bool DocumentController::loginWithBunker(const QString& uri) {
   bunkerRelayIndex_ = -1;
   bunkerConnectedOnce_ = false;
   bunkerActive_ = true;
+  bunkerDeadline_.start(kBunkerDeadlineMs);
   status_ = tr("Waiting for the bunker to approve.");
   emit statusChanged();
   emit accountChanged();

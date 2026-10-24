@@ -33,6 +33,23 @@ void wipeString(std::string& text) {
   text.clear();
 }
 
+// Clears a buffer that held key material when the scope ends, on every return
+// path. The caller reserves capacity first, so growth does not leave an
+// uncleared copy behind.
+template <typename Container>
+class WipeOnExit {
+ public:
+  explicit WipeOnExit(Container& container) : container_(container) {}
+  ~WipeOnExit() {
+    if (!container_.empty()) OPENSSL_cleanse(container_.data(), container_.size() * sizeof(container_[0]));
+  }
+  WipeOnExit(const WipeOnExit&) = delete;
+  WipeOnExit& operator=(const WipeOnExit&) = delete;
+
+ private:
+  Container& container_;
+};
+
 int hexValue(char c) {
   if (c >= '0' && c <= '9') return c - '0';
   if (c >= 'a' && c <= 'f') return c - 'a' + 10;
@@ -161,6 +178,7 @@ bool bech32Decode(std::string_view text, std::string& hrp, std::vector<unsigned 
   bool lower = false;
   bool upper = false;
   std::string folded(text.size(), '\0');
+  const WipeOnExit foldedGuard(folded);
   for (std::size_t index = 0; index < text.size(); ++index) {
     const unsigned char c = static_cast<unsigned char>(text[index]);
     if (c >= 'a' && c <= 'z') lower = true;
@@ -176,22 +194,25 @@ bool bech32Decode(std::string_view text, std::string& hrp, std::vector<unsigned 
   }
   std::vector<int> values;
   values.reserve(folded.size() - separator - 1);
+  const WipeOnExit valuesGuard(values);
   for (std::size_t index = separator + 1; index < folded.size(); ++index) {
-    const char* found = std::strchr(kBech32, folded[index]);
+    // A NUL byte would match the terminator of kBech32.
+    const char* found = folded[index] == '\0' ? nullptr : std::strchr(kBech32, folded[index]);
     if (found == nullptr) return false;
     values.push_back(static_cast<int>(found - kBech32));
   }
   std::vector<int> check = hrpExpand(hrp);
+  check.reserve(check.size() + values.size());
+  const WipeOnExit checkGuard(check);
   check.insert(check.end(), values.begin(), values.end());
   if (bech32Polymod(check) != 1) return false;
   values.resize(values.size() - 6);
   std::vector<int> bytes;
-  if (!convertBits(values.data(), values.size(), 5, 8, false, bytes)) {
-    wipeString(folded);
-    return false;
-  }
+  bytes.reserve(values.size() * 5 / 8 + 1);
+  const WipeOnExit bytesGuard(bytes);
+  if (!convertBits(values.data(), values.size(), 5, 8, false, bytes)) return false;
+  data.reserve(bytes.size());
   data.assign(bytes.begin(), bytes.end());
-  wipeString(folded);
   return true;
 }
 
@@ -217,10 +238,10 @@ bool bech32Encode(std::string_view hrp, const unsigned char* raw, std::size_t si
 bool decodeKey(std::string_view text, std::string_view hrp, unsigned char out[32]) {
   std::string found;
   std::vector<unsigned char> data;
+  const WipeOnExit dataGuard(data);
   if (!bech32Decode(text, found, data)) return false;
   if (found != hrp || data.size() != 32) return false;
   std::memcpy(out, data.data(), 32);
-  OPENSSL_cleanse(data.data(), data.size());
   return true;
 }
 
@@ -250,12 +271,18 @@ bool hkdfExpand(const unsigned char prk[32], const unsigned char* info, std::siz
   std::size_t filled = 0;
   unsigned char counter = 1;
   std::vector<unsigned char> message;
+  message.reserve(32 + infoLen + 1);
+  const WipeOnExit messageGuard(message);
   while (filled < outLen) {
     message.clear();
     if (counter > 1) message.insert(message.end(), previous, previous + 32);
     message.insert(message.end(), info, info + infoLen);
     message.push_back(counter);
-    if (!hmacSha256(prk, 32, message.data(), message.size(), block)) return false;
+    if (!hmacSha256(prk, 32, message.data(), message.size(), block)) {
+      OPENSSL_cleanse(block, sizeof(block));
+      OPENSSL_cleanse(previous, sizeof(previous));
+      return false;
+    }
     const std::size_t take = std::min<std::size_t>(32, outLen - filled);
     std::memcpy(out + filled, block, take);
     std::memcpy(previous, block, 32);
@@ -372,6 +399,7 @@ bool headerValue(std::string_view headers, std::string_view name, std::string& v
       if (found == name) {
         std::string_view raw = line.substr(colon + 1);
         while (!raw.empty() && std::isspace(static_cast<unsigned char>(raw.front())) != 0) raw.remove_prefix(1);
+        while (!raw.empty() && std::isspace(static_cast<unsigned char>(raw.back())) != 0) raw.remove_suffix(1);
         value.assign(raw);
         return true;
       }
@@ -544,6 +572,7 @@ struct EcPoint {
 
 bool loadScalar(const Secp& secp, const unsigned char secret[32], Bn& out) {
   if (BN_bin2bn(secret, 32, out.get()) == nullptr) return false;
+  BN_set_flags(out.get(), BN_FLG_CONSTTIME);
   return !BN_is_zero(out.get()) && BN_ucmp(out.get(), secp.order) < 0;
 }
 
@@ -644,19 +673,24 @@ bool schnorrSign(const unsigned char secret[32], const unsigned char* message, s
   taggedHash("BIP0340/aux", aux, 32, auxHash);
   for (int index = 0; index < 32; ++index) tweak[index] = static_cast<unsigned char>(secretBytes[index] ^ auxHash[index]);
   std::vector<unsigned char> nonceInput;
+  nonceInput.reserve(64 + messageLen);
+  const WipeOnExit nonceInputGuard(nonceInput);
   nonceInput.insert(nonceInput.end(), tweak, tweak + 32);
   nonceInput.insert(nonceInput.end(), px, px + 32);
   if (messageLen > 0) nonceInput.insert(nonceInput.end(), message, message + messageLen);
   unsigned char nonceHash[32];
   taggedHash("BIP0340/nonce", nonceInput.data(), nonceInput.size(), nonceHash);
   Bn nonce;
+  BN_set_flags(nonce.get(), BN_FLG_CONSTTIME);
   if (BN_bin2bn(nonceHash, 32, nonce.get()) == nullptr || BN_mod(nonce.get(), nonce.get(), secp.order, secp.ctx) != 1 ||
       BN_is_zero(nonce.get())) {
     error = "signer.crypto";
     OPENSSL_cleanse(secretBytes, sizeof(secretBytes));
     OPENSSL_cleanse(tweak, sizeof(tweak));
+    OPENSSL_cleanse(nonceHash, sizeof(nonceHash));
     return false;
   }
+  OPENSSL_cleanse(nonceHash, sizeof(nonceHash));
   EcPoint noncePoint(secp.group);
   unsigned char rx[32];
   bool nonceEven = false;
@@ -691,7 +725,6 @@ bool schnorrSign(const unsigned char secret[32], const unsigned char* message, s
   else error = "signer.crypto";
   OPENSSL_cleanse(secretBytes, sizeof(secretBytes));
   OPENSSL_cleanse(tweak, sizeof(tweak));
-  OPENSSL_cleanse(nonceHash, sizeof(nonceHash));
   return ok;
 }
 
@@ -833,6 +866,7 @@ bool nip44Decrypt(const unsigned char key[32], std::string_view payload, std::st
   unsigned char calculated[32];
   bool ok = hmacSha256(keys + 44, 32, aad.data(), aad.size(), calculated) && CRYPTO_memcmp(calculated, mac, 32) == 0;
   std::vector<unsigned char> padded(cipherLen);
+  const WipeOnExit paddedGuard(padded);
   if (ok) ok = chacha20(keys, keys + 32, cipher, cipherLen, padded.data());
   OPENSSL_cleanse(keys, sizeof(keys));
   if (!ok || padded.size() < 2) return false;
@@ -854,7 +888,6 @@ bool nip44Decrypt(const unsigned char key[32], std::string_view payload, std::st
     return false;
   }
   error.clear();
-  if (!padded.empty()) OPENSSL_cleanse(padded.data(), padded.size());
   return true;
 }
 
@@ -918,6 +951,46 @@ bool verifyEvent(const Event& event) {
 }
 
 namespace {
+
+// A host name or an IPv4 address. Anything else, a CR or LF included, would
+// reach the Host header and the TLS peer name.
+bool hostNameOk(std::string_view host) {
+  if (host.empty() || host.size() > 253 || host.front() == '.' || host.front() == '-') return false;
+  for (const unsigned char c : host) {
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) continue;
+    if (c == '.' || c == '-' || c == '_') continue;
+    return false;
+  }
+  return true;
+}
+
+bool ipv6LiteralOk(std::string_view host) {
+  if (host.size() < 2 || host.size() > 45) return false;
+  for (const unsigned char c : host) {
+    if (hexValue(static_cast<char>(c)) >= 0 || c == ':' || c == '.') continue;
+    return false;
+  }
+  return true;
+}
+
+// RFC 3986 path and query bytes. A fragment, a space, or a control byte is
+// refused, so the request line cannot be split.
+bool pathOk(std::string_view path) {
+  constexpr std::string_view kRefused = "\"<>\\^`{|}#";
+  for (const unsigned char c : path) {
+    if (c <= 0x20 || c >= 0x7f || kRefused.find(static_cast<char>(c)) != std::string_view::npos) return false;
+  }
+  return true;
+}
+
+bool authUrlOk(std::string_view url) {
+  constexpr std::string_view kScheme = "https://";
+  if (url.size() <= kScheme.size() || url.size() > 512 || url.substr(0, kScheme.size()) != kScheme) return false;
+  for (const unsigned char c : url) {
+    if (c <= 0x20 || c >= 0x7f) return false;
+  }
+  return true;
+}
 
 bool libraryIdOk(std::string_view id) {
   if (id.empty() || id.size() > 64) return false;
@@ -1097,6 +1170,7 @@ bool parseRelayUrl(std::string_view text, RelayLocation& out, std::string& error
     if (end == std::string_view::npos || end < 2) return false;
     host.assign(rest.substr(1, end - 1));
     after = rest.substr(end + 1);
+    if (!ipv6LiteralOk(host)) return false;
   } else {
     const auto cut = rest.find_first_of(":/?");
     if (cut == std::string_view::npos) host.assign(rest);
@@ -1104,8 +1178,8 @@ bool parseRelayUrl(std::string_view text, RelayLocation& out, std::string& error
       host.assign(rest.substr(0, cut));
       after = rest.substr(cut);
     }
+    if (!hostNameOk(host)) return false;
   }
-  if (host.empty()) return false;
   int port = 443;
   if (!after.empty() && after.front() == ':') {
     std::size_t index = 1;
@@ -1123,6 +1197,7 @@ bool parseRelayUrl(std::string_view text, RelayLocation& out, std::string& error
   std::string path = "/";
   if (!after.empty()) {
     if (after.front() != '/' && after.front() != '?') return false;
+    if (!pathOk(after)) return false;
     path.assign(after);
     if (path.front() == '?') path.insert(path.begin(), '/');
   }
@@ -1135,63 +1210,61 @@ bool parseRelayUrl(std::string_view text, RelayLocation& out, std::string& error
   return true;
 }
 
-bool parseBunkerUri(std::string_view text, BunkerUri& out, std::string& error) {
-  error = "signer.bunker";
-  const std::string trimmed = trimCopy(text);
+namespace {
+
+// One key=value pair of a bunker link. Every copy of the value is cleared,
+// because the secret is one of them.
+bool readBunkerPair(std::string_view pair, BunkerUri& out) {
+  const auto eq = pair.find('=');
+  if (eq == std::string_view::npos) return false;
+  std::string key;
+  std::string value;
+  const bool decoded = percentDecode(pair.substr(0, eq), key) && percentDecode(pair.substr(eq + 1), value);
+  RelayLocation location;
+  std::string relayError;
+  if (decoded && key == "relay" && out.relays.size() < 8 && parseRelayUrl(value, location, relayError) &&
+      std::find(out.relays.begin(), out.relays.end(), value) == out.relays.end()) {
+    out.relays.push_back(value);
+  } else if (decoded && key == "secret") {
+    wipeString(out.secret);
+    out.secret = value;
+  }
+  wipeString(value);
+  return decoded;
+}
+
+bool readBunkerText(std::string_view trimmed, BunkerUri& out) {
   constexpr std::string_view kPrefix = "bunker://";
-  if (trimmed.size() > 5000 || trimmed.size() <= kPrefix.size() || trimmed.compare(0, kPrefix.size(), kPrefix) != 0) {
+  if (trimmed.size() > 5000 || trimmed.size() <= kPrefix.size() || trimmed.substr(0, kPrefix.size()) != kPrefix) {
     return false;
   }
-  if (trimmed.compare(0, 14, "nostrconnect://") == 0) return false;
   const auto queryAt = trimmed.find('?');
-  const std::string pubkeyHex =
-      queryAt == std::string::npos ? trimmed.substr(kPrefix.size()) : trimmed.substr(kPrefix.size(), queryAt - kPrefix.size());
+  if (queryAt == std::string_view::npos) return false;
+  const std::string_view pubkeyHex = trimmed.substr(kPrefix.size(), queryAt - kPrefix.size());
   unsigned char pubkey[32];
   if (!parseHex(pubkeyHex, pubkey, 32) || !xOnlyOnCurve(pubkey)) return false;
   out.remotePubkeyHex = hexEncode(pubkey, 32);
-  out.relays.clear();
-  out.secret.clear();
-  if (queryAt == std::string::npos) return false;
-  std::string query = trimmed.substr(queryAt + 1);
-  std::size_t cursor = 0;
-  while (cursor < query.size()) {
-    auto end = query.find('&', cursor);
-    if (end == std::string::npos) end = query.size();
-    std::string pair = query.substr(cursor, end - cursor);
-    const auto eq = pair.find('=');
-    if (eq == std::string::npos) {
-      wipeString(pair);
-      wipeString(query);
-      wipeString(out.secret);
-      return false;
-    }
-    std::string key;
-    std::string value;
-    if (!percentDecode(pair.substr(0, eq), key) || !percentDecode(pair.substr(eq + 1), value)) {
-      wipeString(pair);
-      wipeString(query);
-      wipeString(value);
-      wipeString(out.secret);
-      return false;
-    }
-    if (key == "relay" && out.relays.size() < 8) {
-      RelayLocation location;
-      std::string relayError;
-      if (parseRelayUrl(value, location, relayError)) {
-        const std::string url(value);
-        if (std::find(out.relays.begin(), out.relays.end(), url) == out.relays.end()) out.relays.push_back(url);
-      }
-    } else if (key == "secret") {
-      out.secret = value;
-    }
-    wipeString(value);
-    wipeString(pair);
-    if (end == query.size()) break;
-    cursor = end + 1;
+  std::string_view query = trimmed.substr(queryAt + 1);
+  while (!query.empty()) {
+    const auto end = query.find('&');
+    if (!readBunkerPair(query.substr(0, end), out)) return false;
+    if (end == std::string_view::npos) break;
+    query.remove_prefix(end + 1);
   }
-  wipeString(query);
-  if (out.relays.empty()) {
+  return !out.relays.empty();
+}
+
+}  // namespace
+
+bool parseBunkerUri(std::string_view text, BunkerUri& out, std::string& error) {
+  out = BunkerUri{};
+  std::string trimmed = trimCopy(text);
+  const bool ok = readBunkerText(trimmed, out);
+  wipeString(trimmed);
+  if (!ok) {
     wipeString(out.secret);
+    out = BunkerUri{};
+    error = "signer.bunker";
     return false;
   }
   error.clear();
@@ -1243,7 +1316,9 @@ HandshakeStatus readHandshake(std::string_view bytes, std::string_view expect, s
   used = end + 4;
   const auto lineEnd = bytes.find("\r\n");
   const std::string_view status = bytes.substr(0, lineEnd);
-  if (status.find(" 101 ") == std::string_view::npos) {
+  constexpr std::string_view kSwitching = "HTTP/1.1 101";
+  if (status.substr(0, kSwitching.size()) != kSwitching ||
+      (status.size() > kSwitching.size() && status[kSwitching.size()] != ' ')) {
     error = "signer.relay";
     return HandshakeStatus::Failed;
   }
@@ -1342,58 +1417,56 @@ void WebsocketReader::reset() {
   assembling_ = false;
 }
 
+bool WebsocketReader::accept(WebsocketFrame& frame, std::vector<WsIncoming>& out, std::string& error) {
+  if (frame.opcode == 0x9 || frame.opcode == 0xA || frame.opcode == 0x8) {
+    const WsKind kind = frame.opcode == 0x9 ? WsKind::Ping : frame.opcode == 0x8 ? WsKind::Close : WsKind::Pong;
+    out.push_back(WsIncoming{kind, std::move(frame.payload)});
+    return true;
+  }
+  // Binary frames and reserved opcodes are refused. A continuation needs an
+  // open text message, and a new text frame needs none.
+  const bool continuation = frame.opcode == 0x0;
+  if ((frame.opcode != 0x0 && frame.opcode != 0x1) || continuation != assembling_) {
+    error = "signer.relay";
+    return false;
+  }
+  if (!continuation && frame.fin) {
+    out.push_back(WsIncoming{WsKind::Text, std::move(frame.payload)});
+    return true;
+  }
+  if (fragment_.size() + frame.payload.size() > kMaxFrame) {
+    error = "signer.relay";
+    return false;
+  }
+  fragment_ += frame.payload;
+  assembling_ = !frame.fin;
+  if (frame.fin) {
+    out.push_back(WsIncoming{WsKind::Text, std::move(fragment_)});
+    fragment_.clear();
+  }
+  return true;
+}
+
 bool WebsocketReader::consume(const unsigned char* data, std::size_t size, std::vector<WsIncoming>& out,
                               std::string& error) {
   if (size > 0) buffer_.insert(buffer_.end(), data, data + size);
-  while (!buffer_.empty()) {
+  // Frames are read at an offset and the buffer is trimmed once, so a burst of
+  // small frames costs one pass, not one erase per frame.
+  std::size_t offset = 0;
+  bool ok = true;
+  while (ok && offset < buffer_.size()) {
     std::size_t used = 0;
     WebsocketFrame frame;
-    const FrameStatus status = websocketReadFrame(buffer_.data(), buffer_.size(), used, frame, error);
-    if (status == FrameStatus::NeedMore) return true;
-    if (status != FrameStatus::Ok) return false;
-    buffer_.erase(buffer_.begin(), buffer_.begin() + static_cast<std::ptrdiff_t>(used));
-    if (frame.opcode == 0x9 || frame.opcode == 0xA || frame.opcode == 0x8) {
-      WsIncoming incoming;
-      incoming.kind = frame.opcode == 0x9 ? WsKind::Ping : frame.opcode == 0x8 ? WsKind::Close : WsKind::Pong;
-      incoming.data = frame.payload;
-      out.push_back(std::move(incoming));
-      continue;
-    }
-    if (frame.opcode == 0x2 || (frame.opcode != 0x0 && frame.opcode != 0x1)) {
-      error = "signer.relay";
-      return false;
-    }
-    if (frame.opcode == 0x1 && assembling_) {
-      error = "signer.relay";
-      return false;
-    }
-    if (frame.opcode == 0x0 && !assembling_) {
-      error = "signer.relay";
-      return false;
-    }
-    if (frame.opcode == 0x1 && frame.fin) {
-      if (frame.payload.size() > kMaxFrame) {
-        error = "signer.relay";
-        return false;
-      }
-      out.push_back(WsIncoming{WsKind::Text, frame.payload});
-      continue;
-    }
-    if (frame.opcode == 0x1) {
-      fragment_ = frame.payload;
-      assembling_ = true;
-      continue;
-    }
-    if (fragment_.size() + frame.payload.size() > kMaxFrame) {
-      error = "signer.relay";
-      return false;
-    }
-    fragment_ += frame.payload;
-    if (!frame.fin) continue;
-    out.push_back(WsIncoming{WsKind::Text, fragment_});
-    fragment_.clear();
-    assembling_ = false;
+    const FrameStatus status = websocketReadFrame(buffer_.data() + offset, buffer_.size() - offset, used, frame, error);
+    if (status == FrameStatus::NeedMore) break;
+    ok = status == FrameStatus::Ok && accept(frame, out, error);
+    offset += used;
   }
+  if (!ok) {
+    reset();
+    return false;
+  }
+  buffer_.erase(buffer_.begin(), buffer_.begin() + static_cast<std::ptrdiff_t>(offset));
   return true;
 }
 
@@ -1542,8 +1615,12 @@ bool SignerSession::loginWithPublicKey(std::string_view pubkeyHex, SignerMethod 
     error = "signer.state";
     return false;
   }
+  // NIP-55 signers have returned the key both as hex and as an npub.
+  const std::string text = trimCopy(pubkeyHex);
   unsigned char pubkey[32];
-  if (!parseHex(trimCopy(pubkeyHex), pubkey, 32) || !xOnlyOnCurve(pubkey)) {
+  std::string decodeError;
+  const bool parsed = text.rfind("npub1", 0) == 0 ? decodeNpub(text, pubkey, decodeError) : parseHex(text, pubkey, 32);
+  if (!parsed || !xOnlyOnCurve(pubkey)) {
     error = "signer.rejected";
     return false;
   }
@@ -1635,9 +1712,10 @@ bool SignerSession::beginBunker(std::string_view uri, std::int64_t now, std::str
   method_ = SignerMethod::Bunker;
   state_ = SignerState::WaitConnect;
   std::vector<std::string> params = {remoteHex_, bunkerSecret_, "get_public_key", "{\"name\":\"TimberLab\"}"};
+  // The secret stays until the connect reply, because NIP-46 lets the bunker
+  // answer with it instead of "ack".
   const bool ok = nextRequest("connect", params, now, error);
   for (std::string& param : params) wipeString(param);
-  wipeString(bunkerSecret_);
   if (!ok) {
     wipe();
     return false;
@@ -1680,9 +1758,16 @@ RemoteResult SignerSession::acceptRemoteEvent(const Event& event, std::int64_t n
   const bool hasError = body.contains("error") && body["error"].is_string() && !body["error"].get<std::string>().empty();
   const std::string result = body.contains("result") && body["result"].is_string() ? body["result"].get<std::string>() : "";
   if (hasError && result == "auth_url") {
-    detail_ = body["error"].get<std::string>();
-    if (detail_.size() > 180) detail_.resize(180);
-    authUrl_ = detail_;
+    // The page is shown, never opened, and only as a plain https address. A
+    // cut address would point somewhere else, so a long one is refused.
+    const std::string url = body["error"].get<std::string>();
+    if (!authUrlOk(url)) {
+      wipe();
+      error = "signer.rejected";
+      return RemoteResult::Failed;
+    }
+    detail_ = url;
+    authUrl_ = url;
     error = "signer.auth";
     return RemoteResult::AuthRequired;
   }
@@ -1696,11 +1781,14 @@ RemoteResult SignerSession::acceptRemoteEvent(const Event& event, std::int64_t n
     return RemoteResult::Failed;
   }
   if (state_ == SignerState::WaitConnect) {
-    if (result != "ack") {
+    const bool echoed = !bunkerSecret_.empty() && result.size() == bunkerSecret_.size() &&
+                        CRYPTO_memcmp(result.data(), bunkerSecret_.data(), result.size()) == 0;
+    if (result != "ack" && !echoed) {
       wipe();
       error = "signer.rejected";
       return RemoteResult::Failed;
     }
+    wipeString(bunkerSecret_);
     if (!nextRequest("get_public_key", {}, now, error)) {
       wipe();
       return RemoteResult::Failed;

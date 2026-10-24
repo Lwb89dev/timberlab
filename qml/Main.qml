@@ -1,7 +1,9 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls.Material
 import QtQuick.Dialogs
 import QtQuick.Layouts
+import QtCore
 import TimberLab
 import TimberLab.Render
 
@@ -9,9 +11,17 @@ ApplicationWindow {
     id: window
     width: 1440
     height: 900
+    minimumWidth: 1080
+    minimumHeight: 680
     visible: true
     title: "TimberLab — " + app.projectName
     color: Theme.bg
+
+    Material.theme: Theme.darkMode ? Material.Dark : Material.Light
+    Material.primary: Theme.panel
+    Material.accent: Theme.accent
+    Material.foreground: Theme.text
+    Material.background: Theme.bg
 
     palette.window: Theme.panel
     palette.windowText: Theme.text
@@ -20,7 +30,7 @@ ApplicationWindow {
     palette.button: Theme.panelRaised
     palette.buttonText: Theme.text
     palette.highlight: Theme.accent
-    palette.highlightedText: "#1c1b19"
+    palette.highlightedText: Theme.onAccent
     palette.mid: Theme.border
     palette.placeholderText: Theme.muted
 
@@ -34,6 +44,14 @@ ApplicationWindow {
         if (!item) return false
         return item instanceof TextInput || item instanceof TextEdit || item instanceof ComboBox
     }
+
+    Settings {
+        id: appearanceSettings
+        category: "Appearance"
+        property bool darkMode: true
+    }
+
+    Behavior on color { ColorAnimation { duration: Theme.motion } }
 
     menuBar: MenuBar {
         Menu {
@@ -136,69 +154,232 @@ ApplicationWindow {
     }
 
     header: ToolBar {
-        leftPadding: 8
-        rightPadding: 8
-        background: Rectangle { color: Theme.panel }
+        implicitHeight: Theme.toolbarHeight
+        leftPadding: 12
+        rightPadding: 12
+        topPadding: 8
+        bottomPadding: 8
+        background: Rectangle {
+            color: Theme.panel
+            border.width: 0
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                height: 1
+                color: Theme.border
+            }
+            Behavior on color { ColorAnimation { duration: Theme.motion } }
+        }
         RowLayout {
             anchors.fill: parent
-            spacing: 6
-            Button { text: qsTr("New"); onClicked: askNew() }
-            Button { text: qsTr("Open"); onClicked: confirmIfDirty("open") }
-            Button { text: qsTr("Save"); onClicked: saveOrAsk() }
-            ToolSeparator {}
-            Button { text: qsTr("Undo"); enabled: app.canUndo; onClicked: app.undo() }
-            Button { text: qsTr("Redo"); enabled: app.canRedo; onClicked: app.redo() }
-            ToolSeparator {}
-            Button { text: qsTr("Board"); onClicked: app.addBoard() }
-            Button { text: qsTr("Box"); onClicked: app.addBox() }
-            Button { text: qsTr("Cylinder"); onClicked: app.addCylinder() }
-            Button {
+            spacing: 5
+
+            Rectangle {
+                Layout.preferredWidth: 42
+                Layout.preferredHeight: 42
+                radius: 12
+                color: Theme.field
+                border.color: Theme.border
+                border.width: 1
+                Image {
+                    anchors.fill: parent
+                    anchors.margins: 3
+                    source: "qrc:/icons/icon.png"
+                    fillMode: Image.PreserveAspectFit
+                    mipmap: true
+                    smooth: true
+                }
+            }
+            ColumnLayout {
+                Layout.preferredWidth: 116
+                spacing: -1
+                Label {
+                    text: "TimberLab"
+                    color: Theme.text
+                    font.pixelSize: 16
+                    font.weight: Font.DemiBold
+                }
+                RowLayout {
+                    spacing: 5
+                    Rectangle {
+                        width: 6
+                        height: 6
+                        radius: 3
+                        color: app.dirty ? Theme.accent : Theme.ok
+                    }
+                    Label {
+                        text: app.dirty ? qsTr("UNSAVED") : qsTr("SAVED")
+                        color: Theme.muted
+                        font.pixelSize: 8
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: 1
+                    }
+                }
+            }
+            Rectangle { Layout.preferredWidth: 1; Layout.preferredHeight: 32; color: Theme.border }
+
+            AppButton { text: qsTr("New"); glyph: "+"; subtle: true; onClicked: askNew() }
+            AppButton { text: qsTr("Open"); glyph: "◰"; subtle: true; onClicked: confirmIfDirty("open") }
+            AppButton { text: qsTr("Save"); glyph: "↓"; primary: true; onClicked: saveOrAsk() }
+            Rectangle { Layout.preferredWidth: 1; Layout.preferredHeight: 28; color: Theme.border }
+            AppButton { glyph: "↶"; compact: true; subtle: true; toolTip: qsTr("Undo"); enabled: app.canUndo; onClicked: app.undo() }
+            AppButton { glyph: "↷"; compact: true; subtle: true; toolTip: qsTr("Redo"); enabled: app.canRedo; onClicked: app.redo() }
+            Rectangle { Layout.preferredWidth: 1; Layout.preferredHeight: 28; color: Theme.border }
+            AppButton { text: qsTr("Board"); glyph: "▰"; subtle: true; onClicked: app.addBoard() }
+            AppButton { text: qsTr("Box"); glyph: "◆"; subtle: true; onClicked: app.addBox() }
+            AppButton { text: qsTr("Cylinder"); glyph: "●"; subtle: true; onClicked: app.addCylinder() }
+            AppButton {
                 id: assemblyButton
                 text: qsTr("Assembly")
+                glyph: "◈"
+                subtle: true
                 onClicked: assemblyMenu.popup(assemblyButton, 0, assemblyButton.height)
             }
-            Button { text: qsTr("Duplicate"); onClicked: app.duplicateSelected() }
-            Button { text: qsTr("Delete"); onClicked: app.deleteSelected() }
-            ToolSeparator {}
-            Button { text: qsTr("Fit"); onClicked: viewport.frameAll() }
+            AppButton { glyph: "⧉"; compact: true; subtle: true; toolTip: qsTr("Duplicate"); onClicked: app.duplicateSelected() }
+            AppButton { glyph: "×"; compact: true; destructive: true; toolTip: qsTr("Delete"); onClicked: app.deleteSelected() }
             Item { Layout.fillWidth: true }
+            AppButton { glyph: "⛶"; compact: true; subtle: true; toolTip: qsTr("Fit all"); onClicked: viewport.frameAll() }
+            AppButton {
+                glyph: window.showParts ? "◧" : "▯"
+                compact: true
+                subtle: true
+                toolTip: window.showParts ? qsTr("Hide parts") : qsTr("Show parts")
+                onClicked: window.showParts = !window.showParts
+            }
+            AppButton {
+                glyph: window.showInspector ? "◨" : "▯"
+                compact: true
+                subtle: true
+                toolTip: window.showInspector ? qsTr("Hide inspector") : qsTr("Show inspector")
+                onClicked: window.showInspector = !window.showInspector
+            }
+            AppButton {
+                glyph: Theme.darkMode ? "☼" : "☾"
+                compact: true
+                subtle: true
+                toolTip: Theme.darkMode ? qsTr("Use light theme") : qsTr("Use dark theme")
+                onClicked: {
+                    Theme.darkMode = !Theme.darkMode
+                    appearanceSettings.darkMode = Theme.darkMode
+                }
+            }
         }
     }
 
     RowLayout {
+        id: workspace
         anchors.fill: parent
-        spacing: 0
-        PartsPanel {
-            visible: window.showParts
-            Layout.preferredWidth: 280
+        anchors.margins: 10
+        spacing: 8
+        opacity: 0
+        scale: 0.992
+
+        Item {
+            property real animatedWidth: window.showParts ? 292 : 0
+            Layout.preferredWidth: animatedWidth
             Layout.fillHeight: true
-            onDemoRequested: window.confirmIfDirty("demo")
-            onRenameRequested: function (partId, partName) {
-                renameDialog.partId = partId
-                renameField.text = partName
-                renameDialog.open()
+            clip: true
+            Behavior on animatedWidth { NumberAnimation { duration: Theme.motion; easing.type: Easing.OutCubic } }
+            PartsPanel {
+                width: 292
+                height: parent.height
+                opacity: window.showParts ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: Theme.motionFast } }
+                onDemoRequested: window.confirmIfDirty("demo")
+                onRenameRequested: function (partId, partName) {
+                    renameDialog.partId = partId
+                    renameField.text = partName
+                    renameDialog.open()
+                }
             }
         }
-        Rectangle { visible: window.showParts; width: 1; color: Theme.border; Layout.fillHeight: true }
-        Viewport {
-            id: viewport
+
+        Rectangle {
+            id: viewportFrame
             Layout.fillWidth: true
             Layout.fillHeight: true
-            controller: app
+            radius: Theme.radiusLarge
+            color: Theme.canvas
+            border.color: Theme.border
+            border.width: 1
+            clip: true
+
+            Viewport {
+                id: viewport
+                anchors.fill: parent
+                anchors.margins: 1
+                controller: app
+                darkMode: Theme.darkMode
+            }
+
+            Rectangle {
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.margins: 14
+                implicitWidth: projectChipRow.implicitWidth + 20
+                implicitHeight: 34
+                radius: 10
+                color: Theme.darkMode ? "#d9161917" : "#e6ffffff"
+                border.color: Theme.border
+                Row {
+                    id: projectChipRow
+                    anchors.centerIn: parent
+                    spacing: 7
+                    Rectangle {
+                        width: 7
+                        height: 7
+                        radius: 4
+                        color: app.dirty ? Theme.accent : Theme.ok
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Label {
+                        text: app.projectName
+                        textFormat: Text.PlainText
+                        color: Theme.text
+                        font.pixelSize: 11
+                        font.weight: Font.Medium
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+            }
+
+            Rectangle {
+                anchors.top: parent.top
+                anchors.right: parent.right
+                anchors.margins: 14
+                implicitWidth: viewTools.implicitWidth + 10
+                implicitHeight: 42
+                radius: 12
+                color: Theme.darkMode ? "#d9161917" : "#e6ffffff"
+                border.color: Theme.border
+                Row {
+                    id: viewTools
+                    anchors.centerIn: parent
+                    spacing: 2
+                    AppButton { text: qsTr("TOP"); compact: true; subtle: true; onClicked: viewport.setStandardView("top") }
+                    AppButton { text: qsTr("FRONT"); compact: true; subtle: true; onClicked: viewport.setStandardView("front") }
+                    AppButton { text: qsTr("RIGHT"); compact: true; subtle: true; onClicked: viewport.setStandardView("right") }
+                    AppButton { text: qsTr("ISO"); compact: true; subtle: true; onClicked: viewport.setStandardView("iso") }
+                }
+            }
 
             Rectangle {
                 id: dragOverlay
                 visible: viewport.dragOverlayVisible
-                color: Theme.panelRaised
+                color: Theme.panel
                 border.color: Theme.accent
                 border.width: 1
-                radius: Theme.radius
-                opacity: 0.92
-                implicitWidth: dragOverlayRow.implicitWidth + 16
-                implicitHeight: dragOverlayRow.implicitHeight + 8
-                z: 1
+                radius: 12
+                opacity: visible ? 0.96 : 0
+                scale: visible ? 1 : 0.9
+                implicitWidth: dragOverlayRow.implicitWidth + 22
+                implicitHeight: dragOverlayRow.implicitHeight + 12
+                z: 3
                 x: viewport.dragOverlayPosition.x - implicitWidth / 2
                 y: viewport.dragOverlayPosition.y - implicitHeight / 2
+                Behavior on opacity { NumberAnimation { duration: Theme.motionFast } }
+                Behavior on scale { NumberAnimation { duration: Theme.motionFast; easing.type: Easing.OutBack } }
                 Row {
                     id: dragOverlayRow
                     anchors.centerIn: parent
@@ -224,21 +405,40 @@ ApplicationWindow {
                 }
             }
         }
-        Rectangle { visible: window.showInspector; width: 1; color: Theme.border; Layout.fillHeight: true }
-        Inspector {
-            visible: window.showInspector
-            Layout.preferredWidth: 320
+
+        Item {
+            property real animatedWidth: window.showInspector ? 340 : 0
+            Layout.preferredWidth: animatedWidth
             Layout.fillHeight: true
+            clip: true
+            Behavior on animatedWidth { NumberAnimation { duration: Theme.motion; easing.type: Easing.OutCubic } }
+            Inspector {
+                width: 340
+                height: parent.height
+                opacity: window.showInspector ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: Theme.motionFast } }
+            }
         }
     }
 
     footer: Rectangle {
-        implicitHeight: 40
+        implicitHeight: Theme.statusHeight
         color: Theme.panel
+        border.color: Theme.border
+        border.width: 0
+        Rectangle { anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; height: 1; color: Theme.border }
+        Behavior on color { ColorAnimation { duration: Theme.motion } }
         RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: 12
-            anchors.rightMargin: 12
+            anchors.leftMargin: 14
+            anchors.rightMargin: 14
+            spacing: 10
+            Rectangle {
+                width: 7
+                height: 7
+                radius: 4
+                color: app.signedIn ? Theme.ok : Theme.faint
+            }
             Label {
                 text: app.signedIn ? app.accountNpub : qsTr("Not signed in")
                 textFormat: Text.PlainText
@@ -255,7 +455,8 @@ ApplicationWindow {
             }
             ComboBox {
                 id: unitBox
-                implicitHeight: 28
+                implicitHeight: 30
+                implicitWidth: 136
                 textRole: "label"
                 valueRole: "value"
                 model: [
@@ -270,7 +471,8 @@ ApplicationWindow {
             ComboBox {
                 id: fractionBox
                 visible: app.displayUnit === "in" || app.displayUnit === "ft"
-                implicitHeight: 28
+                implicitHeight: 30
+                implicitWidth: 74
                 textRole: "label"
                 valueRole: "value"
                 model: [
@@ -281,7 +483,8 @@ ApplicationWindow {
             }
             ComboBox {
                 id: qualityBox
-                implicitHeight: 28
+                implicitHeight: 30
+                implicitWidth: 132
                 textRole: "label"
                 valueRole: "value"
                 model: [
@@ -292,8 +495,33 @@ ApplicationWindow {
                 onActivated: app.meshQuality = currentValue
             }
             Label {
+                visible: window.width >= 1280
                 text: qsTr("Orbit: drag  ·  Pan: shift-drag or right-drag  ·  Zoom: wheel  ·  Z up")
                 color: Theme.muted
+                font.pixelSize: 10
+            }
+        }
+    }
+
+    SequentialAnimation {
+        id: workspaceIntro
+        PauseAnimation { duration: 60 }
+        ParallelAnimation {
+            NumberAnimation {
+                target: workspace
+                property: "opacity"
+                from: 0
+                to: 1
+                duration: 320
+                easing.type: Easing.OutCubic
+            }
+            NumberAnimation {
+                target: workspace
+                property: "scale"
+                from: 0.992
+                to: 1
+                duration: 360
+                easing.type: Easing.OutCubic
             }
         }
     }
@@ -530,7 +758,11 @@ ApplicationWindow {
         confirmDirty.open()
     }
 
-    Component.onCompleted: syncFooter()
+    Component.onCompleted: {
+        Theme.darkMode = appearanceSettings.darkMode
+        syncFooter()
+        workspaceIntro.start()
+    }
 
     Connections {
         target: app

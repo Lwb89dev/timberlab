@@ -542,8 +542,12 @@ bool readEnvelope(const std::string& plaintext, IncomingRecord& incoming, std::s
     error = "sync.mismatch";
     return false;
   }
-  if (incoming.payload.value("id", std::string()) != incoming.id ||
-      incoming.payload.value("kind", std::string()) != incoming.kind) {
+  // value() would throw on a non-string id or kind.
+  const auto payloadId = incoming.payload.find("id");
+  const auto payloadKind = incoming.payload.find("kind");
+  if (payloadId == incoming.payload.end() || !payloadId->is_string() || payloadId->get<std::string>() != incoming.id ||
+      payloadKind == incoming.payload.end() || !payloadKind->is_string() ||
+      payloadKind->get<std::string>() != incoming.kind) {
     error = "sync.mismatch";
     return false;
   }

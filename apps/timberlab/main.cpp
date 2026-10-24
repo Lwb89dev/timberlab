@@ -10,7 +10,10 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QLocale>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
 #include <QQmlEngine>
+#include <QQmlNetworkAccessManagerFactory>
 #include <QQuickStyle>
 #include <QTranslator>
 #include <QQuickWindow>
@@ -20,6 +23,33 @@
 #include <QUrl>
 
 #include <string>
+
+namespace {
+
+// QML loads from the binary and from local files only. A remote URL, from rich
+// text or anything else, becomes an unknown-protocol error rather than a
+// request that would reveal the user's address. The bunker socket does not use
+// this manager.
+class LocalOnlyAccessManager : public QNetworkAccessManager {
+ public:
+  using QNetworkAccessManager::QNetworkAccessManager;
+
+ protected:
+  QNetworkReply* createRequest(Operation op, const QNetworkRequest& request, QIODevice* outgoing) override {
+    const QString scheme = request.url().scheme();
+    if (scheme == QLatin1String("qrc") || scheme == QLatin1String("file") || scheme == QLatin1String("data")) {
+      return QNetworkAccessManager::createRequest(op, request, outgoing);
+    }
+    return QNetworkAccessManager::createRequest(op, QNetworkRequest(QUrl(QStringLiteral("blocked:"))), outgoing);
+  }
+};
+
+class LocalOnlyFactory : public QQmlNetworkAccessManagerFactory {
+ public:
+  QNetworkAccessManager* create(QObject* parent) override { return new LocalOnlyAccessManager(parent); }
+};
+
+}  // namespace
 
 int main(int argc, char* argv[]) {
   bool accept = false;
@@ -62,7 +92,7 @@ int main(int argc, char* argv[]) {
   QCoreApplication::setApplicationVersion("0.3.0");
   QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/icons/icon.png")));
   QGuiApplication::setDesktopFileName(QStringLiteral("timberlab"));
-  QQuickStyle::setStyle("Fusion");
+  QQuickStyle::setStyle("Material");
 
   bool demo = false;
   QString projectArgument;
@@ -78,7 +108,9 @@ int main(int argc, char* argv[]) {
   controller.initialise();
   if (demo) controller.makeDemo();
 
+  LocalOnlyFactory localOnly;
   QQmlApplicationEngine engine;
+  engine.setNetworkAccessManagerFactory(&localOnly);
   engine.rootContext()->setContextProperty("app", &controller);
   engine.addImportPath(QStringLiteral("qrc:/qt/qml"));
   engine.load(QUrl(QStringLiteral("qrc:/qml/Main.qml")));

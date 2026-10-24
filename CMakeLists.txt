@@ -71,6 +71,7 @@ target_include_directories(timberlab-model
 )
 target_include_directories(timberlab-model SYSTEM PUBLIC "${OpenCASCADE_INCLUDE_DIR}")
 target_compile_definitions(timberlab-model PUBLIC MINIZ_NO_ZLIB_COMPATIBLE_NAMES)
+target_compile_definitions(timberlab-model PRIVATE TIMBERLAB_VERSION="${PROJECT_VERSION}")
 target_compile_definitions(timberlab-model PRIVATE _LARGEFILE64_SOURCE=1 __USE_LARGEFILE64)
 target_link_libraries(timberlab-model
   PUBLIC
@@ -99,8 +100,12 @@ qt_add_executable(timberlab
 )
 qt_add_resources(TIMBERLAB_RCC resources/timberlab.qrc)
 target_sources(timberlab PRIVATE ${TIMBERLAB_RCC})
+# The QML files live in a .qrc, not in a QML module, so lupdate does not find
+# them through the target. Without this list it marks every QML string as
+# vanished and lrelease drops those translations.
 qt_add_translations(timberlab
   TS_FILES translations/timberlab_it.ts
+  SOURCES qml/Main.qml qml/AppButton.qml qml/SectionTitle.qml qml/PartsPanel.qml qml/Inspector.qml qml/JointSection.qml qml/Theme.qml
   RESOURCE_PREFIX "/i18n"
 )
 target_include_directories(timberlab PRIVATE

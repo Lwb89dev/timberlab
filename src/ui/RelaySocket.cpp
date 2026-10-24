@@ -3,6 +3,7 @@
 #include <openssl/rand.h>
 
 #include <QSignalBlocker>
+#include <QSslConfiguration>
 #include <QSslError>
 
 #include <string_view>
@@ -10,8 +11,20 @@
 
 namespace timberlab::ui {
 
+namespace {
+
+// Two full frames. A relay that sends faster than this is read waits in the
+// kernel instead of in this process.
+constexpr qint64 kReadBuffer = 512 * 1024;
+
+}  // namespace
+
 RelaySocket::RelaySocket(QObject* parent) : QObject(parent), socket_(this) {
   socket_.setPeerVerifyMode(QSslSocket::VerifyPeer);
+  socket_.setReadBufferSize(kReadBuffer);
+  QSslConfiguration tls = socket_.sslConfiguration();
+  tls.setProtocol(QSsl::TlsV1_2OrLater);
+  socket_.setSslConfiguration(tls);
   connect(&socket_, &QSslSocket::encrypted, this, [this] {
     if (closing_ || httpRequest_.empty()) return;
     socket_.write(httpRequest_.data(), static_cast<qint64>(httpRequest_.size()));
@@ -104,7 +117,7 @@ void RelaySocket::consume(const unsigned char* data, int size) {
   }
   for (const storage::WsIncoming& item : incoming) {
     if (item.kind == storage::WsKind::Text) {
-      emit textMessage(QString::fromUtf8(item.data.data(), static_cast<int>(item.data.size())));
+      emit textMessage(QByteArray(item.data.data(), static_cast<qsizetype>(item.data.size())));
       if (closing_ || !upgraded_) return;
       continue;
     }

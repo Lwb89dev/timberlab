@@ -79,7 +79,10 @@ ColumnLayout {
         Layout.fillWidth: true
         Label {
             text: label
+            textFormat: Text.PlainText
             color: Theme.muted
+            font.pixelSize: 11
+            font.weight: Font.Medium
             Layout.preferredWidth: 108
         }
         TextField {
@@ -93,7 +96,7 @@ ColumnLayout {
         }
     }
 
-    Label { text: qsTr("Joinery"); color: Theme.muted }
+    SectionTitle { text: qsTr("Joinery") }
     ComboBox {
         id: typeBox
         Layout.fillWidth: true
@@ -130,8 +133,10 @@ ColumnLayout {
         wrapMode: Text.WordWrap
         Layout.fillWidth: true
     }
-    Button {
+    AppButton {
         text: qsTr("Add joint")
+        glyph: "+"
+        primary: true
         Layout.fillWidth: true
         implicitHeight: Theme.controlHeight
         enabled: mateBox.count > 0 && app.selectedId.length > 0
@@ -140,63 +145,76 @@ ColumnLayout {
 
     Repeater {
         model: app.joints
-        delegate: ColumnLayout {
+        delegate: Rectangle {
             required property var modelData
             Layout.fillWidth: true
-            spacing: 8
-            Label {
-                text: section.typeName(modelData.type) + " — " + (modelData.mateName || "")
-                color: Theme.text
-                wrapMode: Text.WordWrap
-                Layout.fillWidth: true
-            }
-            ValueField {
-                visible: section.shows(modelData.type, "length")
-                label: qsTr("Length")
-                value: modelData.length || ""
-                onCommitted: function (text) { app.setJointFromText(modelData.id, "length", text) }
-            }
-            ValueField {
-                visible: section.shows(modelData.type, "width")
-                label: qsTr("Width")
-                value: modelData.width || ""
-                onCommitted: function (text) { app.setJointFromText(modelData.id, "width", text) }
-            }
-            ValueField {
-                visible: section.shows(modelData.type, "thickness")
-                label: modelData.type === "joint.dowel" ? qsTr("Diameter") : qsTr("Thickness")
-                value: modelData.thickness || ""
-                onCommitted: function (text) { app.setJointFromText(modelData.id, "thickness", text) }
-            }
-            ValueField {
-                visible: section.shows(modelData.type, "depth")
-                label: qsTr("Depth")
-                value: modelData.depth || ""
-                onCommitted: function (text) { app.setJointFromText(modelData.id, "depth", text) }
-            }
-            ValueField {
-                visible: section.shows(modelData.type, "offset")
-                label: modelData.type === "joint.dovetail" || modelData.type === "joint.half_blind_dovetail" ? qsTr("Slope") : qsTr("Offset")
-                value: modelData.offset || ""
-                onCommitted: function (text) { app.setJointFromText(modelData.id, "offset", text) }
-            }
-            ValueField {
-                visible: section.shows(modelData.type, "offset2")
-                label: modelData.type === "joint.sliding_dovetail" ? qsTr("Slope") : qsTr("Second offset")
-                value: modelData.offset2 || ""
-                onCommitted: function (text) { app.setJointFromText(modelData.id, "offset2", text) }
-            }
-            ValueField {
-                visible: section.shows(modelData.type, "count")
-                label: qsTr("Count")
-                value: modelData.count || ""
-                onCommitted: function (text) { app.setJointFromText(modelData.id, "count", text) }
-            }
-            Button {
-                text: qsTr("Remove joint")
-                Layout.fillWidth: true
-                implicitHeight: Theme.controlHeight
-                onClicked: app.removeJoint(modelData.id)
+            implicitHeight: jointContent.implicitHeight + 20
+            radius: Theme.radius
+            color: Theme.field
+            border.color: Theme.border
+            border.width: 1
+            ColumnLayout {
+                id: jointContent
+                anchors.fill: parent
+                anchors.margins: 10
+                spacing: 8
+                Label {
+                    text: section.typeName(modelData.type) + " — " + (modelData.mateName || "")
+                    textFormat: Text.PlainText
+                    color: Theme.accentSoft
+                    font.weight: Font.DemiBold
+                    wrapMode: Text.WordWrap
+                    Layout.fillWidth: true
+                }
+                ValueField {
+                    visible: section.shows(modelData.type, "length")
+                    label: qsTr("Length")
+                    value: modelData.length || ""
+                    onCommitted: function (text) { app.setJointFromText(modelData.id, "length", text) }
+                }
+                ValueField {
+                    visible: section.shows(modelData.type, "width")
+                    label: qsTr("Width")
+                    value: modelData.width || ""
+                    onCommitted: function (text) { app.setJointFromText(modelData.id, "width", text) }
+                }
+                ValueField {
+                    visible: section.shows(modelData.type, "thickness")
+                    label: modelData.type === "joint.dowel" ? qsTr("Diameter") : qsTr("Thickness")
+                    value: modelData.thickness || ""
+                    onCommitted: function (text) { app.setJointFromText(modelData.id, "thickness", text) }
+                }
+                ValueField {
+                    visible: section.shows(modelData.type, "depth")
+                    label: qsTr("Depth")
+                    value: modelData.depth || ""
+                    onCommitted: function (text) { app.setJointFromText(modelData.id, "depth", text) }
+                }
+                ValueField {
+                    visible: section.shows(modelData.type, "offset")
+                    label: modelData.type === "joint.dovetail" || modelData.type === "joint.half_blind_dovetail" ? qsTr("Slope") : qsTr("Offset")
+                    value: modelData.offset || ""
+                    onCommitted: function (text) { app.setJointFromText(modelData.id, "offset", text) }
+                }
+                ValueField {
+                    visible: section.shows(modelData.type, "offset2")
+                    label: modelData.type === "joint.sliding_dovetail" ? qsTr("Slope") : qsTr("Second offset")
+                    value: modelData.offset2 || ""
+                    onCommitted: function (text) { app.setJointFromText(modelData.id, "offset2", text) }
+                }
+                ValueField {
+                    visible: section.shows(modelData.type, "count")
+                    label: qsTr("Count")
+                    value: modelData.count || ""
+                    onCommitted: function (text) { app.setJointFromText(modelData.id, "count", text) }
+                }
+                AppButton {
+                    text: qsTr("Remove joint")
+                    destructive: true
+                    Layout.fillWidth: true
+                    implicitHeight: Theme.controlHeight
+                    onClicked: app.removeJoint(modelData.id)
+                }
             }
         }
     }

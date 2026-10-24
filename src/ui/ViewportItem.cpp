@@ -124,6 +124,7 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
   void synchronize(QQuickFramebufferObject* item) override {
     auto* view = static_cast<ViewportItem*>(item);
     controller_ = view;
+    darkMode_ = view->darkMode();
     const float aspect = view->height() > 0 ? float(view->width() / view->height()) : 1.f;
     const QVector3D eye = view->eye();
     const QVector3D up = std::abs(view->elevation()) > 80.f ? QVector3D(0, 1, 0) : QVector3D(0, 0, 1);
@@ -174,7 +175,10 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
     if (geometryDirty_) uploadParts();
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
-    glClearColor(0.176f, 0.169f, 0.161f, 1.f);
+    if (darkMode_)
+      glClearColor(0.090f, 0.106f, 0.094f, 1.f);
+    else
+      glClearColor(0.910f, 0.898f, 0.867f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     drawGrid();
     drawGuides();
@@ -204,13 +208,17 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
   }
 
   void ensureGrid() {
-    if (gridReady_) return;
+    if (gridReady_ && gridDark_ == darkMode_) return;
     std::vector<float> lines;
     auto push = [&](float x, float y, float z, float r, float g, float b) {
       lines.insert(lines.end(), {x, y, z, r, g, b});
     };
-    const float minor[3] = {0.29f, 0.27f, 0.25f};
-    const float major[3] = {0.42f, 0.38f, 0.33f};
+    const float minorDark[3] = {0.20f, 0.23f, 0.20f};
+    const float majorDark[3] = {0.31f, 0.34f, 0.29f};
+    const float minorLight[3] = {0.78f, 0.75f, 0.69f};
+    const float majorLight[3] = {0.63f, 0.58f, 0.50f};
+    const float* minor = darkMode_ ? minorDark : minorLight;
+    const float* major = darkMode_ ? majorDark : majorLight;
     for (int i = -20; i <= 20; ++i) {
       const float at = float(i) * 100.f;
       const float* color = (i % 5 == 0) ? major : minor;
@@ -220,9 +228,9 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
       push(at, 2000, 0, color[0], color[1], color[2]);
     }
     gridCount_ = int(lines.size() / 6);
-    gridVao_.create();
+    if (!gridVao_.isCreated()) gridVao_.create();
     gridVao_.bind();
-    gridVbo_.create();
+    if (!gridVbo_.isCreated()) gridVbo_.create();
     gridVbo_.bind();
     gridVbo_.allocate(lines.data(), int(lines.size() * sizeof(float)));
     glEnableVertexAttribArray(0);
@@ -231,6 +239,7 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(3 * sizeof(float)));
     gridVao_.release();
     gridReady_ = true;
+    gridDark_ = darkMode_;
   }
 
   void uploadParts() {
@@ -434,6 +443,8 @@ class ViewportRenderer : public QQuickFramebufferObject::Renderer, protected QOp
   QOpenGLBuffer gridVbo_{QOpenGLBuffer::VertexBuffer};
   int gridCount_ = 0;
   bool gridReady_ = false;
+  bool gridDark_ = true;
+  bool darkMode_ = true;
   QOpenGLVertexArrayObject guideVao_;
   QOpenGLBuffer guideVbo_{QOpenGLBuffer::VertexBuffer};
   int guideCount_ = 0;
@@ -476,6 +487,13 @@ void ViewportItem::setController(DocumentController* controller) {
     connect(controller_, &DocumentController::selectionChanged, this, &ViewportItem::update, Qt::UniqueConnection);
   }
   emit controllerChanged();
+  update();
+}
+
+void ViewportItem::setDarkMode(bool darkMode) {
+  if (darkMode_ == darkMode) return;
+  darkMode_ = darkMode;
+  emit darkModeChanged();
   update();
 }
 

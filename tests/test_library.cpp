@@ -480,3 +480,24 @@ TEST_CASE("a nostr library event updates one row and leaves the project file") {
   REQUIRE(readBytes(projectPath) == projectBefore);
   OPENSSL_cleanse(secret, sizeof(secret));
 }
+
+TEST_CASE("an envelope whose payload id is not a string is refused without an exception") {
+  const auto path = testDirectory() / "envelope-types.sqlite";
+  removeDatabase(path);
+  timberlab::storage::Library library(path.string());
+  REQUIRE(library.ok());
+  const nlohmann::json payload = {{"id", 7}, {"kind", "material"}, {"name", "Oak"}, {"notes", ""},
+                                  {"visualHex", "#aabbcc"}};
+  const nlohmann::json envelope = {{"contentHash", timberlab::storage::sha256Hex(payload.dump())},
+                                   {"id", "user_x"},
+                                   {"kind", "material"},
+                                   {"payload", payload},
+                                   {"revision", 2}};
+  std::string winner;
+  std::string error;
+  bool imported = true;
+  REQUIRE_NOTHROW(imported = library.importPlaintext(envelope.dump(), winner, error));
+  REQUIRE_FALSE(imported);
+  REQUIRE(error == "sync.mismatch");
+  REQUIRE(library.materials().empty());
+}
