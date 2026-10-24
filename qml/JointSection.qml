@@ -22,7 +22,15 @@ ColumnLayout {
         "joint.finger",
         "joint.half_blind_dovetail",
         "joint.tongue_groove",
-        "joint.dowel"
+        "joint.dowel",
+        "joint.haunched_tenon",
+        "joint.wedged_tenon",
+        "joint.loose_tenon",
+        "joint.cross_lap",
+        "joint.end_lap",
+        "joint.splined_miter",
+        "joint.biscuit",
+        "joint.pocket_screw"
     ]
 
     function typeKey() {
@@ -43,7 +51,56 @@ ColumnLayout {
         if (type === "joint.half_blind_dovetail") return qsTr("Half-blind dovetail")
         if (type === "joint.tongue_groove") return qsTr("Tongue and groove")
         if (type === "joint.dowel") return qsTr("Dowel")
+        if (type === "joint.haunched_tenon") return qsTr("Haunched tenon")
+        if (type === "joint.wedged_tenon") return qsTr("Wedged tenon")
+        if (type === "joint.loose_tenon") return qsTr("Loose tenon")
+        if (type === "joint.cross_lap") return qsTr("Cross lap")
+        if (type === "joint.end_lap") return qsTr("End lap")
+        if (type === "joint.splined_miter") return qsTr("Splined miter")
+        if (type === "joint.biscuit") return qsTr("Biscuit")
+        if (type === "joint.pocket_screw") return qsTr("Pocket screw")
         return type
+    }
+    function fieldLabel(type, key) {
+        if (key === "length") {
+            if (type === "joint.end_lap") return qsTr("Lap length")
+            if (type === "joint.pocket_screw") return qsTr("Counterbore length")
+            return qsTr("Length")
+        }
+        if (key === "width") {
+            if (type === "joint.loose_tenon") return qsTr("Pocket length")
+            if (type === "joint.biscuit") return qsTr("Disc diameter")
+            if (type === "joint.end_lap") return qsTr("Notch width")
+            if (type === "joint.pocket_screw") return qsTr("Counterbore diameter")
+            return qsTr("Width")
+        }
+        if (key === "thickness") {
+            if (type === "joint.dowel") return qsTr("Diameter")
+            if (type === "joint.loose_tenon") return qsTr("Pocket thickness")
+            if (type === "joint.biscuit" || type === "joint.splined_miter") return qsTr("Kerf thickness")
+            if (type === "joint.pocket_screw") return qsTr("Pilot diameter")
+            return qsTr("Thickness")
+        }
+        if (key === "depth") {
+            if (type === "joint.end_lap") return qsTr("Notch depth")
+            if (type === "joint.splined_miter") return qsTr("Kerf depth")
+            return qsTr("Depth")
+        }
+        if (key === "offset") {
+            if (type === "joint.dovetail" || type === "joint.half_blind_dovetail") return qsTr("Slope")
+            if (type === "joint.loose_tenon" || type === "joint.biscuit") return qsTr("Pitch")
+            if (type === "joint.splined_miter") return qsTr("Kerf offset")
+            if (type === "joint.pocket_screw") return qsTr("Distance from end")
+            return qsTr("Offset")
+        }
+        if (key === "offset2") {
+            if (type === "joint.sliding_dovetail") return qsTr("Slope")
+            if (type === "joint.pocket_screw") return qsTr("Spacing")
+            return qsTr("Second offset")
+        }
+        if (key === "length2") return type === "joint.wedged_tenon" ? qsTr("Kerf depth") : qsTr("Haunch length")
+        if (key === "width2") return qsTr("Kerf width")
+        return qsTr("Count")
     }
     function shows(type, key) {
         if (type === "joint.mortise_tenon")
@@ -65,6 +122,16 @@ ColumnLayout {
             return key === "length" || key === "width" || key === "thickness" || key === "depth" || key === "offset" || key === "count"
         if (type === "joint.tongue_groove") return key === "thickness" || key === "depth"
         if (type === "joint.dowel") return key === "thickness" || key === "depth"
+        if (type === "joint.haunched_tenon") return key !== "width2" && key !== "count"
+        if (type === "joint.wedged_tenon") return true
+        if (type === "joint.loose_tenon" || type === "joint.biscuit")
+            return key === "thickness" || key === "width" || key === "depth" || key === "offset" || key === "count"
+        if (type === "joint.cross_lap") return key === "depth" || key === "offset" || key === "offset2"
+        if (type === "joint.end_lap") return key === "length" || key === "width" || key === "depth" || key === "offset"
+        if (type === "joint.splined_miter")
+            return key === "length" || key === "thickness" || key === "depth" || key === "offset"
+        if (type === "joint.pocket_screw")
+            return key === "length" || key === "width" || key === "thickness" || key === "offset" || key === "offset2" || key === "count"
         return false
     }
     function syncMate() {
@@ -101,22 +168,7 @@ ColumnLayout {
         id: typeBox
         Layout.fillWidth: true
         implicitHeight: Theme.controlHeight
-        model: [
-            qsTr("Mortise and tenon"),
-            qsTr("Half lap"),
-            qsTr("Dado"),
-            qsTr("Groove"),
-            qsTr("Rabbet"),
-            qsTr("Bridle"),
-            qsTr("Castle"),
-            qsTr("Miter"),
-            qsTr("Dovetail"),
-            qsTr("Sliding dovetail"),
-            qsTr("Finger joint"),
-            qsTr("Half-blind dovetail"),
-            qsTr("Tongue and groove"),
-            qsTr("Dowel")
-        ]
+        model: section.typeKeys.map(function (key) { return section.typeName(key) })
     }
     Label { text: qsTr("Mate"); color: Theme.muted }
     ComboBox {
@@ -168,43 +220,55 @@ ColumnLayout {
                 }
                 ValueField {
                     visible: section.shows(modelData.type, "length")
-                    label: qsTr("Length")
+                    label: section.fieldLabel(modelData.type, "length")
                     value: modelData.length || ""
                     onCommitted: function (text) { app.setJointFromText(modelData.id, "length", text) }
                 }
                 ValueField {
                     visible: section.shows(modelData.type, "width")
-                    label: qsTr("Width")
+                    label: section.fieldLabel(modelData.type, "width")
                     value: modelData.width || ""
                     onCommitted: function (text) { app.setJointFromText(modelData.id, "width", text) }
                 }
                 ValueField {
                     visible: section.shows(modelData.type, "thickness")
-                    label: modelData.type === "joint.dowel" ? qsTr("Diameter") : qsTr("Thickness")
+                    label: section.fieldLabel(modelData.type, "thickness")
                     value: modelData.thickness || ""
                     onCommitted: function (text) { app.setJointFromText(modelData.id, "thickness", text) }
                 }
                 ValueField {
                     visible: section.shows(modelData.type, "depth")
-                    label: qsTr("Depth")
+                    label: section.fieldLabel(modelData.type, "depth")
                     value: modelData.depth || ""
                     onCommitted: function (text) { app.setJointFromText(modelData.id, "depth", text) }
                 }
                 ValueField {
                     visible: section.shows(modelData.type, "offset")
-                    label: modelData.type === "joint.dovetail" || modelData.type === "joint.half_blind_dovetail" ? qsTr("Slope") : qsTr("Offset")
+                    label: section.fieldLabel(modelData.type, "offset")
                     value: modelData.offset || ""
                     onCommitted: function (text) { app.setJointFromText(modelData.id, "offset", text) }
                 }
                 ValueField {
                     visible: section.shows(modelData.type, "offset2")
-                    label: modelData.type === "joint.sliding_dovetail" ? qsTr("Slope") : qsTr("Second offset")
+                    label: section.fieldLabel(modelData.type, "offset2")
                     value: modelData.offset2 || ""
                     onCommitted: function (text) { app.setJointFromText(modelData.id, "offset2", text) }
                 }
                 ValueField {
+                    visible: section.shows(modelData.type, "length2")
+                    label: section.fieldLabel(modelData.type, "length2")
+                    value: modelData.length2 || ""
+                    onCommitted: function (text) { app.setJointFromText(modelData.id, "length2", text) }
+                }
+                ValueField {
+                    visible: section.shows(modelData.type, "width2")
+                    label: section.fieldLabel(modelData.type, "width2")
+                    value: modelData.width2 || ""
+                    onCommitted: function (text) { app.setJointFromText(modelData.id, "width2", text) }
+                }
+                ValueField {
                     visible: section.shows(modelData.type, "count")
-                    label: qsTr("Count")
+                    label: section.fieldLabel(modelData.type, "count")
                     value: modelData.count || ""
                     onCommitted: function (text) { app.setJointFromText(modelData.id, "count", text) }
                 }

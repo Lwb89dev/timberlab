@@ -1,12 +1,15 @@
 #include "timberlab/geometry/solids.hpp"
 
+#include "timberlab/core/transform.hpp"
 #include "timberlab/units/units.hpp"
 
+#include <BRepAdaptor_Curve.hxx>
 #include <BRepAlgoAPI_Cut.hxx>
 #include <BRepAlgoAPI_Fuse.hxx>
 #include <BRepBndLib.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
 #include <BRepBuilderAPI_MakePolygon.hxx>
+#include <BRepBuilderAPI_Transform.hxx>
 #include <BRepCheck_Analyzer.hxx>
 #include <BRepClass3d_SolidClassifier.hxx>
 #include <BRepGProp.hxx>
@@ -16,6 +19,11 @@
 #include <BRepPrimAPI_MakePrism.hxx>
 #include <BRep_Tool.hxx>
 #include <Bnd_Box.hxx>
+#include <GCPnts_QuasiUniformDeflection.hxx>
+#include <GeomAbs_CurveType.hxx>
+#include <HLRAlgo_Projector.hxx>
+#include <HLRBRep_Algo.hxx>
+#include <HLRBRep_HLRToShape.hxx>
 #include <GProp_GProps.hxx>
 #include <Poly_Triangulation.hxx>
 #include <Standard_Failure.hxx>
@@ -24,13 +32,34 @@
 #include <TopLoc_Location.hxx>
 #include <TopTools_ListOfShape.hxx>
 #include <TopoDS.hxx>
+#include <TopoDS_Edge.hxx>
 #include <TopoDS_Face.hxx>
 #include <gp.hxx>
 #include <gp_Ax2.hxx>
 #include <gp_Pnt.hxx>
+#include <gp_Trsf.hxx>
 #include <gp_Vec.hxx>
 
+#if defined(TIMBERLAB_HAS_STEP)
+#include <IFSelect_ReturnStatus.hxx>
+#include <Interface_Static.hxx>
+#include <Message.hxx>
+#include <Message_Messenger.hxx>
+#include <Message_PrinterOStream.hxx>
+#include <STEPControl_StepModelType.hxx>
+#include <STEPControl_Writer.hxx>
+#include <StepBasic_Product.hxx>
+#include <StepData_StepModel.hxx>
+#include <TCollection_HAsciiString.hxx>
+#endif
+
+#include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstdint>
+#include <cstring>
+#include <set>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -300,11 +329,31 @@ bool fuseTools(const TopoDS_Shape& left, const TopoDS_Shape& right, TopoDS_Shape
   return true;
 }
 
-bool makeCylinder(const LocalCut& original, const Component& part, TopoDS_Shape& shape, std::string& error) {
-  if (original.cylinderAxis < 0 || original.cylinderAxis > 2 || original.radiusNm <= 0) {
+bool makeFreeCylinder(const LocalCut& cut, TopoDS_Shape& shape, std::string& error) {
+  const gp_Pnt from(units::toMillimetres(cut.x0), units::toMillimetres(cut.y0), units::toMillimetres(cut.z0));
+  const gp_Pnt to(units::toMillimetres(cut.x1), units::toMillimetres(cut.y1), units::toMillimetres(cut.z1));
+  const double height = from.Distance(to);
+  const double radius = units::toMillimetres(cut.radiusNm);
+  if (!(height > 0.0) || !(radius > 0.0)) {
     error = "joint.no_effect";
     return false;
   }
+  BRepPrimAPI_MakeCylinder cylinder(gp_Ax2(from, gp_Dir(gp_Vec(from, to))), radius, height);
+  cylinder.Build();
+  if (!cylinder.IsDone()) {
+    error = "geometry.kernel";
+    return false;
+  }
+  shape = cylinder.Shape();
+  return true;
+}
+
+bool makeCylinder(const LocalCut& original, const Component& part, TopoDS_Shape& shape, std::string& error) {
+  if (original.cylinderAxis < 0 || original.cylinderAxis > 3 || original.radiusNm <= 0) {
+    error = "joint.no_effect";
+    return false;
+  }
+  if (original.cylinderAxis == 3) return makeFreeCylinder(original, shape, error);
   LocalCut span = original;
   expandBoundary(span, part);
   const std::int64_t axisLow[3] = {span.x0, span.y0, span.z0};
@@ -447,7 +496,8 @@ bool collectCuts(const Component& component, const std::vector<Joint>& joints, c
       return false;
     }
     if (!jointFits(joint, *partA, *partB, error)) return false;
-    if (!cutsForPart(joint, component, cuts, error)) return false;
+    const Component& mate = component.id == joint.partA ? *partB : *partA;
+    if (!cutsForPart(joint, component, mate, cuts, error)) return false;
   }
   return true;
 }
@@ -591,5 +641,317 @@ PointSide classifyLocal(const Component& component, const std::vector<Joint>& jo
   }
   return PointSide::Unknown;
 }
+
+namespace {
+
+void appendSegments(const TopoDS_Shape& compound, std::vector<Segment2>& out) {
+  if (compound.IsNull()) return;
+  constexpr double kDeflectionMm = 0.02;
+  for (TopExp_Explorer explorer(compound, TopAbs_EDGE); explorer.More(); explorer.Next()) {
+    const TopoDS_Edge edge = TopoDS::Edge(explorer.Current());
+    BRepAdaptor_Curve curve(edge);
+    const double first = curve.FirstParameter();
+    const double last = curve.LastParameter();
+    if (curve.GetType() == GeomAbs_Line) {
+      const gp_Pnt a = curve.Value(first);
+      const gp_Pnt b = curve.Value(last);
+      out.push_back({a.X(), a.Y(), b.X(), b.Y()});
+      continue;
+    }
+    GCPnts_QuasiUniformDeflection points(curve, kDeflectionMm);
+    if (!points.IsDone() || points.NbPoints() < 2) continue;
+    for (int index = 1; index < points.NbPoints(); ++index) {
+      const gp_Pnt a = points.Value(index);
+      const gp_Pnt b = points.Value(index + 1);
+      out.push_back({a.X(), a.Y(), b.X(), b.Y()});
+    }
+  }
+}
+
+// A hidden edge that lies under visible ones adds nothing to the drawing. The back
+// face of a box projects onto its front face, for one, and a slot in the front
+// splits the visible edge in pieces while the back edge stays whole. Axis-aligned
+// edges lose the parts that visible edges cover. Other edges are dropped only
+// when a visible edge has the same two ends.
+constexpr double kCoincidentMm = 1.0e-4;
+
+struct Interval {
+  double low = 0;
+  double high = 0;
+};
+
+void subtractCovered(const Interval& span, std::vector<Interval> covered, std::vector<Interval>& out) {
+  std::sort(covered.begin(), covered.end(), [](const Interval& a, const Interval& b) { return a.low < b.low; });
+  double cursor = span.low;
+  for (const Interval& piece : covered) {
+    if (piece.high <= cursor) continue;
+    if (piece.low >= span.high) break;
+    if (piece.low > cursor + kCoincidentMm) out.push_back({cursor, piece.low});
+    cursor = std::max(cursor, piece.high);
+  }
+  if (cursor < span.high - kCoincidentMm) out.push_back({cursor, span.high});
+}
+
+void dropCoincidentHidden(ViewLines& lines) {
+  const auto key = [](const Segment2& segment) {
+    std::array<std::int64_t, 4> ends = {std::llround(segment.u0 * 1.0e4), std::llround(segment.v0 * 1.0e4),
+                                        std::llround(segment.u1 * 1.0e4), std::llround(segment.v1 * 1.0e4)};
+    if (ends[0] > ends[2] || (ends[0] == ends[2] && ends[1] > ends[3])) {
+      std::swap(ends[0], ends[2]);
+      std::swap(ends[1], ends[3]);
+    }
+    return ends;
+  };
+  std::set<std::array<std::int64_t, 4>> seen;
+  for (const Segment2& segment : lines.visible) seen.insert(key(segment));
+  std::vector<Segment2> kept;
+  for (const Segment2& segment : lines.hidden) {
+    const bool horizontal = std::abs(segment.v0 - segment.v1) < kCoincidentMm;
+    const bool vertical = std::abs(segment.u0 - segment.u1) < kCoincidentMm;
+    if (!horizontal && !vertical) {
+      if (seen.insert(key(segment)).second) kept.push_back(segment);
+      continue;
+    }
+    const double fixed = horizontal ? segment.v0 : segment.u0;
+    const Interval span = horizontal ? Interval{std::min(segment.u0, segment.u1), std::max(segment.u0, segment.u1)}
+                                     : Interval{std::min(segment.v0, segment.v1), std::max(segment.v0, segment.v1)};
+    std::vector<Interval> covered;
+    for (const Segment2& visible : lines.visible) {
+      const bool along = horizontal ? std::abs(visible.v0 - fixed) < kCoincidentMm && std::abs(visible.v1 - fixed) < kCoincidentMm
+                                    : std::abs(visible.u0 - fixed) < kCoincidentMm && std::abs(visible.u1 - fixed) < kCoincidentMm;
+      if (!along) continue;
+      covered.push_back(horizontal ? Interval{std::min(visible.u0, visible.u1), std::max(visible.u0, visible.u1)}
+                                   : Interval{std::min(visible.v0, visible.v1), std::max(visible.v0, visible.v1)});
+    }
+    std::vector<Interval> rest;
+    subtractCovered(span, covered, rest);
+    for (const Interval& piece : rest) {
+      kept.push_back(horizontal ? Segment2{piece.low, fixed, piece.high, fixed}
+                                : Segment2{fixed, piece.low, fixed, piece.high});
+    }
+  }
+  lines.hidden = std::move(kept);
+}
+
+gp_Ax2 viewFrame(ViewDirection view) {
+  if (view == ViewDirection::Top) return gp_Ax2(gp_Pnt(0, 0, 0), gp_Dir(0, 0, 1), gp_Dir(1, 0, 0));
+  if (view == ViewDirection::Right) return gp_Ax2(gp_Pnt(0, 0, 0), gp_Dir(1, 0, 0), gp_Dir(0, 1, 0));
+  return gp_Ax2(gp_Pnt(0, 0, 0), gp_Dir(0, -1, 0), gp_Dir(1, 0, 0));
+}
+
+#if defined(TIMBERLAB_HAS_STEP)
+bool worldShape(const Component& component, const std::vector<Joint>& joints, const std::vector<Component>& parts,
+                bool world, TopoDS_Shape& shape, std::string& error) {
+  if (!buildSolid(component, joints, parts, shape, error)) return false;
+  if (!world) return true;
+  double m[16];
+  placementMatrix(component.placement, m);
+  gp_Trsf transform;
+  transform.SetValues(m[0], m[4], m[8], m[12], m[1], m[5], m[9], m[13], m[2], m[6], m[10], m[14]);
+  BRepBuilderAPI_Transform moved(shape, transform, Standard_True);
+  if (!moved.IsDone()) {
+    error = "geometry.kernel";
+    return false;
+  }
+  shape = moved.Shape();
+  return true;
+}
+#endif
+
+std::vector<const Component*> exportedParts(const std::vector<Component>& parts, const std::string& onlyId) {
+  std::vector<const Component*> chosen;
+  for (const Component& part : parts) {
+    if (!onlyId.empty() && part.id != onlyId) continue;
+    if (onlyId.empty() && !part.visible) continue;
+    chosen.push_back(&part);
+  }
+  return chosen;
+}
+
+void putFloat(std::string& out, float value) {
+  char bytes[sizeof(float)];
+  std::memcpy(bytes, &value, sizeof(float));
+  out.append(bytes, sizeof(float));
+}
+
+void putCount(std::string& out, std::uint32_t value, int width) {
+  for (int shift = 0; shift < width * 8; shift += 8) out.push_back(static_cast<char>((value >> shift) & 0xffu));
+}
+
+}  // namespace
+
+ViewLines hiddenLineView(const Component& component, const std::vector<Joint>& joints,
+                         const std::vector<Component>& parts, ViewDirection view) {
+  ViewLines lines;
+  TopoDS_Shape shape;
+  try {
+    if (!buildSolid(component, joints, parts, shape, lines.error)) {
+      if (lines.error.empty()) lines.error = "geometry.kernel";
+      return lines;
+    }
+    Handle(HLRBRep_Algo) algo = new HLRBRep_Algo();
+    algo->Add(shape);
+    algo->Projector(HLRAlgo_Projector(viewFrame(view)));
+    algo->Update();
+    algo->Hide();
+    HLRBRep_HLRToShape result(algo);
+    appendSegments(result.VCompound(), lines.visible);
+    appendSegments(result.OutLineVCompound(), lines.visible);
+    appendSegments(result.HCompound(), lines.hidden);
+    appendSegments(result.OutLineHCompound(), lines.hidden);
+  } catch (const Standard_Failure&) {
+    lines.error = "geometry.kernel";
+    return lines;
+  }
+  if (lines.visible.empty()) {
+    lines.error = "geometry.empty";
+    return lines;
+  }
+  dropCoincidentHidden(lines);
+  lines.ok = true;
+  return lines;
+}
+
+ExportResult exportStl(const std::vector<Component>& parts, const std::vector<Joint>& joints,
+                       const std::string& onlyId, bool world) {
+  ExportResult result;
+  const std::vector<const Component*> chosen = exportedParts(parts, onlyId);
+  if (chosen.empty()) {
+    result.error = "component.missing";
+    return result;
+  }
+  std::string triangles;
+  std::uint32_t count = 0;
+  try {
+    for (const Component* part : chosen) {
+      const SolidMesh mesh = meshFor(*part, joints, parts, MeshQuality::Fine);
+      if (!mesh.ok) {
+        result.error = mesh.error.empty() ? "geometry.invalid" : mesh.error;
+        return result;
+      }
+      double m[16];
+      if (world) placementMatrix(part->placement, m);
+      else setIdentity(m);
+      for (std::size_t index = 0; index + 2 < mesh.indices.size(); index += 3) {
+        double corner[3][3];
+        for (int c = 0; c < 3; ++c) {
+          const std::size_t offset = static_cast<std::size_t>(mesh.indices[index + static_cast<std::size_t>(c)]) * 6;
+          transformPoint(m, mesh.interleaved[offset], mesh.interleaved[offset + 1], mesh.interleaved[offset + 2],
+                         corner[c][0], corner[c][1], corner[c][2]);
+        }
+        const double ex = corner[1][0] - corner[0][0];
+        const double ey = corner[1][1] - corner[0][1];
+        const double ez = corner[1][2] - corner[0][2];
+        const double fx = corner[2][0] - corner[0][0];
+        const double fy = corner[2][1] - corner[0][1];
+        const double fz = corner[2][2] - corner[0][2];
+        double nx = ey * fz - ez * fy;
+        double ny = ez * fx - ex * fz;
+        double nz = ex * fy - ey * fx;
+        const double length = std::sqrt(nx * nx + ny * ny + nz * nz);
+        if (!(length > 0.0)) continue;
+        nx /= length;
+        ny /= length;
+        nz /= length;
+        putFloat(triangles, static_cast<float>(nx));
+        putFloat(triangles, static_cast<float>(ny));
+        putFloat(triangles, static_cast<float>(nz));
+        for (const auto& point : corner) {
+          for (const double value : point) putFloat(triangles, static_cast<float>(value));
+        }
+        putCount(triangles, 0, 2);
+        ++count;
+      }
+    }
+  } catch (const Standard_Failure&) {
+    result.error = "geometry.kernel";
+    return result;
+  }
+  if (count == 0) {
+    result.error = "geometry.empty";
+    return result;
+  }
+  std::string header = "TimberLab binary STL, millimetres";
+  header.resize(80, ' ');
+  result.data = header;
+  putCount(result.data, count, 4);
+  result.data += triangles;
+  result.partCount = static_cast<int>(chosen.size());
+  result.ok = true;
+  return result;
+}
+
+#if defined(TIMBERLAB_HAS_STEP)
+bool stepAvailable() { return true; }
+
+ExportResult exportStep(const std::vector<Component>& parts, const std::vector<Joint>& joints,
+                        const std::string& onlyId, bool world) {
+  ExportResult result;
+  const std::vector<const Component*> chosen = exportedParts(parts, onlyId);
+  if (chosen.empty()) {
+    result.error = "component.missing";
+    return result;
+  }
+  try {
+    // The writer prints a transfer report for each shape to the console.
+    static const bool quiet = [] {
+      Message::DefaultMessenger()->RemovePrinters(STANDARD_TYPE(Message_PrinterOStream));
+      return true;
+    }();
+    (void)quiet;
+    STEPControl_Writer writer;
+    Interface_Static::SetCVal("write.step.unit", "MM");
+    Interface_Static::SetCVal("write.step.schema", "AP214IS");
+    std::vector<std::string> names;
+    for (const Component* part : chosen) {
+      TopoDS_Shape shape;
+      if (!worldShape(*part, joints, parts, world, shape, result.error)) {
+        if (result.error.empty()) result.error = "geometry.kernel";
+        return result;
+      }
+      if (writer.Transfer(shape, STEPControl_AsIs) != IFSelect_RetDone) {
+        result.error = "geometry.kernel";
+        return result;
+      }
+      names.push_back(part->name.empty() ? part->id : part->name);
+    }
+    // The writer adds one product per transferred shape, in order.
+    Handle(StepData_StepModel) model = writer.Model();
+    std::size_t next = 0;
+    for (int index = 1; index <= model->NbEntities() && next < names.size(); ++index) {
+      Handle(StepBasic_Product) product = Handle(StepBasic_Product)::DownCast(model->Value(index));
+      if (product.IsNull()) continue;
+      Handle(TCollection_HAsciiString) text = new TCollection_HAsciiString(names[next].c_str());
+      product->SetId(text);
+      product->SetName(text);
+      ++next;
+    }
+    std::ostringstream stream;
+    if (writer.WriteStream(stream) != IFSelect_RetDone) {
+      result.error = "geometry.kernel";
+      return result;
+    }
+    result.data = stream.str();
+  } catch (const Standard_Failure&) {
+    result.error = "geometry.kernel";
+    return result;
+  }
+  if (result.data.empty()) {
+    result.error = "geometry.empty";
+    return result;
+  }
+  result.partCount = static_cast<int>(chosen.size());
+  result.ok = true;
+  return result;
+}
+#else
+bool stepAvailable() { return false; }
+
+ExportResult exportStep(const std::vector<Component>&, const std::vector<Joint>&, const std::string&, bool) {
+  ExportResult result;
+  result.error = "export.unavailable";
+  return result;
+}
+#endif
 
 }  // namespace timberlab::geometry

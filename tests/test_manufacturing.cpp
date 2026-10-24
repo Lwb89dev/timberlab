@@ -1,12 +1,15 @@
 #include "timberlab/core/document.hpp"
 #include "timberlab/core/joint.hpp"
 #include "timberlab/core/manufacturing.hpp"
+#include "timberlab/geometry/solids.hpp"
 #include "timberlab/units/units.hpp"
 
 #include <nlohmann/json.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
+#include <cstdint>
 #include <cstring>
 #include <string>
 
@@ -191,4 +194,203 @@ TEST_CASE("top, right, sheet, DXF, and PDF are wires of the same solid") {
   REQUIRE(xrefLabel != std::string::npos);
   const std::size_t xrefAt = static_cast<std::size_t>(std::stoll(pdf.substr(xrefLabel + std::strlen("\nstartxref\n"))));
   REQUIRE(pdf.compare(xrefAt, 5, "xref\n") == 0);
+}
+
+namespace {
+
+Joint dadoOn(const Component& host, PartFace face) {
+  Joint joint;
+  joint.id = "dado";
+  joint.type = JointType::Dado;
+  joint.partA = host.id;
+  joint.partB = "mate";
+  joint.faceA = face;
+  joint.widthNm = 20 * kMm;
+  joint.offsetNm = 40 * kMm;
+  joint.depthNm = 5 * kMm;
+  return joint;
+}
+
+bool contains(const std::string& text, const std::string& part) { return text.find(part) != std::string::npos; }
+
+std::size_t occurrences(const std::string& text, const std::string& part) {
+  std::size_t count = 0;
+  for (std::size_t at = text.find(part); at != std::string::npos; at = text.find(part, at + part.size())) ++count;
+  return count;
+}
+
+}  // namespace
+
+TEST_CASE("hidden-line removal tells a slot facing the viewer from one behind the face") {
+  const Component host = board("host", 100 * kMm, 20 * kMm, 40 * kMm);
+  const Component mate = board("mate", 40 * kMm, 18 * kMm, 40 * kMm);
+  const std::vector<Component> parts{host, mate};
+
+  const auto plain = timberlab::geometry::hiddenLineView(host, {}, parts, timberlab::geometry::ViewDirection::Front);
+  REQUIRE(plain.ok);
+  REQUIRE(plain.hidden.empty());
+
+  const auto toward = timberlab::geometry::hiddenLineView(host, {dadoOn(host, PartFace::Y0)}, parts,
+                                                          timberlab::geometry::ViewDirection::Front);
+  const auto away = timberlab::geometry::hiddenLineView(host, {dadoOn(host, PartFace::Y1)}, parts,
+                                                        timberlab::geometry::ViewDirection::Front);
+  REQUIRE(toward.ok);
+  REQUIRE(away.ok);
+  INFO("visible " << toward.visible.size() << " hidden " << toward.hidden.size());
+  INFO("away visible " << away.visible.size() << " hidden " << away.hidden.size());
+  REQUIRE(toward.hidden.empty());
+  REQUIRE_FALSE(away.hidden.empty());
+  REQUIRE(toward.visible.size() > plain.visible.size());
+}
+
+TEST_CASE("the hidden-line sheet draws visible lines solid, hidden lines dashed, and dimensions the cuts") {
+  const Component host = board("host", 100 * kMm, 20 * kMm, 40 * kMm);
+  const Component mate = board("mate", 40 * kMm, 18 * kMm, 40 * kMm);
+  const std::vector<Component> parts{host, mate};
+  std::string error;
+
+  const std::string toward = timberlab::manufacturing::hiddenLineSheetSvg(host, {dadoOn(host, PartFace::Y0)}, parts, error);
+  REQUIRE_FALSE(toward.empty());
+  REQUIRE(contains(toward, "<g id=\"visible\""));
+  REQUIRE(contains(toward, "<g id=\"dimensions\""));
+  REQUIRE(contains(toward, ">100</text>"));
+  REQUIRE(contains(toward, ">20</text>"));
+  REQUIRE(contains(toward, ">40</text>"));
+  REQUIRE(contains(toward, ">5</text>"));
+  REQUIRE(contains(toward, "Hidden-line removal on the exact solid"));
+  REQUIRE_FALSE(contains(toward, "Tessellation"));
+
+  const std::string away = timberlab::manufacturing::hiddenLineSheetSvg(host, {dadoOn(host, PartFace::Y1)}, parts, error);
+  REQUIRE(occurrences(away, "<line") > occurrences(toward, "<line") - 12);
+  const auto hiddenBlock = [](const std::string& svg) {
+    const std::size_t from = svg.find("<g id=\"hidden\"");
+    const std::size_t to = svg.find("</g>", from);
+    return svg.substr(from, to - from);
+  };
+  REQUIRE(occurrences(hiddenBlock(away), "<line") > occurrences(hiddenBlock(toward), "<line"));
+
+  const std::string dxf = timberlab::manufacturing::hiddenLineDxf(host, {dadoOn(host, PartFace::Y1)}, parts, error);
+  REQUIRE(contains(dxf, "HIDDEN"));
+  REQUIRE(contains(dxf, "DIMENSIONS"));
+  REQUIRE(contains(dxf, "\nTEXT\n"));
+  REQUIRE(contains(dxf, "\nEOF\n"));
+
+  const std::string pdf = timberlab::manufacturing::hiddenLinePdf(host, {dadoOn(host, PartFace::Y1)}, parts, error);
+  REQUIRE(pdf.rfind("%PDF-1.4", 0) == 0);
+  REQUIRE(contains(pdf, "[1.5 1] 0 d"));
+  REQUIRE(contains(pdf, "(100) Tj"));
+  REQUIRE(contains(pdf, "%%EOF"));
+
+  Component pin;
+  pin.id = "pin";
+  pin.type = ComponentType::Cylinder;
+  pin.radiusNm = 10 * kMm;
+  pin.heightNm = 50 * kMm;
+  const std::string round = timberlab::manufacturing::hiddenLineSheetSvg(pin, {}, {pin}, error);
+  REQUIRE_FALSE(round.empty());
+  REQUIRE_FALSE(contains(round, "<text"));
+}
+
+TEST_CASE("feature dimensions follow a mortise and tenon through a size edit") {
+  Document document;
+  std::string error;
+  const std::string rail = document.addBoard();
+  const std::string leg = document.addBoard();
+  REQUIRE(document.setDimension(rail, "width", 300 * kMm, error));
+  REQUIRE(document.setDimension(rail, "thickness", 20 * kMm, error));
+  REQUIRE(document.setDimension(rail, "height", 60 * kMm, error));
+  REQUIRE_FALSE(document.addJoint("joint.mortise_tenon", rail, leg, error).empty());
+  const Joint joint = document.joints().front();
+  const Component* tenon = document.find(rail);
+  const std::string sheet =
+      timberlab::manufacturing::hiddenLineSheetSvg(*tenon, document.joints(), document.components(), error);
+  REQUIRE_FALSE(sheet.empty());
+  const auto expectDimension = [&](std::int64_t nm) {
+    std::string text = timberlab::units::formatLength(nm, timberlab::units::LengthUnit::Millimetre, 16);
+    const std::size_t space = text.find(' ');
+    if (space != std::string::npos) text.resize(space);
+    INFO(text);
+    REQUIRE(contains(sheet, ">" + text + "</text>"));
+  };
+  expectDimension(joint.lengthNm);
+  expectDimension(300 * kMm);
+  expectDimension(60 * kMm);
+}
+
+TEST_CASE("binary STL holds one triangle record per face triangle in millimetres") {
+  Component box = board("box", 10 * kMm, 20 * kMm, 30 * kMm);
+  box.placement.xNm = 100 * kMm;
+  const std::vector<Component> parts{box};
+
+  const auto local = timberlab::geometry::exportStl(parts, {}, "box", false);
+  REQUIRE(local.ok);
+  REQUIRE(local.partCount == 1);
+  REQUIRE(local.data.size() == 84 + 12 * 50);
+  std::uint32_t count = 0;
+  std::memcpy(&count, local.data.data() + 80, 4);
+  REQUIRE(count == 12);
+  const auto firstX = [](const std::string& data, std::size_t record, int corner) {
+    float value = 0;
+    std::memcpy(&value, data.data() + 84 + record * 50 + 12 + static_cast<std::size_t>(corner) * 12, 4);
+    return value;
+  };
+  float lowest = 1e9f;
+  float highest = -1e9f;
+  for (std::size_t record = 0; record < 12; ++record) {
+    for (int corner = 0; corner < 3; ++corner) {
+      lowest = std::min(lowest, firstX(local.data, record, corner));
+      highest = std::max(highest, firstX(local.data, record, corner));
+    }
+  }
+  REQUIRE(lowest == 0.0f);
+  REQUIRE(highest == 10.0f);
+
+  const auto placed = timberlab::geometry::exportStl(parts, {}, "", true);
+  REQUIRE(placed.ok);
+  float placedLowest = 1e9f;
+  for (std::size_t record = 0; record < 12; ++record) {
+    for (int corner = 0; corner < 3; ++corner) placedLowest = std::min(placedLowest, firstX(placed.data, record, corner));
+  }
+  REQUIRE(placedLowest == 100.0f);
+
+  REQUIRE_FALSE(timberlab::geometry::exportStl(parts, {}, "missing", false).ok);
+  Component hidden = box;
+  hidden.visible = false;
+  REQUIRE_FALSE(timberlab::geometry::exportStl({hidden}, {}, "", true).ok);
+}
+
+TEST_CASE("a STEP file holds one named solid per part and the cut surfaces of its joints") {
+  if (!timberlab::geometry::stepAvailable()) SKIP("this Open CASCADE was built without the data-exchange modules");
+  Component left = board("Left leg", 60 * kMm, 40 * kMm, 300 * kMm);
+  Component rail = board("Rail", 100 * kMm, 20 * kMm, 60 * kMm);
+  rail.placement.xNm = 70 * kMm;
+  Joint dowel;
+  dowel.id = "dowel";
+  dowel.type = JointType::Dowel;
+  dowel.partA = left.id;
+  dowel.partB = rail.id;
+  dowel.faceA = PartFace::X1;
+  dowel.faceB = PartFace::X0;
+  dowel.thicknessNm = 8 * kMm;
+  dowel.depthNm = 15 * kMm;
+  const std::vector<Component> parts{left, rail};
+  const std::vector<Joint> joints{dowel};
+
+  const auto both = timberlab::geometry::exportStep(parts, joints, "", true);
+  INFO(both.error);
+  REQUIRE(both.ok);
+  REQUIRE(both.partCount == 2);
+  REQUIRE(both.data.rfind("ISO-10303-21;", 0) == 0);
+  REQUIRE(occurrences(both.data, "MANIFOLD_SOLID_BREP") == 2);
+  REQUIRE(contains(both.data, "'Left leg'"));
+  REQUIRE(contains(both.data, "'Rail'"));
+  REQUIRE(contains(both.data, "CYLINDRICAL_SURFACE"));
+  REQUIRE(contains(both.data, "MILLI"));
+
+  const auto one = timberlab::geometry::exportStep(parts, joints, "Rail", false);
+  REQUIRE(one.ok);
+  REQUIRE(one.partCount == 1);
+  REQUIRE(occurrences(one.data, "MANIFOLD_SOLID_BREP") == 1);
+  REQUIRE_FALSE(contains(one.data, "'Left leg'"));
+  REQUIRE_FALSE(timberlab::geometry::exportStep(parts, joints, "missing", false).ok);
 }

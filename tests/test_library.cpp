@@ -31,12 +31,17 @@ void removeDatabase(const std::filesystem::path& path) {
 }
 
 bool ownerOnly(const std::filesystem::path& path) {
+#if defined(_WIN32)
+  // Windows reports one fixed set of permission bits; access control lists decide.
+  return true;
+#else
   std::error_code ec;
   if (!std::filesystem::exists(path, ec)) return true;
   const auto foreign = std::filesystem::perms::group_all | std::filesystem::perms::others_all;
   const auto mode = std::filesystem::status(path).permissions();
   return (mode & foreign) == std::filesystem::perms::none &&
          (mode & std::filesystem::perms::owner_read) != std::filesystem::perms::none;
+#endif
 }
 
 bool execSql(sqlite3* db, const char* sql) {

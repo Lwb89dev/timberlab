@@ -33,7 +33,11 @@ bool ensureDataDir() {
   std::error_code error;
   std::filesystem::create_directories("build/accept", error);
   if (error) return false;
+#if defined(_WIN32)
+  return _putenv_s("TIMBERLAB_DATA_DIR", "build/accept") == 0;
+#else
   return setenv("TIMBERLAB_DATA_DIR", "build/accept", 0) == 0;
+#endif
 }
 
 const ui::ScenePart* findPart(const std::vector<ui::ScenePart>& scene, const QString& id) {
@@ -73,6 +77,35 @@ bool meshMatches(const ui::DocumentController& editor, const QString& id, float 
 
 const Component* requirePart(const ui::DocumentController& editor, const QString& id) {
   return editor.document().find(id.toStdString());
+}
+
+// Volume of a closed triangle mesh, by the divergence theorem. The scene keeps
+// a cache of each part's tessellation, and this checks that an edit left no part
+// showing an old solid.
+double meshVolumeMm3(const ui::ScenePart& part) {
+  double volume = 0;
+  for (std::size_t index = 0; index + 2 < part.indices.size(); index += 3) {
+    double p[3][3];
+    for (int corner = 0; corner < 3; ++corner) {
+      const std::size_t offset = static_cast<std::size_t>(part.indices[index + static_cast<std::size_t>(corner)]) * 6;
+      for (int axis = 0; axis < 3; ++axis) p[corner][axis] = part.interleaved[offset + static_cast<std::size_t>(axis)];
+    }
+    volume += p[0][0] * (p[1][1] * p[2][2] - p[1][2] * p[2][1]) - p[0][1] * (p[1][0] * p[2][2] - p[1][2] * p[2][0]) +
+              p[0][2] * (p[1][0] * p[2][1] - p[1][1] * p[2][0]);
+  }
+  return std::abs(volume) / 6.0;
+}
+
+bool sceneMatchesSolids(const ui::DocumentController& editor) {
+  const std::vector<ui::ScenePart> scene = editor.copyScene();
+  for (const Component& component : editor.document().components()) {
+    const ui::ScenePart* shown = findPart(scene, QString::fromStdString(component.id));
+    const auto solid =
+        geometry::probeSolid(component, editor.document().joints(), editor.document().components());
+    if (shown == nullptr || !solid.ok) return false;
+    if (std::abs(meshVolumeMm3(*shown) - solid.volumeMm3) > solid.volumeMm3 * 1e-3) return false;
+  }
+  return true;
 }
 
 }  // namespace
@@ -271,6 +304,75 @@ int runAccept() {
   }
   if (reloaded.userMaterials().size() != 1) return fail("library reopen");
   if (reloaded.document().joints().size() != 1) return fail("library edit dropped joint");
+
+  // The Joinery button: two selected boards that touch get a joint on their
+  // contacting faces, and a pair that does not touch is refused.
+  ui::DocumentController pair;
+  pair.initialise();
+  pair.setDisplayUnit("mm");
+  QString boards[2];
+  for (QString& board : boards) {
+    pair.addBoard();
+    board = pair.selectedId();
+    if (!pair.setParameterFromText(board, "width", "100 mm")) return failStatus("pair width", pair);
+    if (!pair.setParameterFromText(board, "thickness", "18 mm")) return failStatus("pair thickness", pair);
+    if (!pair.setParameterFromText(board, "height", "200 mm")) return failStatus("pair height", pair);
+    for (const char* axis : {"x", "y", "z"}) {
+      if (!pair.setTranslationFromText(board, axis, "0 mm")) return failStatus("pair origin", pair);
+    }
+  }
+  if (!pair.setTranslationFromText(boards[1], "x", "150 mm")) return failStatus("pair apart", pair);
+  pair.select(boards[0]);
+  if (!pair.armSelectedPair().isEmpty()) return fail("one board armed a joint");
+  pair.select(boards[1], Qt::ControlModifier);
+  if (!pair.armSelectedPair().isEmpty()) return fail("distant boards armed a joint");
+  if (pair.addArmedJoint("joint.half_lap")) return fail("distant boards joined");
+  if (!pair.setTranslationFromText(boards[1], "x", "100 mm")) return failStatus("pair touching", pair);
+  pair.select(boards[0]);
+  pair.select(boards[1], Qt::ControlModifier);
+  const QStringList fitting = pair.armSelectedPair();
+  if (fitting.isEmpty() || fitting != pair.armedJointTypes()) return failStatus("touching boards offered no joint", pair);
+  for (const char* later : {"joint.haunched_tenon", "joint.wedged_tenon", "joint.loose_tenon"}) {
+    if (!fitting.contains(later)) return fail("later joint not offered");
+  }
+  if (!pair.addArmedJoint(fitting.first())) return failStatus("pair joint", pair);
+  if (pair.document().joints().size() != 1) return fail("pair joint count");
+  const Joint& pairJoint = pair.document().joints().front();
+  const bool samePair = (pairJoint.partA == boards[0].toStdString() && pairJoint.partB == boards[1].toStdString()) ||
+                        (pairJoint.partA == boards[1].toStdString() && pairJoint.partB == boards[0].toStdString());
+  if (!samePair) return fail("pair joint parts");
+
+  // Edits after the joint: the scene must follow the solids, whether the part
+  // itself changed or only the part it is joined to.
+  if (!sceneMatchesSolids(pair)) return fail("scene after the joint");
+  if (!pair.setParameterFromText(boards[1], "width", "90 mm")) return failStatus("pair mate width", pair);
+  if (!sceneMatchesSolids(pair)) return fail("scene after the mate changed");
+  const QString pairJointId = QString::fromStdString(pair.document().joints().front().id);
+  for (const char* key : {"length", "width", "thickness", "depth"}) {
+    if (!pair.setJointFromText(pairJointId, key, "5 mm")) continue;
+    if (!sceneMatchesSolids(pair)) return fail(std::string("scene after the joint ") + key);
+  }
+  pair.undo();
+  if (!sceneMatchesSolids(pair)) return fail("scene after undo");
+
+  // The exports, on the joined pair: STL, STEP when this build has the writer,
+  // and the hidden-line sheet of the selected part.
+  const auto exported = [&](const char* name) { return QUrl::fromLocalFile(QString::fromStdString((directory / name).string())); };
+  const auto written = [&](const char* name) {
+    std::error_code size_error;
+    return std::filesystem::file_size(directory / name, size_error) > 0 && !size_error;
+  };
+  if (!pair.exportModel(exported("pair.stl"), "stl", "project") || !written("pair.stl")) {
+    return failStatus("pair stl", pair);
+  }
+  if (pair.stepAvailable() &&
+      (!pair.exportModel(exported("pair.step"), "step", "project") || !written("pair.step"))) {
+    return failStatus("pair step", pair);
+  }
+  pair.select(boards[0]);
+  if (!pair.exportDrawing(exported("pair-hlr.svg"), "hlr-sheet") || !written("pair-hlr.svg")) {
+    return failStatus("pair hidden-line sheet", pair);
+  }
 
   std::cout << "accept ok: shelf 800 x 19.05 x 400 mm with a mortise, rail 609.6 x 19.05 x 304.8 mm with a tenon, reloaded "
             << projectPath.string() << "\n";

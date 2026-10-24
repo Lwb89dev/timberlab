@@ -8,9 +8,15 @@
 
 #include <fcntl.h>
 #include <sys/stat.h>
+#if defined(_WIN32)
+#include <io.h>
+#else
 #include <unistd.h>
+#endif
 
+#include <algorithm>
 #include <cerrno>
+#include <climits>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -27,6 +33,47 @@ IoResult fail(const char* code) {
 
 IoResult fail(const std::string& code) { return fail(code.c_str()); }
 
+using IoCount = long long;
+
+// The file calls this module needs, with the POSIX descriptor API on one side
+// and the C runtime's equivalents on the other. Windows has no O_NOFOLLOW and
+// no directory fsync. A name that already exists, symlink or not, is still
+// refused by O_EXCL, and the owner-only mode is the runtime's default there.
+#if defined(_WIN32)
+int openNewFile(const std::filesystem::path& path) {
+  return ::_wopen(path.c_str(), _O_WRONLY | _O_CREAT | _O_EXCL | _O_BINARY, _S_IREAD | _S_IWRITE);
+}
+int openOldFile(const std::filesystem::path& path) { return ::_wopen(path.c_str(), _O_RDONLY | _O_BINARY); }
+int closeFile(int fd) { return ::_close(fd); }
+int flushFile(int fd) { return ::_commit(fd); }
+IoCount writeFile(int fd, const char* data, std::size_t size) {
+  return ::_write(fd, data, static_cast<unsigned int>(std::min<std::size_t>(size, INT_MAX)));
+}
+IoCount readFile(int fd, char* buffer, std::size_t size) {
+  return ::_read(fd, buffer, static_cast<unsigned int>(std::min<std::size_t>(size, INT_MAX)));
+}
+std::FILE* streamOf(int fd) { return ::_fdopen(fd, "wb"); }
+int descriptorOf(std::FILE* file) { return ::_fileno(file); }
+void syncFolder(const std::filesystem::path&) {}
+#else
+int openNewFile(const std::filesystem::path& path) {
+  return ::open(path.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, S_IRUSR | S_IWUSR);
+}
+int openOldFile(const std::filesystem::path& path) { return ::open(path.c_str(), O_RDONLY | O_CLOEXEC); }
+int closeFile(int fd) { return ::close(fd); }
+int flushFile(int fd) { return ::fsync(fd); }
+IoCount writeFile(int fd, const char* data, std::size_t size) { return ::write(fd, data, size); }
+IoCount readFile(int fd, char* buffer, std::size_t size) { return ::read(fd, buffer, size); }
+std::FILE* streamOf(int fd) { return ::fdopen(fd, "wb"); }
+int descriptorOf(std::FILE* file) { return ::fileno(file); }
+void syncFolder(const std::filesystem::path& folder) {
+  const int fd = ::open(folder.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+  if (fd < 0) return;
+  ::fsync(fd);
+  ::close(fd);
+}
+#endif
+
 // A new file beside target that only the owner can read. The name is random,
 // and O_EXCL with O_NOFOLLOW refuses a file or symlink planted under it, so a
 // save into a shared folder cannot be redirected onto another file.
@@ -41,7 +88,7 @@ int createPrivateTemp(const std::filesystem::path& target, std::filesystem::path
       suffix.push_back(kHex[byte & 0x0f]);
     }
     temporary = target.string() + "." + suffix + ".tmp";
-    const int fd = ::open(temporary.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, S_IRUSR | S_IWUSR);
+    const int fd = openNewFile(temporary);
     if (fd >= 0) return fd;
     if (errno != EEXIST) return -1;
   }
@@ -51,15 +98,12 @@ int createPrivateTemp(const std::filesystem::path& target, std::filesystem::path
 // The rename is durable only after the folder entry reaches the disk too.
 void syncParent(const std::filesystem::path& target) {
   const std::filesystem::path parent = target.has_parent_path() ? target.parent_path() : std::filesystem::path(".");
-  const int fd = ::open(parent.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
-  if (fd < 0) return;
-  ::fsync(fd);
-  ::close(fd);
+  syncFolder(parent);
 }
 
 bool writeAll(int fd, const char* data, std::size_t size) {
   while (size > 0) {
-    const ssize_t written = ::write(fd, data, size);
+    const IoCount written = writeFile(fd, data, size);
     if (written < 0 && errno == EINTR) continue;
     if (written <= 0) return false;
     data += written;
@@ -72,14 +116,14 @@ bool writeAll(int fd, const char* data, std::size_t size) {
 // destination. A rename replaces a symlink at destination rather than
 // writing through it.
 bool copyPrivate(const std::filesystem::path& source, const std::filesystem::path& destination) {
-  const int in = ::open(source.c_str(), O_RDONLY | O_CLOEXEC);
+  const int in = openOldFile(source);
   if (in < 0) return false;
   std::filesystem::path temporary;
   const int out = createPrivateTemp(destination, temporary);
   bool ok = out >= 0;
   char buffer[65536];
   while (ok) {
-    const ssize_t got = ::read(in, buffer, sizeof(buffer));
+    const IoCount got = readFile(in, buffer, sizeof(buffer));
     if (got < 0 && errno == EINTR) continue;
     if (got <= 0) {
       ok = got == 0;
@@ -87,10 +131,10 @@ bool copyPrivate(const std::filesystem::path& source, const std::filesystem::pat
     }
     ok = writeAll(out, buffer, static_cast<std::size_t>(got));
   }
-  ::close(in);
+  closeFile(in);
   if (out >= 0) {
-    ok = ::fsync(out) == 0 && ok;
-    ok = ::close(out) == 0 && ok;
+    ok = flushFile(out) == 0 && ok;
+    ok = closeFile(out) == 0 && ok;
   }
   std::error_code ec;
   if (ok) std::filesystem::rename(temporary, destination, ec);
@@ -107,9 +151,9 @@ bool writeArchive(const std::filesystem::path& target, const std::string& manife
                   std::filesystem::path& temporary) {
   const int fd = createPrivateTemp(target, temporary);
   if (fd < 0) return false;
-  std::FILE* file = ::fdopen(fd, "wb");
+  std::FILE* file = streamOf(fd);
   if (file == nullptr) {
-    ::close(fd);
+    closeFile(fd);
     std::error_code ec;
     std::filesystem::remove(temporary, ec);
     return false;
@@ -123,7 +167,7 @@ bool writeArchive(const std::filesystem::path& target, const std::string& manife
   ok = ok && mz_zip_writer_finalize_archive(&zip) == MZ_TRUE;
   mz_zip_writer_end(&zip);
   ok = std::fflush(file) == 0 && ok;
-  ok = ::fsync(::fileno(file)) == 0 && ok;
+  ok = flushFile(descriptorOf(file)) == 0 && ok;
   ok = std::fclose(file) == 0 && ok;
   if (!ok) {
     std::error_code ec;

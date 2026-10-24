@@ -18,6 +18,11 @@
 
 #include <QtMath>
 
+#if defined(Q_OS_ANDROID)
+// Qt's ES headers stop at 2.0. The pick target uses 3.0 enums.
+#include <GLES3/gl3.h>
+#endif
+
 #include <algorithm>
 #include <cmath>
 #include <memory>
@@ -663,6 +668,10 @@ QVector3D ViewportItem::eye() const {
   const float y = -distance_ * std::cos(elevation) * std::cos(azimuth);
   const float z = distance_ * std::sin(elevation);
   return target_ + QVector3D(x, y, z);
+}
+
+int ViewportItem::partCount() const {
+  return controller_ != nullptr ? static_cast<int>(controller_->copyScene().size()) : 0;
 }
 
 void ViewportItem::orbit(QPointF delta) {

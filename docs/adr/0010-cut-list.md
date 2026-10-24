@@ -22,5 +22,5 @@ The same mesh is projected three ways. Front drops Y: horizontal is X, up is Z. 
 
 - The allowance is an argument. The menu does not ask for one.
 - Two parts group in the bill of materials only when material, role, shape, and finished size all match.
-- TKHLR stays unused. The overall front dimensions are not a hidden-line view.
+- When this record was written TKHLR was unused and the overall front dimensions were not a hidden-line view. A later change added hidden-line sheets that use TKHLR on the exact solid, and the wire files above are still the tessellation.
 - The File menu writes these files. The menu items were not clicked in a window. The strings and the model functions are what the tests cover.

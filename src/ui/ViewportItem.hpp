@@ -65,6 +65,9 @@ class ViewportItem : public QQuickFramebufferObject {
   Q_INVOKABLE void frameAll();
   Q_INVOKABLE void frameSelection();
   Q_INVOKABLE void setStandardView(const QString& name);
+  // One step of camera orbit, for the frame-rate run.
+  void orbitStep(double dx, double dy) { orbit(QPointF(dx, dy)); }
+  int partCount() const;
 
  public slots:
   void deliverPick(const QString& id, Qt::KeyboardModifiers modifiers = Qt::NoModifier);

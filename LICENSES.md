@@ -14,6 +14,8 @@ Qt Quick 3D is not installed here, so it has no SPDX entry in this tree. Qt's `q
 
 LGPL still has source and relink obligations when a binary is shipped. The version-tag `.deb` ships TimberLab's binary together with the Qt 6.8.3 and Open CASCADE 7.9.2 shared libraries it was linked against. The git tag is the TimberLab source. `packaging/copyright` names the upstream Qt and OCCT source archives and is installed as `/usr/share/doc/timberlab/copyright`. The OCCT LGPL text and exception are copied into that directory. Shared libraries are how this package meets the relink requirement. A store package, and GPLv3 installation information for a locked tablet, have not been checked.
 
+The Android package built by `packaging/build-android.sh` carries the Qt 6.8.3, Open CASCADE 7.9.2, and OpenSSL 3.0.22 libraries as shared libraries and links SQLite 3.45.1 (public domain) statically. The Windows zip from `.github/workflows/windows.yml` carries the Qt and Open CASCADE DLLs, the OpenSSL and SQLite DLLs, and a `licenses` folder with the project license, this file, and the OCCT LGPL text and exception. Neither package's notices have been reviewed against each library's terms, and neither has been published.
+
 ## Other components
 
 | Piece | Terms | Role |

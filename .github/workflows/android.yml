@@ -1,0 +1,90 @@
+name: Android
+
+# Builds the arm64 package with the Android NDK. A version tag builds it and adds
+# the APK to the GitHub release. A manual run keeps the APK as a workflow
+# artifact only. The APK is signed with the standard Android debug key, so it
+# installs with adb and is not a store release.
+on:
+  push:
+    tags:
+      - "*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - name: Check out the source
+        uses: actions/checkout@v4
+
+      - name: Read the version
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^project(TimberLab VERSION \([0-9.]*\) .*/\1/p' CMakeLists.txt)"
+          test -n "${version}"
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            grep -q "project(TimberLab VERSION ${GITHUB_REF_NAME} " CMakeLists.txt
+            grep -q "setApplicationVersion(\"${GITHUB_REF_NAME}\")" apps/timberlab/main.cpp
+          fi
+          echo "VERSION=${version}" >> "${GITHUB_ENV}"
+
+      - name: Install build packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake ninja-build perl curl unzip \
+            python3 python3-pip python3-venv libgl-dev libegl-dev ca-certificates
+
+      - name: Install the Java and Qt tools
+        run: |
+          set -euo pipefail
+          python3 -m venv "${RUNNER_TEMP}/aqt"
+          "${RUNNER_TEMP}/aqt/bin/pip" install 'aqtinstall==3.2.1'
+          echo "${RUNNER_TEMP}/aqt/bin" >> "${GITHUB_PATH}"
+          echo "JAVA_HOME=${JAVA_HOME_17_X64}" >> "${GITHUB_ENV}"
+
+      - name: Install the Android SDK and NDK
+        run: |
+          set -euo pipefail
+          packaging/build-android.sh sdk
+
+      - name: Restore the Qt, Open CASCADE, OpenSSL, and SQLite builds
+        id: deps-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps/qt
+            deps/occt-android-install
+            deps/openssl-android
+            deps/sqlite-android
+          key: android-deps-${{ hashFiles('packaging/build-android.sh') }}-v1
+
+      - name: Build those dependencies
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          packaging/build-android.sh qt occt openssl sqlite
+
+      - name: Build and sign the package
+        run: |
+          set -euo pipefail
+          packaging/build-android.sh apk sign
+          test -f "build/android/timberlab-${VERSION}-arm64-debug.apk"
+
+      - name: Upload the package
+        uses: actions/upload-artifact@v4
+        with:
+          name: timberlab-${{ env.VERSION }}-android-arm64
+          path: build/android/timberlab-${{ env.VERSION }}-arm64-debug.apk
+          if-no-files-found: error
+
+      - name: Add the APK to the GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: build/android/timberlab-${{ env.VERSION }}-arm64-debug.apk
+          fail_on_unmatched_files: true

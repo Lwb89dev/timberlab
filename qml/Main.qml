@@ -70,6 +70,16 @@ ApplicationWindow {
             MenuItem { text: qsTr("Export DXF wire…"); onTriggered: openDrawing("dxf", "dxf", qsTr("Export DXF wire"), qsTr("DXF wire (*.dxf)")) }
             MenuItem { text: qsTr("Export PDF wire…"); onTriggered: openDrawing("pdf", "pdf", qsTr("Export PDF wire"), qsTr("PDF wire (*.pdf)")) }
             MenuItem { text: qsTr("Export front dimensions…"); onTriggered: openDrawing("dimensions", "svg", qsTr("Export front dimensions"), qsTr("Front dimensions (*.svg)")) }
+            MenuItem { text: qsTr("Export hidden-line sheet…"); onTriggered: openDrawing("hlr-sheet", "svg", qsTr("Export hidden-line sheet"), qsTr("Hidden-line sheet (*.svg)")) }
+            MenuItem { text: qsTr("Export hidden-line DXF…"); onTriggered: openDrawing("hlr-dxf", "dxf", qsTr("Export hidden-line DXF"), qsTr("Hidden-line DXF (*.dxf)")) }
+            MenuItem { text: qsTr("Export hidden-line PDF…"); onTriggered: openDrawing("hlr-pdf", "pdf", qsTr("Export hidden-line PDF"), qsTr("Hidden-line PDF (*.pdf)")) }
+            Menu {
+                title: qsTr("Export 3D model")
+                MenuItem { text: qsTr("STL, whole project…"); onTriggered: openModel("stl", "project", qsTr("Export STL"), qsTr("STL (*.stl)")) }
+                MenuItem { text: qsTr("STL, selected part…"); enabled: app.hasSelection; onTriggered: openModel("stl", "part", qsTr("Export STL"), qsTr("STL (*.stl)")) }
+                MenuItem { text: qsTr("STEP, whole project…"); enabled: app.stepAvailable(); onTriggered: openModel("step", "project", qsTr("Export STEP"), qsTr("STEP (*.step *.stp)")) }
+                MenuItem { text: qsTr("STEP, selected part…"); enabled: app.stepAvailable() && app.hasSelection; onTriggered: openModel("step", "part", qsTr("Export STEP"), qsTr("STEP (*.step *.stp)")) }
+            }
             MenuSeparator {}
             MenuItem { text: qsTr("Export library events…"); enabled: app.canPublishLibrary; onTriggered: libraryExportDialog.open() }
             MenuItem { text: qsTr("Import library events…"); enabled: app.canPublishLibrary; onTriggered: libraryImportDialog.open() }
@@ -235,6 +245,15 @@ ApplicationWindow {
                 glyph: "◈"
                 subtle: true
                 onClicked: assemblyMenu.popup(assemblyButton, 0, assemblyButton.height)
+            }
+            AppButton {
+                id: joineryButton
+                text: qsTr("Joinery")
+                glyph: "⋈"
+                subtle: true
+                enabled: app.selectedIds.length === 2
+                toolTip: qsTr("Join the two selected boards. The board you selected last becomes the tenon or the first lap.")
+                onClicked: openJoineryMenu(joineryButton)
             }
             AppButton { glyph: "⧉"; compact: true; subtle: true; toolTip: qsTr("Duplicate"); onClicked: app.duplicateSelected() }
             AppButton { glyph: "×"; compact: true; destructive: true; toolTip: qsTr("Delete"); onClicked: app.deleteSelected() }
@@ -567,6 +586,16 @@ ApplicationWindow {
         onAccepted: app.exportDrawing(selectedFile, kind)
     }
     FileDialog {
+        id: modelDialog
+        property string format: "stl"
+        property string scope: "project"
+        title: qsTr("Export STL")
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "stl"
+        nameFilters: [qsTr("STL (*.stl)")]
+        onAccepted: app.exportModel(selectedFile, format, scope)
+    }
+    FileDialog {
         id: libraryExportDialog
         title: qsTr("Export library events")
         fileMode: FileDialog.SaveFile
@@ -713,6 +742,14 @@ ApplicationWindow {
         drawingDialog.nameFilters = [filter]
         drawingDialog.open()
     }
+    function openModel(format, scope, title, filter) {
+        modelDialog.format = format
+        modelDialog.scope = scope
+        modelDialog.title = title
+        modelDialog.defaultSuffix = format === "step" ? "step" : "stl"
+        modelDialog.nameFilters = [filter]
+        modelDialog.open()
+    }
     function saveOrAsk() {
         viewport.forceActiveFocus()
         if (app.projectPath.length === 0) saveDialog.open()
@@ -733,6 +770,14 @@ ApplicationWindow {
         if (key === "joint.half_blind_dovetail") return qsTr("Half-blind dovetail")
         if (key === "joint.tongue_groove") return qsTr("Tongue and groove")
         if (key === "joint.dowel") return qsTr("Dowel")
+        if (key === "joint.haunched_tenon") return qsTr("Haunched tenon")
+        if (key === "joint.wedged_tenon") return qsTr("Wedged tenon")
+        if (key === "joint.loose_tenon") return qsTr("Loose tenon")
+        if (key === "joint.cross_lap") return qsTr("Cross lap")
+        if (key === "joint.end_lap") return qsTr("End lap")
+        if (key === "joint.splined_miter") return qsTr("Splined miter")
+        if (key === "joint.biscuit") return qsTr("Biscuit")
+        if (key === "joint.pocket_screw") return qsTr("Pocket screw")
         return key
     }
     function formatMm(value) {
@@ -741,6 +786,11 @@ ApplicationWindow {
     function openContactMenu(x, y) {
         armedJointTypes = app.armedJointTypes()
         contactJointMenu.popup(viewport, x, y)
+    }
+    function openJoineryMenu(anchor) {
+        armedJointTypes = app.armSelectedPair()
+        if (armedJointTypes.length === 0) return
+        contactJointMenu.popup(anchor, 0, anchor.height)
     }
     function syncFooter() {
         const unitIndex = unitBox.indexOfValue(app.displayUnit)

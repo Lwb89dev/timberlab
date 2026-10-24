@@ -343,6 +343,106 @@
         <source>Remove joint</source>
         <translation>Rimuovi giunto</translation>
     </message>
+    <message>
+        <source>Haunched tenon</source>
+        <translation>Tenone con tacco</translation>
+    </message>
+    <message>
+        <source>Wedged tenon</source>
+        <translation>Tenone a cuneo</translation>
+    </message>
+    <message>
+        <source>Loose tenon</source>
+        <translation>Tenone libero</translation>
+    </message>
+    <message>
+        <source>Cross lap</source>
+        <translation>Mezzo legno a croce</translation>
+    </message>
+    <message>
+        <source>End lap</source>
+        <translation>Mezzo legno di testa</translation>
+    </message>
+    <message>
+        <source>Splined miter</source>
+        <translation>Mitra con spina</translation>
+    </message>
+    <message>
+        <source>Biscuit</source>
+        <translation>Biscotto</translation>
+    </message>
+    <message>
+        <source>Pocket screw</source>
+        <translation>Vite a tasca</translation>
+    </message>
+    <message>
+        <source>Lap length</source>
+        <translation>Lunghezza della battuta</translation>
+    </message>
+    <message>
+        <source>Counterbore length</source>
+        <translation>Lunghezza dell'allargamento</translation>
+    </message>
+    <message>
+        <source>Pocket length</source>
+        <translation>Lunghezza della sede</translation>
+    </message>
+    <message>
+        <source>Disc diameter</source>
+        <translation>Diametro del disco</translation>
+    </message>
+    <message>
+        <source>Notch width</source>
+        <translation>Larghezza dell'incavo</translation>
+    </message>
+    <message>
+        <source>Counterbore diameter</source>
+        <translation>Diametro dell'allargamento</translation>
+    </message>
+    <message>
+        <source>Pocket thickness</source>
+        <translation>Spessore della sede</translation>
+    </message>
+    <message>
+        <source>Kerf thickness</source>
+        <translation>Spessore del taglio</translation>
+    </message>
+    <message>
+        <source>Pilot diameter</source>
+        <translation>Diametro del foro guida</translation>
+    </message>
+    <message>
+        <source>Notch depth</source>
+        <translation>Profondità dell'incavo</translation>
+    </message>
+    <message>
+        <source>Kerf depth</source>
+        <translation>Profondità del taglio</translation>
+    </message>
+    <message>
+        <source>Pitch</source>
+        <translation>Passo</translation>
+    </message>
+    <message>
+        <source>Kerf offset</source>
+        <translation>Posizione del taglio</translation>
+    </message>
+    <message>
+        <source>Distance from end</source>
+        <translation>Distanza dalla testa</translation>
+    </message>
+    <message>
+        <source>Spacing</source>
+        <translation>Interasse</translation>
+    </message>
+    <message>
+        <source>Haunch length</source>
+        <translation>Lunghezza del tacco</translation>
+    </message>
+    <message>
+        <source>Kerf width</source>
+        <translation>Larghezza del taglio</translation>
+    </message>
 </context>
 <context>
     <name>Main</name>
@@ -350,6 +450,16 @@
         <location filename="../qml/Main.qml" line="58"/>
         <source>File</source>
         <translation>File</translation>
+    </message>
+    <message>
+        <location filename="../qml/Main.qml" line="238"/>
+        <source>Joinery</source>
+        <translation>Giunti</translation>
+    </message>
+    <message>
+        <location filename="../qml/Main.qml" line="242"/>
+        <source>Join the two selected boards. The board you selected last becomes the tenon or the first lap.</source>
+        <translation>Unisce le due tavole selezionate. L'ultima tavola selezionata diventa il tenone o il primo mezzo legno.</translation>
     </message>
     <message>
         <location filename="../qml/Main.qml" line="59"/>
@@ -939,6 +1049,110 @@
         <source>TimberLab</source>
         <translation>TimberLab</translation>
     </message>
+    <message>
+        <source>Haunched tenon</source>
+        <translation>Tenone con tacco</translation>
+    </message>
+    <message>
+        <source>Wedged tenon</source>
+        <translation>Tenone a cuneo</translation>
+    </message>
+    <message>
+        <source>Loose tenon</source>
+        <translation>Tenone libero</translation>
+    </message>
+    <message>
+        <source>Cross lap</source>
+        <translation>Mezzo legno a croce</translation>
+    </message>
+    <message>
+        <source>End lap</source>
+        <translation>Mezzo legno di testa</translation>
+    </message>
+    <message>
+        <source>Splined miter</source>
+        <translation>Mitra con spina</translation>
+    </message>
+    <message>
+        <source>Biscuit</source>
+        <translation>Biscotto</translation>
+    </message>
+    <message>
+        <source>Pocket screw</source>
+        <translation>Vite a tasca</translation>
+    </message>
+    <message>
+        <source>Export hidden-line sheet…</source>
+        <translation>Esporta foglio a linee nascoste…</translation>
+    </message>
+    <message>
+        <source>Export hidden-line sheet</source>
+        <translation>Esporta foglio a linee nascoste</translation>
+    </message>
+    <message>
+        <source>Hidden-line sheet (*.svg)</source>
+        <translation>Foglio a linee nascoste (*.svg)</translation>
+    </message>
+    <message>
+        <source>Export hidden-line DXF…</source>
+        <translation>Esporta DXF a linee nascoste…</translation>
+    </message>
+    <message>
+        <source>Export hidden-line DXF</source>
+        <translation>Esporta DXF a linee nascoste</translation>
+    </message>
+    <message>
+        <source>Hidden-line DXF (*.dxf)</source>
+        <translation>DXF a linee nascoste (*.dxf)</translation>
+    </message>
+    <message>
+        <source>Export hidden-line PDF…</source>
+        <translation>Esporta PDF a linee nascoste…</translation>
+    </message>
+    <message>
+        <source>Export hidden-line PDF</source>
+        <translation>Esporta PDF a linee nascoste</translation>
+    </message>
+    <message>
+        <source>Hidden-line PDF (*.pdf)</source>
+        <translation>PDF a linee nascoste (*.pdf)</translation>
+    </message>
+    <message>
+        <source>Export 3D model</source>
+        <translation>Esporta modello 3D</translation>
+    </message>
+    <message>
+        <source>STL, whole project…</source>
+        <translation>STL, tutto il progetto…</translation>
+    </message>
+    <message>
+        <source>STL, selected part…</source>
+        <translation>STL, pezzo selezionato…</translation>
+    </message>
+    <message>
+        <source>STEP, whole project…</source>
+        <translation>STEP, tutto il progetto…</translation>
+    </message>
+    <message>
+        <source>STEP, selected part…</source>
+        <translation>STEP, pezzo selezionato…</translation>
+    </message>
+    <message>
+        <source>Export STL</source>
+        <translation>Esporta STL</translation>
+    </message>
+    <message>
+        <source>STL (*.stl)</source>
+        <translation>STL (*.stl)</translation>
+    </message>
+    <message>
+        <source>Export STEP</source>
+        <translation>Esporta STEP</translation>
+    </message>
+    <message>
+        <source>STEP (*.step *.stp)</source>
+        <translation>STEP (*.step *.stp)</translation>
+    </message>
 </context>
 <context>
     <name>PartsPanel</name>
@@ -1273,6 +1487,16 @@
         <location filename="../src/ui/DocumentController.cpp" line="1344"/>
         <source>No joint fits these parts.</source>
         <translation>Nessun giunto entra in questi pezzi.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="1322"/>
+        <source>These boards do not touch.</source>
+        <translation>Queste tavole non si toccano.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DocumentController.cpp" line="1364"/>
+        <source>Select two boards to join.</source>
+        <translation>Seleziona due tavole da unire.</translation>
     </message>
     <message>
         <location filename="../src/ui/DocumentController.cpp" line="1381"/>
@@ -1905,6 +2129,38 @@
         <location filename="../src/ui/DocumentController.cpp" line="487"/>
         <source>Drawer bottom</source>
         <translation>Spessore fondo</translation>
+    </message>
+    <message>
+        <source>Hidden-line sheet written, with feature dimensions in millimetres.</source>
+        <translation>Foglio a linee nascoste scritto, con le quote delle lavorazioni in millimetri.</translation>
+    </message>
+    <message>
+        <source>Hidden-line DXF written, with feature dimensions in millimetres.</source>
+        <translation>DXF a linee nascoste scritto, con le quote delle lavorazioni in millimetri.</translation>
+    </message>
+    <message>
+        <source>Hidden-line PDF written, with feature dimensions in millimetres.</source>
+        <translation>PDF a linee nascoste scritto, con le quote delle lavorazioni in millimetri.</translation>
+    </message>
+    <message>
+        <source>STL written: %1 part(s), %2, millimetres.</source>
+        <translation>STL scritto: %1 pezzi, %2, millimetri.</translation>
+    </message>
+    <message>
+        <source>STEP written: %1 part(s), %2, millimetres.</source>
+        <translation>STEP scritto: %1 pezzi, %2, millimetri.</translation>
+    </message>
+    <message>
+        <source>in the part's own frame</source>
+        <translation>nel riferimento del pezzo</translation>
+    </message>
+    <message>
+        <source>at their placements</source>
+        <translation>nelle posizioni del progetto</translation>
+    </message>
+    <message>
+        <source>This build has no STEP writer. Its Open CASCADE was built without data exchange.</source>
+        <translation>Questa versione non ha il writer STEP: il suo Open CASCADE è stato compilato senza lo scambio dati.</translation>
     </message>
 </context>
 </TS>

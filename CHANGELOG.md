@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.5.0 — 2026-10-24
+
+### Joinery
+
+- Eight more joints: haunched tenon, wedged tenon, loose tenon, cross lap, end lap, splined miter, biscuit, and pocket screw. Each cuts the solids with a boolean, keeps its own sizes, rebuilds when a part changes, and is refused when it no longer fits. The wedged and haunched tenons add two optional stored lengths, `length2` and `width2`. An older file loads unchanged. A pocket screw cuts only its own part, with two cylinders on an axis at 15 degrees, which needed a cutter that is not parallel to a part axis. The end lap is the tee half lap. The corner lap is still the half lap. The wedge, the loose tenon, the biscuit, and the spline are not modeled as parts.
+- A Joinery button in the toolbar joins two selected boards. Select two boards (Ctrl-click), press Joinery, and pick a type. The menu lists only the types that fit that pair, the same as the right-click contact menu, and the joint is cut on the faces that actually touch. The board selected last becomes the tenon or the first lap. If the two boards do not touch, or fewer or more than two are selected, nothing is added and the status line says why.
+
+### Drawings and export
+
+- A hidden-line sheet of the selected part as SVG, DXF, or PDF. The three views come from OCCT's hidden-line removal on the exact solid, so visible edges are solid and hidden edges are dashed, and a curved edge is a curve split with a 0.02 mm deflection rather than a mesh edge. Each view carries feature dimensions in millimetres: the size and position of every cut along the view's axes, chained from the part's corner, plus the overall size. They are read from the cuts the joints store. The older wire files are unchanged.
+- STL (binary) and STEP (AP214) export of the whole project at its placements, or of the selected part in its own frame, under File → Export 3D model. STEP gives each part one named solid. It needs an Open CASCADE with the data-exchange module, which the Linux package and the Windows build now have. The Android build does not, and says so.
+- `timberlab --bench` and `TIMBERLAB_FRAME_BENCH` measure save, load, tessellation, export, and frame rate. The numbers are in the README.
+
+### Performance
+
+- An edit used to tessellate every part again. The editor now keeps each part's tessellation and tessellates only the parts whose size or joints changed, or whose joined part changed. Through the editor, an edit to a jointed board went from 351 ms to 14 ms with 100 boards, and from 1.75 s to 17 ms with 500.
+
+### Platforms
+
+- `packaging/build-android.sh` builds a debug-signed arm64 APK with the NDK. The APK has been built and its contents checked. It has not been installed on a device or an emulator.
+- `.github/workflows/windows.yml` builds a Windows x64 zip with MSVC on a version tag or a manual run. It has not run yet, and MSVC has not compiled this tree.
+- `.github/workflows/android.yml` builds the APK on a version tag or a manual run, with the same script. `.github/workflows/macos.yml` builds an Apple Silicon app bundle on a manual run only. Neither has run.
+- To make that possible the save path has a C runtime branch for Windows, the data folder follows `LOCALAPPDATA` on Windows and the app's private storage on Android, the compiler warning flags are chosen per compiler, and `cutsForPart` takes the other part.
+
 ## 0.4.1 — 2026-10-24
 
 ### Packaging

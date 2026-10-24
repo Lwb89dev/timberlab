@@ -555,3 +555,420 @@ TEST_CASE("a dowel cuts a centered cylindrical hole in each face") {
   odd.thicknessNm = 8 * kMm + 1;
   REQUIRE_FALSE(timberlab::jointFits(odd, partA, partB, error));
 }
+
+namespace {
+
+Joint tenonJoint(JointType type, const Component& mortise, const Component& tenon) {
+  Joint joint;
+  joint.id = "tenon";
+  joint.type = type;
+  joint.partA = mortise.id;
+  joint.partB = tenon.id;
+  joint.faceA = PartFace::X1;
+  joint.faceB = PartFace::X0;
+  joint.thicknessNm = 6 * kMm;
+  joint.lengthNm = 15 * kMm;
+  joint.depthNm = 12 * kMm;
+  joint.offsetNm = 12 * kMm;
+  joint.offset2Nm = 20 * kMm;
+  return joint;
+}
+
+}  // namespace
+
+TEST_CASE("a haunched tenon keeps a short haunch beside the tenon") {
+  Component mortise = board("mortise", 100 * kMm, 30 * kMm, 80 * kMm);
+  Component tenon = board("tenon", 40 * kMm, 18 * kMm, 40 * kMm);
+  Joint joint = tenonJoint(JointType::HaunchedTenon, mortise, tenon);
+  joint.widthNm = 24 * kMm;
+  joint.length2Nm = 5 * kMm;
+  std::vector<Component> parts{mortise, tenon};
+  const std::vector<Joint> joints{joint};
+  expectVolume(tenon, joints, parts, 40.0 * 18.0 * 40.0 - (4320.0 + 2880.0 + 960.0));
+  expectVolume(mortise, joints, parts, 100.0 * 30.0 * 80.0 - (1728.0 + 480.0));
+  REQUIRE(classifyLocal(tenon, joints, parts, 3, 9, 30) == PointSide::Out);
+  REQUIRE(classifyLocal(tenon, joints, parts, 3, 9, 10) == PointSide::In);
+  REQUIRE(classifyLocal(tenon, joints, parts, 12, 9, 30) == PointSide::In);
+  REQUIRE(classifyLocal(tenon, joints, parts, 12, 2, 30) == PointSide::Out);
+  REQUIRE(classifyLocal(mortise, joints, parts, 94, 15, 30) == PointSide::Out);
+  REQUIRE(classifyLocal(mortise, joints, parts, 94, 15, 50) == PointSide::In);
+  REQUIRE(classifyLocal(mortise, joints, parts, 98, 15, 50) == PointSide::Out);
+
+  std::string error;
+  Joint flipped = joint;
+  flipped.removeMinB = true;
+  expectVolume(tenon, {flipped}, parts, 40.0 * 18.0 * 40.0 - (4320.0 + 2880.0 + 960.0));
+  REQUIRE(classifyLocal(tenon, {flipped}, parts, 3, 9, 30) == PointSide::In);
+  REQUIRE(classifyLocal(tenon, {flipped}, parts, 3, 9, 10) == PointSide::Out);
+
+  Joint long_haunch = joint;
+  long_haunch.length2Nm = joint.lengthNm;
+  REQUIRE_FALSE(timberlab::jointFits(long_haunch, mortise, tenon, error));
+  Joint full = joint;
+  full.widthNm = 40 * kMm;
+  REQUIRE_FALSE(timberlab::jointFits(full, mortise, tenon, error));
+  Joint shallow = joint;
+  shallow.depthNm = 4 * kMm;
+  REQUIRE_FALSE(timberlab::jointFits(shallow, mortise, tenon, error));
+}
+
+TEST_CASE("a wedged tenon cuts a kerf for each wedge into the tenon tip") {
+  Component mortise = board("mortise", 100 * kMm, 30 * kMm, 80 * kMm);
+  Component tenon = board("tenon", 40 * kMm, 18 * kMm, 40 * kMm);
+  Joint joint = tenonJoint(JointType::WedgedTenon, mortise, tenon);
+  joint.widthNm = 20 * kMm;
+  joint.offsetNm = 10 * kMm;
+  joint.count = 1;
+  joint.width2Nm = 2 * kMm;
+  joint.length2Nm = 8 * kMm;
+  std::vector<Component> parts{mortise, tenon};
+  const double plain = 40.0 * 18.0 * 40.0 - 15.0 * (18.0 * 40.0 - 6.0 * 20.0);
+  expectVolume(tenon, {joint}, parts, plain - 96.0);
+  expectVolume(mortise, {joint}, parts, 100.0 * 30.0 * 80.0 - 12.0 * 6.0 * 20.0);
+  REQUIRE(classifyLocal(tenon, {joint}, parts, 4, 9, 20) == PointSide::Out);
+  REQUIRE(classifyLocal(tenon, {joint}, parts, 4, 9, 24) == PointSide::In);
+  REQUIRE(classifyLocal(tenon, {joint}, parts, 12, 9, 20) == PointSide::In);
+
+  Joint twin = joint;
+  twin.count = 2;
+  expectVolume(tenon, {twin}, parts, plain - 192.0);
+  REQUIRE(classifyLocal(tenon, {twin}, parts, 4, 9, 15) == PointSide::Out);
+  REQUIRE(classifyLocal(tenon, {twin}, parts, 4, 9, 25) == PointSide::Out);
+  REQUIRE(classifyLocal(tenon, {twin}, parts, 4, 9, 20) == PointSide::In);
+
+  std::string error;
+  Joint deep = joint;
+  deep.length2Nm = 16 * kMm;
+  REQUIRE_FALSE(timberlab::jointFits(deep, mortise, tenon, error));
+  Joint wide = joint;
+  wide.width2Nm = 12 * kMm;
+  REQUIRE_FALSE(timberlab::jointFits(wide, mortise, tenon, error));
+  Joint triple = joint;
+  triple.count = 3;
+  REQUIRE_FALSE(timberlab::jointFits(triple, mortise, tenon, error));
+}
+
+TEST_CASE("a loose tenon cuts matching pockets in both faces") {
+  Component partA = board("a", 100 * kMm, 30 * kMm, 80 * kMm);
+  Component partB = board("b", 40 * kMm, 18 * kMm, 50 * kMm);
+  Joint joint;
+  joint.type = JointType::LooseTenon;
+  joint.partA = partA.id;
+  joint.partB = partB.id;
+  joint.faceA = PartFace::X1;
+  joint.faceB = PartFace::X0;
+  joint.thicknessNm = 6 * kMm;
+  joint.widthNm = 20 * kMm;
+  joint.depthNm = 8 * kMm;
+  joint.count = 2;
+  joint.offsetNm = 25 * kMm;
+  std::vector<Component> parts{partA, partB};
+  const std::vector<Joint> joints{joint};
+  expectVolume(partA, joints, parts, 100.0 * 30.0 * 80.0 - 1920.0);
+  expectVolume(partB, joints, parts, 40.0 * 18.0 * 50.0 - 1920.0);
+  REQUIRE(classifyLocal(partA, joints, parts, 96, 15, 28) == PointSide::Out);
+  REQUIRE(classifyLocal(partA, joints, parts, 96, 15, 40) == PointSide::In);
+  REQUIRE(classifyLocal(partA, joints, parts, 96, 15, 53) == PointSide::Out);
+  REQUIRE(classifyLocal(partB, joints, parts, 4, 9, 13) == PointSide::Out);
+  REQUIRE(classifyLocal(partB, joints, parts, 4, 9, 25) == PointSide::In);
+
+  std::string error;
+  Joint crowded = joint;
+  crowded.offsetNm = 15 * kMm;
+  REQUIRE_FALSE(timberlab::jointFits(crowded, partA, partB, error));
+  Joint spill = joint;
+  spill.offsetNm = 40 * kMm;
+  REQUIRE_FALSE(timberlab::jointFits(spill, partA, partB, error));
+  Joint through = joint;
+  through.depthNm = 40 * kMm;
+  REQUIRE_FALSE(timberlab::jointFits(through, partA, partB, error));
+}
+
+TEST_CASE("a biscuit cuts a disc-shaped kerf in each face") {
+  Component partA = board("a", 100 * kMm, 30 * kMm, 80 * kMm);
+  Component partB = board("b", 40 * kMm, 18 * kMm, 80 * kMm);
+  Joint joint;
+  joint.type = JointType::Biscuit;
+  joint.partA = partA.id;
+  joint.partB = partB.id;
+  joint.faceA = PartFace::X1;
+  joint.faceB = PartFace::X0;
+  joint.thicknessNm = 4 * kMm;
+  joint.widthNm = 100 * kMm;
+  joint.depthNm = 10 * kMm;
+  joint.count = 1;
+  std::vector<Component> parts{partA, partB};
+  const std::vector<Joint> joints{joint};
+  const double segment = 2500.0 * std::acos(0.8) - 40.0 * 30.0;
+  expectVolume(partA, joints, parts, 100.0 * 30.0 * 80.0 - 4.0 * segment);
+  expectVolume(partB, joints, parts, 40.0 * 18.0 * 80.0 - 4.0 * segment);
+  REQUIRE(classifyLocal(partA, joints, parts, 99, 15, 40) == PointSide::Out);
+  REQUIRE(classifyLocal(partA, joints, parts, 99, 15, 60) == PointSide::Out);
+  REQUIRE(classifyLocal(partA, joints, parts, 99, 15, 70) == PointSide::In);
+  REQUIRE(classifyLocal(partA, joints, parts, 91, 15, 45) == PointSide::Out);
+  REQUIRE(classifyLocal(partA, joints, parts, 91, 15, 55) == PointSide::In);
+  REQUIRE(classifyLocal(partA, joints, parts, 99, 5, 40) == PointSide::In);
+  REQUIRE(classifyLocal(partB, joints, parts, 1, 9, 40) == PointSide::Out);
+
+  std::string error;
+  Joint odd = joint;
+  odd.widthNm = 100 * kMm + 1;
+  REQUIRE_FALSE(timberlab::jointFits(odd, partA, partB, error));
+  Joint buried = joint;
+  buried.depthNm = 60 * kMm;
+  REQUIRE_FALSE(timberlab::jointFits(buried, partA, partB, error));
+  Joint wide = joint;
+  wide.widthNm = 200 * kMm;
+  REQUIRE_FALSE(timberlab::jointFits(wide, partA, partB, error));
+}
+
+TEST_CASE("a cross lap leaves one board's thickness where two boards cross") {
+  Component partA = board("a", 200 * kMm, 20 * kMm, 40 * kMm);
+  Component partB = board("b", 300 * kMm, 20 * kMm, 60 * kMm);
+  Joint joint;
+  joint.type = JointType::CrossLap;
+  joint.partA = partA.id;
+  joint.partB = partB.id;
+  joint.faceA = PartFace::Y1;
+  joint.faceB = PartFace::Y0;
+  joint.offsetNm = 70 * kMm;
+  joint.offset2Nm = 130 * kMm;
+  joint.depthNm = 10 * kMm;
+  std::vector<Component> parts{partA, partB};
+  const std::vector<Joint> joints{joint};
+  expectVolume(partA, joints, parts, 200.0 * 20.0 * 40.0 - 60.0 * 40.0 * 10.0);
+  expectVolume(partB, joints, parts, 300.0 * 20.0 * 60.0 - 40.0 * 60.0 * 10.0);
+  REQUIRE(classifyLocal(partA, joints, parts, 100, 15, 20) == PointSide::Out);
+  REQUIRE(classifyLocal(partA, joints, parts, 100, 5, 20) == PointSide::In);
+  REQUIRE(classifyLocal(partA, joints, parts, 20, 15, 20) == PointSide::In);
+  REQUIRE(classifyLocal(partB, joints, parts, 150, 5, 30) == PointSide::Out);
+  REQUIRE(classifyLocal(partB, joints, parts, 150, 15, 30) == PointSide::In);
+
+  partB.heightNm = 80 * kMm;
+  parts[1] = partB;
+  expectVolume(partA, joints, parts, 200.0 * 20.0 * 40.0 - 80.0 * 40.0 * 10.0);
+
+  std::string error;
+  Joint outside = joint;
+  outside.offsetNm = 150 * kMm;
+  REQUIRE_FALSE(timberlab::jointFits(outside, partA, partB, error));
+  Joint through = joint;
+  through.depthNm = 20 * kMm;
+  REQUIRE_FALSE(timberlab::jointFits(through, partA, partB, error));
+}
+
+TEST_CASE("an end lap notches the host and thins the lapping end to fit") {
+  Component host = board("host", 200 * kMm, 20 * kMm, 40 * kMm);
+  Component end = board("end", 120 * kMm, 20 * kMm, 60 * kMm);
+  Joint joint;
+  joint.type = JointType::EndLap;
+  joint.partA = host.id;
+  joint.partB = end.id;
+  joint.faceA = PartFace::Y1;
+  joint.faceB = PartFace::X0;
+  joint.widthNm = 60 * kMm;
+  joint.offsetNm = 70 * kMm;
+  joint.depthNm = 10 * kMm;
+  joint.lengthNm = 40 * kMm;
+  std::vector<Component> parts{host, end};
+  const std::vector<Joint> joints{joint};
+  expectVolume(host, joints, parts, 200.0 * 20.0 * 40.0 - 60.0 * 40.0 * 10.0);
+  expectVolume(end, joints, parts, 120.0 * 20.0 * 60.0 - 10.0 * 40.0 * 60.0);
+  REQUIRE(classifyLocal(host, joints, parts, 100, 15, 20) == PointSide::Out);
+  REQUIRE(classifyLocal(host, joints, parts, 100, 5, 20) == PointSide::In);
+  REQUIRE(classifyLocal(end, joints, parts, 10, 15, 30) == PointSide::Out);
+  REQUIRE(classifyLocal(end, joints, parts, 10, 5, 30) == PointSide::In);
+  REQUIRE(classifyLocal(end, joints, parts, 60, 15, 30) == PointSide::In);
+
+  Joint high = joint;
+  high.removeMinB = true;
+  expectVolume(end, {high}, parts, 120.0 * 20.0 * 60.0 - 10.0 * 40.0 * 60.0);
+  REQUIRE(classifyLocal(end, {high}, parts, 10, 15, 30) == PointSide::In);
+  REQUIRE(classifyLocal(end, {high}, parts, 10, 5, 30) == PointSide::Out);
+
+  std::string error;
+  Joint thick = joint;
+  thick.depthNm = 20 * kMm;
+  REQUIRE_FALSE(timberlab::jointFits(thick, host, end, error));
+  Joint over = joint;
+  over.offsetNm = 150 * kMm;
+  REQUIRE_FALSE(timberlab::jointFits(over, host, end, error));
+}
+
+TEST_CASE("a splined miter adds a kerf across each mitered face") {
+  Component partA = board("a", 80 * kMm, 20 * kMm, 40 * kMm);
+  Component partB = board("b", 80 * kMm, 20 * kMm, 40 * kMm);
+  Joint joint;
+  joint.type = JointType::SplinedMiter;
+  joint.partA = partA.id;
+  joint.partB = partB.id;
+  joint.faceA = PartFace::X0;
+  joint.faceB = PartFace::X0;
+  joint.removeMinA = true;
+  joint.removeMinB = true;
+  joint.lengthNm = 20 * kMm;
+  joint.thicknessNm = 4 * kMm;
+  joint.offsetNm = 18 * kMm;
+  joint.depthNm = 6 * kMm;
+  std::vector<Component> parts{partA, partB};
+  const std::vector<Joint> joints{joint};
+  const double kerf = 4.0 * (120.0 * std::sqrt(2.0) - 18.0);
+  expectVolume(partA, joints, parts, 80.0 * 20.0 * 40.0 - 8000.0 - kerf);
+  expectVolume(partB, joints, parts, 80.0 * 20.0 * 40.0 - 8000.0 - kerf);
+  REQUIRE(classifyLocal(partA, joints, parts, 12.12, 7.88, 20) == PointSide::Out);
+  REQUIRE(classifyLocal(partA, joints, parts, 12.12, 7.88, 5) == PointSide::In);
+  REQUIRE(classifyLocal(partA, joints, parts, 2, 15, 20) == PointSide::Out);
+
+  std::string error;
+  Joint outside = joint;
+  outside.offsetNm = 38 * kMm;
+  REQUIRE_FALSE(timberlab::jointFits(outside, partA, partB, error));
+  Joint deep = joint;
+  deep.depthNm = 400 * kMm;
+  REQUIRE_FALSE(timberlab::jointFits(deep, partA, partB, error));
+}
+
+TEST_CASE("a pocket screw drills a stepped angled hole in the first part only") {
+  Component partA = board("a", 100 * kMm, 18 * kMm, 60 * kMm);
+  Component partB = board("b", 100 * kMm, 18 * kMm, 60 * kMm);
+  Joint joint;
+  joint.type = JointType::PocketScrew;
+  joint.partA = partA.id;
+  joint.partB = partB.id;
+  joint.faceA = PartFace::X1;
+  joint.faceB = PartFace::X0;
+  joint.edge = FaceEdge::U0;
+  joint.widthNm = 8 * kMm;
+  joint.thicknessNm = 4 * kMm;
+  joint.lengthNm = 16 * kMm;
+  joint.offsetNm = 34 * kMm;
+  joint.count = 1;
+  std::vector<Component> parts{partA, partB};
+  const std::vector<Joint> joints{joint};
+  const double angle = 15.0 * 3.141592653589793 / 180.0;
+  const double toEnd = 34.0 / std::cos(angle);
+  const double removed = 3.141592653589793 * (16.0 * 16.0 + 4.0 * (toEnd - 16.0));
+  expectVolume(partA, joints, parts, 100.0 * 18.0 * 60.0 - removed);
+  expectVolume(partB, joints, parts, 100.0 * 18.0 * 60.0);
+  REQUIRE(classifyLocal(partA, joints, parts, 73.73, 2.07, 30) == PointSide::Out);
+  REQUIRE(classifyLocal(partA, joints, parts, 73.73, 2.07, 33) == PointSide::Out);
+  REQUIRE(classifyLocal(partA, joints, parts, 73.73, 2.07, 36) == PointSide::In);
+  REQUIRE(classifyLocal(partA, joints, parts, 93.05, 7.25, 30) == PointSide::Out);
+  REQUIRE(classifyLocal(partA, joints, parts, 93.05, 7.25, 33) == PointSide::In);
+  REQUIRE(classifyLocal(partA, joints, parts, 20, 9, 30) == PointSide::In);
+
+  Joint pair = joint;
+  pair.count = 2;
+  pair.offset2Nm = 20 * kMm;
+  expectVolume(partA, {pair}, parts, 100.0 * 18.0 * 60.0 - 2.0 * removed);
+  REQUIRE(classifyLocal(partA, {pair}, parts, 73.73, 2.07, 20) == PointSide::Out);
+  REQUIRE(classifyLocal(partA, {pair}, parts, 73.73, 2.07, 40) == PointSide::Out);
+  REQUIRE(classifyLocal(partA, {pair}, parts, 73.73, 2.07, 30) == PointSide::In);
+
+  std::string error;
+  Joint near = joint;
+  near.offsetNm = 10 * kMm;
+  REQUIRE_FALSE(timberlab::jointFits(near, partA, partB, error));
+  Joint steep = joint;
+  steep.offsetNm = 80 * kMm;
+  REQUIRE_FALSE(timberlab::jointFits(steep, partA, partB, error));
+  Joint thin = joint;
+  thin.thicknessNm = 8 * kMm;
+  REQUIRE_FALSE(timberlab::jointFits(thin, partA, partB, error));
+  Joint odd = joint;
+  odd.widthNm = 8 * kMm + 1;
+  REQUIRE_FALSE(timberlab::jointFits(odd, partA, partB, error));
+  REQUIRE(timberlab::jointCutsPart(joint, partA.id));
+  REQUIRE_FALSE(timberlab::jointCutsPart(joint, partB.id));
+}
+
+TEST_CASE("starting sizes of the later joints fit two default boards and reload") {
+  const char* keys[] = {"joint.haunched_tenon", "joint.wedged_tenon", "joint.loose_tenon",
+                        "joint.biscuit",        "joint.splined_miter", "joint.pocket_screw"};
+  for (const char* key : keys) {
+    Document document;
+    std::string error;
+    const std::string selected = document.addBoard();
+    const std::string mate = document.addBoard();
+    const std::string id = document.addJoint(key, selected, mate, error);
+    INFO(key);
+    INFO(error);
+    REQUIRE_FALSE(id.empty());
+    const auto cutA = probeSolid(*document.find(selected), document.joints(), document.components());
+    const auto cutB = probeSolid(*document.find(mate), document.joints(), document.components());
+    REQUIRE(cutA.ok);
+    REQUIRE(cutB.ok);
+    REQUIRE(cutA.volumeMm3 < 600.0 * 18.0 * 720.0 - 0.5);
+    if (std::string(key) != "joint.pocket_screw") REQUIRE(cutB.volumeMm3 < 600.0 * 18.0 * 720.0 - 0.5);
+    Document loaded;
+    REQUIRE(Document::fromJson(document.toJson(), loaded, error));
+    REQUIRE(loaded.joints().size() == 1);
+    const Joint& back = loaded.joints().front();
+    const Joint& original = document.joints().front();
+    REQUIRE(jointTypeKey(back.type) == std::string(key));
+    REQUIRE(back.length2Nm == original.length2Nm);
+    REQUIRE(back.width2Nm == original.width2Nm);
+    REQUIRE(back.count == original.count);
+    REQUIRE(back.edge == original.edge);
+  }
+
+  for (const char* key : {"joint.cross_lap", "joint.end_lap"}) {
+    Document document;
+    std::string error;
+    const std::string selected = document.addBoard();
+    const std::string mate = document.addBoard();
+    REQUIRE(document.setDimension(selected, "width", 200 * kMm, error));
+    REQUIRE(document.setDimension(selected, "height", 40 * kMm, error));
+    REQUIRE(document.setDimension(mate, "width", 300 * kMm, error));
+    REQUIRE(document.setDimension(mate, "height", 60 * kMm, error));
+    const std::string id = document.addJoint(key, selected, mate, error);
+    INFO(key);
+    INFO(error);
+    REQUIRE_FALSE(id.empty());
+    REQUIRE(probeSolid(*document.find(selected), document.joints(), document.components()).ok);
+    REQUIRE(probeSolid(*document.find(mate), document.joints(), document.components()).ok);
+  }
+}
+
+TEST_CASE("the later joints store their own keys and an older file still loads") {
+  Document document;
+  std::string error;
+  const std::string selected = document.addBoard();
+  const std::string mate = document.addBoard();
+  REQUIRE_FALSE(document.addJoint("joint.mortise_tenon", selected, mate, error).empty());
+  nlohmann::json plain = nlohmann::json::parse(document.toJson());
+  REQUIRE_FALSE(plain["joints"][0].contains("length2"));
+  REQUIRE_FALSE(plain["joints"][0].contains("width2"));
+  Document older;
+  REQUIRE(Document::fromJson(plain.dump(), older, error));
+
+  Document wedged;
+  const std::string rail = wedged.addBoard();
+  const std::string leg = wedged.addBoard();
+  REQUIRE_FALSE(wedged.addJoint("joint.wedged_tenon", rail, leg, error).empty());
+  nlohmann::json body = nlohmann::json::parse(wedged.toJson());
+  REQUIRE(body["joints"][0].contains("length2"));
+  REQUIRE(body["joints"][0].contains("width2"));
+  for (const char* key : {"length2", "width2", "count"}) {
+    nlohmann::json missing = body;
+    missing["joints"][0].erase(key);
+    Document rejected;
+    REQUIRE_FALSE(Document::fromJson(missing.dump(), rejected, error));
+    REQUIRE(error == "storage.json");
+  }
+  const std::string jointId = wedged.joints().front().id;
+  REQUIRE(wedged.setJointParameter(jointId, "width2", 2 * kMm, error));
+  REQUIRE(wedged.joints().front().width2Nm == 2 * kMm);
+  REQUIRE_FALSE(wedged.setJointParameter(jointId, "width2", 5000 * kMm, error));
+  REQUIRE(error == "joint.parameter");
+
+  Document pocket;
+  const std::string first = pocket.addBoard();
+  const std::string second = pocket.addBoard();
+  REQUIRE_FALSE(pocket.addJoint("joint.pocket_screw", first, second, error).empty());
+  nlohmann::json screw = nlohmann::json::parse(pocket.toJson());
+  screw["joints"][0].erase("edge");
+  Document rejected;
+  REQUIRE_FALSE(Document::fromJson(screw.dump(), rejected, error));
+  REQUIRE(error == "storage.json");
+}

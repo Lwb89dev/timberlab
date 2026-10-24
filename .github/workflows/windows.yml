@@ -1,0 +1,199 @@
+name: Windows
+
+# Builds the Windows x64 package with MSVC. A version tag builds it and adds the
+# zip to the GitHub release. A manual run builds it and keeps the zip as a
+# workflow artifact only.
+on:
+  push:
+    tags:
+      - "*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 240
+    defaults:
+      run:
+        shell: bash
+    env:
+      QT_VERSION: "6.8.3"
+      OCCT_SHA256: "3cd080d3fc33ba0c6c157e110afe3e015859524c4694dbb09812ec9d61595639"
+    steps:
+      - name: Check out the source
+        uses: actions/checkout@v4
+
+      - name: Read the version
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^project(TimberLab VERSION \([0-9.]*\) .*/\1/p' CMakeLists.txt)"
+          test -n "${version}"
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            grep -q "project(TimberLab VERSION ${GITHUB_REF_NAME} " CMakeLists.txt
+            grep -q "setApplicationVersion(\"${GITHUB_REF_NAME}\")" apps/timberlab/main.cpp
+          fi
+          echo "VERSION=${version}" >> "${GITHUB_ENV}"
+
+      - name: Set up the MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Make sure Ninja is there
+        run: |
+          command -v ninja || choco install ninja -y --no-progress
+          ninja --version
+
+      - name: Restore Qt
+        id: qt-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.cache/qt
+          key: qt-6.8.3-windows-msvc2022_64-desktop-v1
+
+      - name: Install Qt
+        if: steps.qt-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          python -m pip install 'aqtinstall==3.2.1'
+          python -m aqt install-qt windows desktop "${QT_VERSION}" win64_msvc2022_64 \
+            -O "${GITHUB_WORKSPACE}/.cache/qt" \
+            --archives qtbase qtdeclarative qtsvg qttools qttranslations qtshadertools
+          test -f "${GITHUB_WORKSPACE}/.cache/qt/${QT_VERSION}/msvc2022_64/lib/cmake/Qt6/Qt6Config.cmake"
+
+      - name: Restore Open CASCADE
+        id: occt-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.cache/occt-install
+          key: occt-7.9.2-with-step-windows-msvc-v2
+
+      - name: Fetch the Open CASCADE source
+        run: |
+          set -euo pipefail
+          mkdir -p "${GITHUB_WORKSPACE}/.cache/occt-src"
+          cd "${GITHUB_WORKSPACE}/.cache/occt-src"
+          curl -fsSL -o occt.tar.gz https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_2.tar.gz
+          echo "${OCCT_SHA256}  occt.tar.gz" | sha256sum -c
+          tar -xzf occt.tar.gz
+          test -f OCCT-7_9_2/LICENSE_LGPL_21.txt
+
+      - name: Build Open CASCADE
+        if: steps.occt-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          workspace="$(cygpath -m "${GITHUB_WORKSPACE}")"
+          cmake -S "${workspace}/.cache/occt-src/OCCT-7_9_2" -B "${workspace}/.cache/occt-build" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_LIBRARY_TYPE=Shared \
+            -DINSTALL_DIR="${workspace}/.cache/occt-install" \
+            -DINSTALL_DIR_LAYOUT=Unix \
+            -DBUILD_MODULE_FoundationClasses=ON \
+            -DBUILD_MODULE_ModelingData=ON \
+            -DBUILD_MODULE_ModelingAlgorithms=ON \
+            -DBUILD_MODULE_Visualization=OFF \
+            -DBUILD_MODULE_ApplicationFramework=OFF \
+            -DBUILD_MODULE_DataExchange=ON \
+            -DBUILD_MODULE_Draw=OFF \
+            -DBUILD_MODULE_DETools=OFF \
+            -DBUILD_DOC_Overview=OFF \
+            -DBUILD_Inspector=OFF \
+            -DBUILD_SAMPLES_QT=OFF \
+            -DUSE_FREETYPE=OFF \
+            -DUSE_FREEIMAGE=OFF \
+            -DUSE_FFMPEG=OFF \
+            -DUSE_OPENGL=OFF \
+            -DUSE_GLES2=OFF \
+            -DUSE_RAPIDJSON=OFF \
+            -DUSE_DRACO=OFF \
+            -DUSE_TBB=OFF \
+            -DUSE_TK=OFF \
+            -DUSE_EIGEN=OFF
+          cmake --build "${workspace}/.cache/occt-build" --target install
+          test -f "${workspace}/.cache/occt-install/lib/cmake/opencascade/OpenCASCADEConfig.cmake"
+
+      - name: Install OpenSSL and SQLite
+        run: |
+          set -euo pipefail
+          "${VCPKG_INSTALLATION_ROOT}/vcpkg.exe" install openssl:x64-windows sqlite3:x64-windows
+          test -f "${VCPKG_INSTALLATION_ROOT}/installed/x64-windows/bin/libcrypto-3-x64.dll"
+
+      - name: Configure and build
+        run: |
+          set -euo pipefail
+          workspace="$(cygpath -m "${GITHUB_WORKSPACE}")"
+          vcpkg="$(cygpath -m "${VCPKG_INSTALLATION_ROOT}")/installed/x64-windows"
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_PREFIX_PATH="${workspace}/.cache/qt/${QT_VERSION}/msvc2022_64;${workspace}/.cache/occt-install;${vcpkg}"
+          cmake --build build --target timberlab timberlab-tests
+
+      - name: Test
+        run: |
+          set -euo pipefail
+          workspace="${GITHUB_WORKSPACE}"
+          vcpkg="${VCPKG_INSTALLATION_ROOT}/installed/x64-windows"
+          export PATH="$(cygpath -u "${workspace}")/.cache/qt/${QT_VERSION}/msvc2022_64/bin:$(cygpath -u "${workspace}")/.cache/occt-install/bin:$(cygpath -u "${vcpkg}")/bin:${PATH}"
+          export QT_PLUGIN_PATH="${workspace}/.cache/qt/${QT_VERSION}/msvc2022_64/plugins"
+          export QT_QPA_PLATFORM=offscreen
+          here="$(cygpath -m "${PWD}")"
+          ./build/timberlab-tests.exe
+          TIMBERLAB_DATA_DIR="${here}/build/self-check" TIMBERLAB_SOURCE_DIR="${here}" ./build/timberlab.exe --check
+          TIMBERLAB_DATA_DIR="${here}/build/accept" ./build/timberlab.exe --accept
+
+      - name: Assemble the package
+        run: |
+          set -euo pipefail
+          workspace="$(cygpath -u "${GITHUB_WORKSPACE}")"
+          qt="${workspace}/.cache/qt/${QT_VERSION}/msvc2022_64"
+          occt="${workspace}/.cache/occt-install"
+          vcpkg="$(cygpath -u "${VCPKG_INSTALLATION_ROOT}")/installed/x64-windows"
+          name="TimberLab-${VERSION}-windows-x64"
+          package="dist/${name}"
+          rm -rf dist
+          mkdir -p "${package}"
+          cp build/timberlab.exe "${package}/"
+          PATH="${qt}/bin:${PATH}" windeployqt.exe --release --no-translations --qmldir qml \
+            --compiler-runtime "${package}/timberlab.exe"
+          cp "${occt}"/bin/*.dll "${package}/"
+          cp "${vcpkg}/bin/libcrypto-3-x64.dll" "${vcpkg}/bin/sqlite3.dll" "${package}/"
+          mkdir -p "${package}/licenses"
+          cp LICENSE LICENSES.md "${package}/licenses/"
+          cp "${workspace}/.cache/occt-src/OCCT-7_9_2/LICENSE_LGPL_21.txt" \
+             "${workspace}/.cache/occt-src/OCCT-7_9_2/OCCT_LGPL_EXCEPTION.txt" "${package}/licenses/"
+          echo "PACKAGE=${package}" >> "${GITHUB_ENV}"
+          echo "PACKAGE_NAME=${name}" >> "${GITHUB_ENV}"
+
+      - name: Run the package on its own
+        run: |
+          set -euo pipefail
+          # Only the Windows folders on the path: every library has to be in the package.
+          here="$(cygpath -m "${PWD}")"
+          export PATH="/c/Windows/System32:/c/Windows"
+          export QT_QPA_PLATFORM=offscreen
+          TIMBERLAB_DATA_DIR="${here}/dist/self-check" TIMBERLAB_SOURCE_DIR="${here}" "./${PACKAGE}/timberlab.exe" --check
+          TIMBERLAB_DATA_DIR="${here}/dist/accept" "./${PACKAGE}/timberlab.exe" --accept
+
+      - name: Zip the package
+        run: |
+          set -euo pipefail
+          cd dist
+          7z a -tzip "${PACKAGE_NAME}.zip" "${PACKAGE_NAME}"
+
+      - name: Upload the package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PACKAGE_NAME }}
+          path: dist/${{ env.PACKAGE_NAME }}.zip
+          if-no-files-found: error
+
+      - name: Add the zip to the GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: dist/${{ env.PACKAGE_NAME }}.zip
+          fail_on_unmatched_files: true

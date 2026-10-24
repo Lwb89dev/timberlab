@@ -33,12 +33,13 @@ A board or box must have positive width, height, and thickness. A cylinder must 
 
 `joints` is optional. A model with no joints omits the array, so an older file still loads. Schema version stays 1. Each joint:
 
-- `id`, `type` (`joint.mortise_tenon`, `joint.half_lap`, `joint.dado`, `joint.groove`, `joint.rabbet`, `joint.bridle`, `joint.castle`, `joint.miter`, `joint.dovetail`, `joint.sliding_dovetail`)
+- `id`, `type` (`joint.mortise_tenon`, `joint.half_lap`, `joint.dado`, `joint.groove`, `joint.rabbet`, `joint.bridle`, `joint.castle`, `joint.miter`, `joint.dovetail`, `joint.sliding_dovetail`, `joint.finger`, `joint.half_blind_dovetail`, `joint.tongue_groove`, `joint.dowel`, `joint.haunched_tenon`, `joint.wedged_tenon`, `joint.loose_tenon`, `joint.cross_lap`, `joint.end_lap`, `joint.splined_miter`, `joint.biscuit`, `joint.pocket_screw`)
 - `partA`, `partB`, `faceA`, `faceB` (`x0`, `x1`, `y0`, `y1`, `z0`, `z1`)
-- `edge` for a rabbet (`u0`, `u1`, `v0`, `v1`)
+- `edge` for a rabbet or a pocket screw (`u0`, `u1`, `v0`, `v1`)
 - `length`, `width`, `thickness`, `depth`, `offset`, `offset2` in nanometres
-- optional `count`, an integer. Castle and dovetail require it. It is omitted when zero. It is not a length
-- `removeMinA`, `removeMinB` for a half-lap or a miter; a missing flag means false
+- optional `length2` and `width2` in nanometres, omitted when zero. A haunched tenon requires `length2`. A wedged tenon requires both. Every other type ignores them, so an older file loads
+- optional `count`, an integer. Castle, dovetail, finger, half-blind dovetail, wedged tenon, loose tenon, biscuit, and pocket screw require it. It is omitted when zero. It is not a length
+- `removeMinA`, `removeMinB` for a half-lap, a miter, a splined miter, a haunched tenon, or an end lap; a missing flag means false
 
 On load, bindings are applied before joints are checked, so a joint is judged against the recomputed parts. A joint that does not fit is rejected (`joint.parameter`). A missing part is `component.missing`. Duplicate joint ids are `storage.duplicate`. More than 2000 joints is `storage.too_many`. The cuts are not stored; they are rebuilt from these fields and the current part sizes. Joint sizes are not formulas.
 

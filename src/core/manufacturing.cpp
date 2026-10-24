@@ -336,6 +336,433 @@ std::string pdfDocument(const ViewWire& front, const ViewWire& top, const ViewWi
   return out;
 }
 
+
+// ---- Hidden-line sheet -----------------------------------------------------
+
+constexpr std::int64_t kDimReserveUm = 14000;
+constexpr std::int64_t kDimTextUm = 2200;
+constexpr std::int64_t kMinBreakGapUm = 50;
+constexpr std::size_t kMaxBreaks = 40;
+
+enum class StrokeKind { Visible, Hidden, Dimension };
+
+struct SheetLine {
+  Projected from;
+  Projected to;
+  StrokeKind kind = StrokeKind::Visible;
+};
+
+// at is the middle of the text along its direction when centered. A vertical
+// text reads from bottom to top.
+struct SheetText {
+  Projected at;
+  std::string text;
+  bool centered = true;
+  bool vertical = false;
+};
+
+// Everything on the sheet, in micrometres with v up.
+struct Sheet {
+  std::int64_t width = 0;
+  std::int64_t height = 0;
+  std::vector<SheetLine> lines;
+  std::vector<SheetText> texts;
+};
+
+struct AxisPair {
+  int u = 0;
+  int v = 2;
+};
+
+AxisPair axesOf(WirePlane plane) {
+  if (plane == WirePlane::Top) return {0, 1};
+  if (plane == WirePlane::Right) return {1, 2};
+  return {0, 2};
+}
+
+std::int64_t axisSize(const Component& component, int axis) {
+  if (axis == 0) return component.widthNm;
+  if (axis == 1) return component.thicknessNm;
+  return component.heightNm;
+}
+
+// The interval a cut occupies on one part axis, in nanometres.
+void cutInterval(const LocalCut& cut, int axis, std::int64_t& low, std::int64_t& high) {
+  const std::int64_t lows[3] = {cut.x0, cut.y0, cut.z0};
+  const std::int64_t highs[3] = {cut.x1, cut.y1, cut.z1};
+  if (cut.cylinderAxis == 3) {
+    low = std::min(lows[axis], highs[axis]) - cut.radiusNm;
+    high = std::max(lows[axis], highs[axis]) + cut.radiusNm;
+    return;
+  }
+  if (cut.cylinderAxis >= 0) {
+    if (axis == cut.cylinderAxis) {
+      low = lows[axis];
+      high = highs[axis];
+      return;
+    }
+    const std::int64_t center = (lows[axis] + highs[axis]) / 2;
+    low = center - cut.radiusNm;
+    high = center + cut.radiusNm;
+    return;
+  }
+  if (cut.prismAxis >= 0) {
+    const std::int64_t* values[3] = {cut.px, cut.py, cut.pz};
+    if (axis == cut.prismAxis) {
+      low = std::min(values[axis][0], cut.prismEnd);
+      high = std::max(values[axis][0], cut.prismEnd);
+      return;
+    }
+    low = high = values[axis][0];
+    for (int point = 1; point < cut.pointCount; ++point) {
+      low = std::min(low, values[axis][point]);
+      high = std::max(high, values[axis][point]);
+    }
+    return;
+  }
+  low = std::min(lows[axis], highs[axis]);
+  high = std::max(lows[axis], highs[axis]);
+}
+
+// Positions along one part axis where a cut starts or stops, with the part's two
+// ends. Positions closer than 50 um are one position.
+std::vector<std::int64_t> featureBreaks(const Component& component, const std::vector<Joint>& joints,
+                                        const std::vector<Component>& parts, int axis) {
+  const std::int64_t full = axisSize(component, axis);
+  std::set<std::int64_t> found = {0, full};
+  for (const Joint& joint : joints) {
+    if (!jointCutsPart(joint, component.id)) continue;
+    const std::string& mateId = joint.partA == component.id ? joint.partB : joint.partA;
+    const Component* mate = nullptr;
+    for (const Component& candidate : parts) {
+      if (candidate.id == mateId) mate = &candidate;
+    }
+    if (mate == nullptr) continue;
+    std::vector<LocalCut> cuts;
+    std::string ignored;
+    if (!cutsForPart(joint, component, *mate, cuts, ignored)) continue;
+    for (const LocalCut& cut : cuts) {
+      std::int64_t low = 0;
+      std::int64_t high = 0;
+      cutInterval(cut, axis, low, high);
+      for (const std::int64_t value : {low, high}) {
+        if (value > 0 && value < full) found.insert(value);
+      }
+    }
+  }
+  std::vector<std::int64_t> merged;
+  for (const std::int64_t value : found) {
+    if (!merged.empty() && value - merged.back() < kMinBreakGapUm * 1000 && value != full) continue;
+    if (!merged.empty() && value == full && full - merged.back() < kMinBreakGapUm * 1000) merged.pop_back();
+    merged.push_back(value);
+  }
+  if (merged.size() > kMaxBreaks) return {0, full};
+  return merged;
+}
+
+// Millimetres to 0.01 mm, without trailing zeros.
+std::string dimensionText(std::int64_t nm) {
+  const std::int64_t hundredths = (nm + 5000) / 10000;
+  std::string text = std::to_string(hundredths / 100);
+  const std::int64_t fraction = hundredths % 100;
+  if (fraction == 0) return text;
+  text += '.';
+  text += static_cast<char>('0' + fraction / 10);
+  if (fraction % 10 != 0) text += static_cast<char>('0' + fraction % 10);
+  return text;
+}
+
+void addDimensionTick(Sheet& sheet, std::int64_t x, std::int64_t y, bool horizontalChain) {
+  const std::int64_t reach = 1000;
+  if (horizontalChain) sheet.lines.push_back({{x, y - reach}, {x, y + reach}, StrokeKind::Dimension});
+  else sheet.lines.push_back({{x - reach, y}, {x + reach, y}, StrokeKind::Dimension});
+}
+
+// A chain of dimensions along the horizontal or vertical axis of a view. origin
+// is where break 0 sits on that axis, and across is the other coordinate.
+void addChain(Sheet& sheet, const std::vector<std::int64_t>& breaks, bool horizontalChain, std::int64_t origin,
+              std::int64_t across) {
+  if (breaks.size() < 2) return;
+  const std::int64_t first = origin + breaks.front() / 1000;
+  const std::int64_t last = origin + breaks.back() / 1000;
+  if (horizontalChain) sheet.lines.push_back({{first, across}, {last, across}, StrokeKind::Dimension});
+  else sheet.lines.push_back({{across, first}, {across, last}, StrokeKind::Dimension});
+  for (const std::int64_t value : breaks) {
+    addDimensionTick(sheet, horizontalChain ? origin + value / 1000 : across,
+                     horizontalChain ? across : origin + value / 1000, horizontalChain);
+  }
+  for (std::size_t index = 0; index + 1 < breaks.size(); ++index) {
+    const std::int64_t a = origin + breaks[index] / 1000;
+    const std::int64_t b = origin + breaks[index + 1] / 1000;
+    const std::string text = dimensionText(breaks[index + 1] - breaks[index]);
+    if (horizontalChain) sheet.texts.push_back({{(a + b) / 2, across + 700}, text, true, false});
+    else sheet.texts.push_back({{across - 600, (a + b) / 2}, text, true, true});
+  }
+}
+
+struct HlrCell {
+  std::set<std::pair<Projected, Projected>> visible;
+  std::set<std::pair<Projected, Projected>> hidden;
+  std::int64_t minU = 0;
+  std::int64_t maxU = 0;
+  std::int64_t minV = 0;
+  std::int64_t maxV = 0;
+  std::vector<std::int64_t> uBreaks;
+  std::vector<std::int64_t> vBreaks;
+  bool dimensioned = false;
+  std::int64_t reserve() const { return dimensioned ? kDimReserveUm : 0; }
+  std::int64_t cellWidth() const { return maxU - minU + 2 * kMarginUm + reserve(); }
+  std::int64_t cellHeight() const { return maxV - minV + 2 * kMarginUm + reserve(); }
+};
+
+void addSegment(std::set<std::pair<Projected, Projected>>& into, const geometry::Segment2& segment) {
+  Projected a = project(static_cast<float>(segment.u0), static_cast<float>(segment.v0));
+  Projected b = project(static_cast<float>(segment.u1), static_cast<float>(segment.v1));
+  if (!(a < b) && !(b < a)) return;
+  if (b < a) std::swap(a, b);
+  into.insert({a, b});
+}
+
+bool buildCell(const Component& component, const std::vector<Joint>& joints, const std::vector<Component>& parts,
+               WirePlane plane, HlrCell& cell, std::string& error) {
+  geometry::ViewDirection direction = geometry::ViewDirection::Front;
+  if (plane == WirePlane::Top) direction = geometry::ViewDirection::Top;
+  if (plane == WirePlane::Right) direction = geometry::ViewDirection::Right;
+  const geometry::ViewLines lines = geometry::hiddenLineView(component, joints, parts, direction);
+  if (!lines.ok) {
+    error = lines.error.empty() ? "geometry.invalid" : lines.error;
+    return false;
+  }
+  for (const geometry::Segment2& segment : lines.visible) addSegment(cell.visible, segment);
+  for (const geometry::Segment2& segment : lines.hidden) addSegment(cell.hidden, segment);
+  for (const auto& edge : cell.visible) cell.hidden.erase(edge);
+  if (cell.visible.empty()) {
+    error = "geometry.empty";
+    return false;
+  }
+  cell.minU = cell.maxU = cell.visible.begin()->first.u;
+  cell.minV = cell.maxV = cell.visible.begin()->first.v;
+  for (const auto* set : {&cell.visible, &cell.hidden}) {
+    for (const auto& edge : *set) {
+      for (const Projected& point : {edge.first, edge.second}) {
+        cell.minU = std::min(cell.minU, point.u);
+        cell.maxU = std::max(cell.maxU, point.u);
+        cell.minV = std::min(cell.minV, point.v);
+        cell.maxV = std::max(cell.maxV, point.v);
+      }
+    }
+  }
+  if (component.type != ComponentType::Cylinder) {
+    const AxisPair axes = axesOf(plane);
+    cell.uBreaks = featureBreaks(component, joints, parts, axes.u);
+    cell.vBreaks = featureBreaks(component, joints, parts, axes.v);
+    cell.dimensioned = true;
+  }
+  return true;
+}
+
+// Places one cell on the sheet with its lower left corner at (originX, originY).
+void placeCell(Sheet& sheet, const HlrCell& cell, std::int64_t originX, std::int64_t originY) {
+  const std::int64_t left = originX + kMarginUm - cell.minU;
+  const std::int64_t bottom = originY + cell.reserve() + kMarginUm - cell.minV;
+  for (const auto& edge : cell.visible) {
+    sheet.lines.push_back({{edge.first.u + left, edge.first.v + bottom},
+                           {edge.second.u + left, edge.second.v + bottom}, StrokeKind::Visible});
+  }
+  for (const auto& edge : cell.hidden) {
+    sheet.lines.push_back({{edge.first.u + left, edge.first.v + bottom},
+                           {edge.second.u + left, edge.second.v + bottom}, StrokeKind::Hidden});
+  }
+  if (!cell.dimensioned) return;
+  const std::int64_t below = originY + cell.reserve() - 6000 + 2000;
+  const std::int64_t beside = originX + cell.cellWidth() - cell.reserve() + 6000;
+  addChain(sheet, cell.uBreaks, true, left, below);
+  addChain(sheet, cell.vBreaks, false, bottom, beside);
+  if (cell.uBreaks.size() > 2) addChain(sheet, {0, cell.uBreaks.back()}, true, left, below - 5000);
+  if (cell.vBreaks.size() > 2) addChain(sheet, {0, cell.vBreaks.back()}, false, bottom, beside + 6000);
+}
+
+bool buildSheet(const Component& component, const std::vector<Joint>& joints, const std::vector<Component>& parts,
+                Sheet& sheet, std::string& error) {
+  HlrCell front;
+  HlrCell top;
+  HlrCell right;
+  if (!buildCell(component, joints, parts, WirePlane::Front, front, error) ||
+      !buildCell(component, joints, parts, WirePlane::Top, top, error) ||
+      !buildCell(component, joints, parts, WirePlane::Right, right, error)) {
+    return false;
+  }
+  sheet.width = front.cellWidth() + kSheetGapUm + right.cellWidth();
+  sheet.height = front.cellHeight() + kSheetGapUm + top.cellHeight();
+  placeCell(sheet, front, 0, 0);
+  placeCell(sheet, right, front.cellWidth() + kSheetGapUm, 0);
+  placeCell(sheet, top, 0, front.cellHeight() + kSheetGapUm);
+  return true;
+}
+
+const char* kHlrNote =
+    "Hidden-line removal on the exact solid. Solid lines are visible and dashed lines are hidden. "
+    "Dimensions are millimetres: the size and position of every cut along each view axis, chained from the "
+    "part corner, and the overall size. Front: X right, Z up. Right: Y right, Z up. Top: X right, Y up.";
+
+std::string sheetPdfText(const Sheet& sheet) {
+  std::ostringstream stream;
+  stream << "BT /F1 9 Tf 36 800 Td (Hidden-line sheet. Millimetres. Solid = visible, dashed = hidden.) Tj ET\n";
+  stream << "q\n2.834646 0 0 2.834646 36 36 cm\n0.35 w\n";
+  for (const SheetLine& line : sheet.lines) {
+    if (line.kind == StrokeKind::Hidden) stream << "[1.5 1] 0 d\n";
+    stream << svgNumber(line.from.u) << ' ' << svgNumber(line.from.v) << " m\n";
+    stream << svgNumber(line.to.u) << ' ' << svgNumber(line.to.v) << " l\nS\n";
+    if (line.kind == StrokeKind::Hidden) stream << "[] 0 d\n";
+  }
+  for (const SheetText& text : sheet.texts) {
+    const std::int64_t shift = text.centered ? static_cast<std::int64_t>(text.text.size()) * kDimTextUm * 28 / 100 : 0;
+    if (text.vertical) {
+      stream << "BT /F1 2.2 Tf 0 1 -1 0 " << svgNumber(text.at.u) << ' ' << svgNumber(text.at.v - shift) << " Tm ("
+             << text.text << ") Tj ET\n";
+    } else {
+      stream << "BT /F1 2.2 Tf 1 0 0 1 " << svgNumber(text.at.u - shift) << ' ' << svgNumber(text.at.v) << " Tm ("
+             << text.text << ") Tj ET\n";
+    }
+  }
+  stream << "Q\n";
+  return stream.str();
+}
+
+std::string pdfFromContents(const std::string& contents) {
+  const std::string objects[] = {
+      "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
+      "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
+      "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R "
+      "/Resources << /Font << /F1 5 0 R >> >> >>\nendobj\n",
+      "4 0 obj\n<< /Length " + std::to_string(contents.size()) + " >>\nstream\n" + contents + "endstream\nendobj\n",
+      "5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n"};
+  std::string out = "%PDF-1.4\n";
+  std::size_t offsets[5];
+  for (int index = 0; index < 5; ++index) {
+    offsets[index] = out.size();
+    out += objects[index];
+  }
+  const std::size_t xrefAt = out.size();
+  std::ostringstream xref;
+  xref << "xref\n0 6\n0000000000 65535 f \n";
+  for (std::size_t offset : offsets) xref << std::setw(10) << std::setfill('0') << offset << " 00000 n \n";
+  xref << "trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n" << xrefAt << "\n%%EOF\n";
+  out += xref.str();
+  return out;
+}
+
+const char* layerOf(StrokeKind kind) {
+  if (kind == StrokeKind::Hidden) return "HIDDEN";
+  if (kind == StrokeKind::Dimension) return "DIMENSIONS";
+  return "VISIBLE";
+}
+
+std::string sheetDxfText(const Sheet& sheet) {
+  std::ostringstream out;
+  appendDxfPair(out, 0, "SECTION");
+  appendDxfPair(out, 2, "HEADER");
+  appendDxfPair(out, 9, "$ACADVER");
+  appendDxfPair(out, 1, "AC1009");
+  appendDxfPair(out, 999, "Hidden-line removal on the exact solid. Millimetres.");
+  appendDxfPair(out, 0, "ENDSEC");
+  appendDxfPair(out, 0, "SECTION");
+  appendDxfPair(out, 2, "TABLES");
+  appendDxfPair(out, 0, "TABLE");
+  appendDxfPair(out, 2, "LTYPE");
+  appendDxfPair(out, 70, "2");
+  appendDxfPair(out, 0, "LTYPE");
+  appendDxfPair(out, 2, "CONTINUOUS");
+  appendDxfPair(out, 70, "0");
+  appendDxfPair(out, 3, "Solid line");
+  appendDxfPair(out, 72, "65");
+  appendDxfPair(out, 73, "0");
+  appendDxfPair(out, 40, "0.0");
+  appendDxfPair(out, 0, "LTYPE");
+  appendDxfPair(out, 2, "HIDDEN");
+  appendDxfPair(out, 70, "0");
+  appendDxfPair(out, 3, "Hidden");
+  appendDxfPair(out, 72, "65");
+  appendDxfPair(out, 73, "2");
+  appendDxfPair(out, 40, "2.5");
+  appendDxfPair(out, 49, "1.5");
+  appendDxfPair(out, 49, "-1.0");
+  appendDxfPair(out, 0, "ENDTAB");
+  appendDxfPair(out, 0, "TABLE");
+  appendDxfPair(out, 2, "LAYER");
+  appendDxfPair(out, 70, "3");
+  for (const char* name : {"VISIBLE", "HIDDEN", "DIMENSIONS"}) {
+    appendDxfPair(out, 0, "LAYER");
+    appendDxfPair(out, 2, name);
+    appendDxfPair(out, 70, "0");
+    appendDxfPair(out, 62, "7");
+    appendDxfPair(out, 6, std::string(name) == "HIDDEN" ? "HIDDEN" : "CONTINUOUS");
+  }
+  appendDxfPair(out, 0, "ENDTAB");
+  appendDxfPair(out, 0, "ENDSEC");
+  appendDxfPair(out, 0, "SECTION");
+  appendDxfPair(out, 2, "ENTITIES");
+  for (const SheetLine& line : sheet.lines) {
+    appendDxfPair(out, 0, "LINE");
+    appendDxfPair(out, 8, layerOf(line.kind));
+    appendDxfPair(out, 10, svgNumber(line.from.u));
+    appendDxfPair(out, 20, svgNumber(line.from.v));
+    appendDxfPair(out, 30, "0.0");
+    appendDxfPair(out, 11, svgNumber(line.to.u));
+    appendDxfPair(out, 21, svgNumber(line.to.v));
+    appendDxfPair(out, 31, "0.0");
+  }
+  for (const SheetText& text : sheet.texts) {
+    const std::int64_t shift = text.centered ? static_cast<std::int64_t>(text.text.size()) * kDimTextUm * 28 / 100 : 0;
+    appendDxfPair(out, 0, "TEXT");
+    appendDxfPair(out, 8, "DIMENSIONS");
+    appendDxfPair(out, 10, svgNumber(text.vertical ? text.at.u : text.at.u - shift));
+    appendDxfPair(out, 20, svgNumber(text.vertical ? text.at.v - shift : text.at.v));
+    appendDxfPair(out, 30, "0.0");
+    appendDxfPair(out, 40, svgNumber(kDimTextUm));
+    appendDxfPair(out, 1, text.text);
+    if (text.vertical) appendDxfPair(out, 50, "90.0");
+  }
+  appendDxfPair(out, 0, "ENDSEC");
+  appendDxfPair(out, 0, "EOF");
+  return out.str();
+}
+
+std::string sheetSvgText(const Sheet& sheet) {
+  const auto x = [](const Projected& point) { return svgNumber(point.u); };
+  const auto y = [&sheet](const Projected& point) { return svgNumber(sheet.height - point.v); };
+  std::ostringstream out;
+  out << "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 " << svgNumber(sheet.width) << ' '
+      << svgNumber(sheet.height) << "\">\n";
+  out << "<!-- " << kHlrNote << " -->\n";
+  const struct {
+    StrokeKind kind;
+    const char* id;
+    const char* style;
+  } groups[] = {
+      {StrokeKind::Visible, "visible", "stroke=\"#1c1b19\" stroke-width=\"0.35\""},
+      {StrokeKind::Hidden, "hidden", "stroke=\"#6b6a66\" stroke-width=\"0.2\" stroke-dasharray=\"1.5 1\""},
+      {StrokeKind::Dimension, "dimensions", "stroke=\"#1c1b19\" stroke-width=\"0.15\""},
+  };
+  for (const auto& group : groups) {
+    out << "<g id=\"" << group.id << "\" fill=\"none\" " << group.style << ">\n";
+    for (const SheetLine& line : sheet.lines) {
+      if (line.kind != group.kind) continue;
+      out << "<line x1=\"" << x(line.from) << "\" y1=\"" << y(line.from) << "\" x2=\"" << x(line.to) << "\" y2=\""
+          << y(line.to) << "\"/>\n";
+    }
+    out << "</g>\n";
+  }
+  out << "<g id=\"dimension-text\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"2.2\" fill=\"#1c1b19\">\n";
+  for (const SheetText& text : sheet.texts) {
+    out << "<text x=\"" << x(text.at) << "\" y=\"" << y(text.at) << "\"";
+    if (text.vertical) out << " transform=\"rotate(-90 " << x(text.at) << ' ' << y(text.at) << ")\"";
+    out << (text.centered ? " text-anchor=\"middle\"" : "") << ">" << text.text << "</text>\n";
+  }
+  out << "</g>\n</svg>\n";
+  return out.str();
+}
+
 }  // namespace
 
 bool cutList(const std::vector<Component>& components, std::int64_t allowanceNm, std::vector<CutPiece>& pieces,
@@ -548,6 +975,27 @@ std::string wirePdf(const Component& component, const std::vector<Joint>& joints
   ViewWire right;
   if (!threeViews(component, joints, parts, front, top, right, error)) return {};
   return pdfDocument(front, top, right);
+}
+
+std::string hiddenLineSheetSvg(const Component& component, const std::vector<Joint>& joints,
+                               const std::vector<Component>& parts, std::string& error) {
+  Sheet sheet;
+  if (!buildSheet(component, joints, parts, sheet, error)) return {};
+  return sheetSvgText(sheet);
+}
+
+std::string hiddenLineDxf(const Component& component, const std::vector<Joint>& joints,
+                          const std::vector<Component>& parts, std::string& error) {
+  Sheet sheet;
+  if (!buildSheet(component, joints, parts, sheet, error)) return {};
+  return sheetDxfText(sheet);
+}
+
+std::string hiddenLinePdf(const Component& component, const std::vector<Joint>& joints,
+                          const std::vector<Component>& parts, std::string& error) {
+  Sheet sheet;
+  if (!buildSheet(component, joints, parts, sheet, error)) return {};
+  return pdfFromContents(sheetPdfText(sheet));
 }
 
 }  // namespace timberlab::manufacturing

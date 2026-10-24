@@ -1,0 +1,161 @@
+name: macOS
+
+# Builds an Apple Silicon app bundle. It runs by hand only: it has not completed
+# a run yet, and a version tag should not turn red because of it. Once a manual
+# run succeeds, add the tag trigger. The bundle is ad-hoc signed, so macOS asks
+# the person who opens it to allow it. It is not notarized.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    runs-on: macos-14
+    timeout-minutes: 240
+    env:
+      QT_VERSION: "6.8.3"
+      OCCT_SHA256: "3cd080d3fc33ba0c6c157e110afe3e015859524c4694dbb09812ec9d61595639"
+    steps:
+      - name: Check out the source
+        uses: actions/checkout@v4
+
+      - name: Read the version
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^project(TimberLab VERSION \([0-9.]*\) .*/\1/p' CMakeLists.txt)"
+          test -n "${version}"
+          echo "VERSION=${version}" >> "${GITHUB_ENV}"
+
+      - name: Install build tools
+        run: |
+          set -euo pipefail
+          brew install ninja openssl@3
+          python3 -m pip install --break-system-packages 'aqtinstall==3.2.1'
+
+      - name: Restore Qt
+        id: qt-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.cache/qt
+          key: qt-6.8.3-macos-clang_64-desktop-v1
+
+      - name: Install Qt
+        if: steps.qt-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          python3 -m aqt install-qt mac desktop "${QT_VERSION}" clang_64 -O "${GITHUB_WORKSPACE}/.cache/qt" \
+            --archives qtbase qtdeclarative qtsvg qttools qttranslations qtshadertools
+          test -f "${GITHUB_WORKSPACE}/.cache/qt/${QT_VERSION}/macos/lib/cmake/Qt6/Qt6Config.cmake"
+
+      - name: Restore Open CASCADE
+        id: occt-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.cache/occt-install
+          key: occt-7.9.2-with-step-macos-arm64-v1
+
+      - name: Fetch the Open CASCADE source
+        run: |
+          set -euo pipefail
+          mkdir -p "${GITHUB_WORKSPACE}/.cache/occt-src"
+          cd "${GITHUB_WORKSPACE}/.cache/occt-src"
+          curl -fsSL -o occt.tar.gz https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V7_9_2.tar.gz
+          echo "${OCCT_SHA256}  occt.tar.gz" | shasum -a 256 -c
+          tar -xzf occt.tar.gz
+
+      - name: Build Open CASCADE
+        if: steps.occt-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          cmake -S "${GITHUB_WORKSPACE}/.cache/occt-src/OCCT-7_9_2" -B "${GITHUB_WORKSPACE}/.cache/occt-build" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+            -DBUILD_LIBRARY_TYPE=Shared \
+            -DINSTALL_DIR="${GITHUB_WORKSPACE}/.cache/occt-install" \
+            -DINSTALL_DIR_LAYOUT=Unix \
+            -DBUILD_MODULE_FoundationClasses=ON \
+            -DBUILD_MODULE_ModelingData=ON \
+            -DBUILD_MODULE_ModelingAlgorithms=ON \
+            -DBUILD_MODULE_Visualization=OFF \
+            -DBUILD_MODULE_ApplicationFramework=OFF \
+            -DBUILD_MODULE_DataExchange=ON \
+            -DBUILD_MODULE_Draw=OFF \
+            -DBUILD_MODULE_DETools=OFF \
+            -DBUILD_DOC_Overview=OFF \
+            -DBUILD_Inspector=OFF \
+            -DBUILD_SAMPLES_QT=OFF \
+            -DUSE_FREETYPE=OFF \
+            -DUSE_FREEIMAGE=OFF \
+            -DUSE_FFMPEG=OFF \
+            -DUSE_OPENGL=OFF \
+            -DUSE_GLES2=OFF \
+            -DUSE_RAPIDJSON=OFF \
+            -DUSE_DRACO=OFF \
+            -DUSE_TBB=OFF \
+            -DUSE_TK=OFF \
+            -DUSE_EIGEN=OFF
+          cmake --build "${GITHUB_WORKSPACE}/.cache/occt-build" --target install
+
+      - name: Configure and build
+        run: |
+          set -euo pipefail
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+            -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/.cache/qt/${QT_VERSION}/macos;${GITHUB_WORKSPACE}/.cache/occt-install" \
+            -DOPENSSL_ROOT_DIR="$(brew --prefix openssl@3)" \
+            -DOPENSSL_USE_STATIC_LIBS=ON
+          cmake --build build --target timberlab timberlab-tests
+
+      - name: Test
+        run: |
+          set -euo pipefail
+          export DYLD_LIBRARY_PATH="${GITHUB_WORKSPACE}/.cache/occt-install/lib:${GITHUB_WORKSPACE}/.cache/qt/${QT_VERSION}/macos/lib"
+          export QT_PLUGIN_PATH="${GITHUB_WORKSPACE}/.cache/qt/${QT_VERSION}/macos/plugins"
+          export QT_QPA_PLATFORM=offscreen
+          ./build/timberlab-tests
+          app="build/timberlab.app/Contents/MacOS/timberlab"
+          TIMBERLAB_DATA_DIR="${PWD}/build/self-check" TIMBERLAB_SOURCE_DIR="${PWD}" "${app}" --check
+          TIMBERLAB_DATA_DIR="${PWD}/build/accept" "${app}" --accept
+
+      - name: Assemble the app
+        run: |
+          set -euo pipefail
+          qt="${GITHUB_WORKSPACE}/.cache/qt/${QT_VERSION}/macos"
+          occt="${GITHUB_WORKSPACE}/.cache/occt-install"
+          rm -rf dist
+          mkdir -p dist
+          cp -R build/timberlab.app dist/TimberLab.app
+          "${qt}/bin/macdeployqt" dist/TimberLab.app -qmldir=qml -libpath="${occt}/lib" -codesign=-
+          mkdir -p dist/TimberLab.app/Contents/Resources/licenses
+          cp LICENSE LICENSES.md dist/TimberLab.app/Contents/Resources/licenses/
+          cp "${GITHUB_WORKSPACE}/.cache/occt-src/OCCT-7_9_2/LICENSE_LGPL_21.txt" \
+             "${GITHUB_WORKSPACE}/.cache/occt-src/OCCT-7_9_2/OCCT_LGPL_EXCEPTION.txt" \
+             dist/TimberLab.app/Contents/Resources/licenses/
+          ls dist/TimberLab.app/Contents/Frameworks | head -40
+
+      - name: Run the app bundle on its own
+        run: |
+          set -euo pipefail
+          unset DYLD_LIBRARY_PATH QT_PLUGIN_PATH
+          export QT_QPA_PLATFORM=offscreen
+          app="dist/TimberLab.app/Contents/MacOS/timberlab"
+          TIMBERLAB_DATA_DIR="${PWD}/dist/self-check" TIMBERLAB_SOURCE_DIR="${PWD}" "${app}" --check
+          TIMBERLAB_DATA_DIR="${PWD}/dist/accept" "${app}" --accept
+
+      - name: Zip the app
+        run: |
+          set -euo pipefail
+          cd dist
+          ditto -c -k --keepParent TimberLab.app "TimberLab-${VERSION}-macos-arm64.zip"
+
+      - name: Upload the app
+        uses: actions/upload-artifact@v4
+        with:
+          name: TimberLab-${{ env.VERSION }}-macos-arm64
+          path: dist/TimberLab-${{ env.VERSION }}-macos-arm64.zip
+          if-no-files-found: error

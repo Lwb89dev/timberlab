@@ -182,13 +182,13 @@ bool jointNeeds(JointType type, const char* key) {
   const std::string_view name(key);
   switch (type) {
     case JointType::MortiseTenon:
-      return true;
+      return name != "length2" && name != "width2";
     case JointType::HalfLap:
       return name == "length";
     case JointType::Dado:
       return name == "width" || name == "depth" || name == "offset";
     case JointType::Groove:
-      return name != "thickness";
+      return name != "thickness" && name != "length2" && name != "width2";
     case JointType::Rabbet:
       return name == "width" || name == "depth";
     case JointType::Bridle:
@@ -209,6 +209,22 @@ bool jointNeeds(JointType type, const char* key) {
       return name == "thickness" || name == "depth";
     case JointType::Dowel:
       return name == "thickness" || name == "depth";
+    case JointType::HaunchedTenon:
+      return name != "width2";
+    case JointType::WedgedTenon:
+      return true;
+    case JointType::LooseTenon:
+      return name == "thickness" || name == "width" || name == "depth";
+    case JointType::CrossLap:
+      return name == "depth" || name == "offset" || name == "offset2";
+    case JointType::EndLap:
+      return name == "length" || name == "width" || name == "depth" || name == "offset";
+    case JointType::SplinedMiter:
+      return name == "length" || name == "thickness" || name == "depth" || name == "offset";
+    case JointType::Biscuit:
+      return name == "thickness" || name == "width" || name == "depth";
+    case JointType::PocketScrew:
+      return name == "length" || name == "width" || name == "thickness" || name == "offset";
   }
   return false;
 }
@@ -246,7 +262,7 @@ bool readFace(const nlohmann::json& item, const char* key, PartFace& dest, std::
 
 bool readEdge(const nlohmann::json& item, JointType type, FaceEdge& dest, std::string& error) {
   dest = FaceEdge::U0;
-  const bool required = type == JointType::Rabbet;
+  const bool required = type == JointType::Rabbet || type == JointType::PocketScrew;
   if (!item.contains("edge")) {
     if (required) error = "storage.json";
     return !required;
@@ -290,11 +306,15 @@ bool readJoint(const nlohmann::json& item, Joint& joint, std::string& error) {
       !takeNm(item, "thickness", jointNeeds(joint.type, "thickness"), joint.thicknessNm, error) ||
       !takeNm(item, "depth", jointNeeds(joint.type, "depth"), joint.depthNm, error) ||
       !takeNm(item, "offset", jointNeeds(joint.type, "offset"), joint.offsetNm, error) ||
-      !takeNm(item, "offset2", jointNeeds(joint.type, "offset2"), joint.offset2Nm, error)) {
+      !takeNm(item, "offset2", jointNeeds(joint.type, "offset2"), joint.offset2Nm, error) ||
+      !takeNm(item, "length2", jointNeeds(joint.type, "length2"), joint.length2Nm, error) ||
+      !takeNm(item, "width2", jointNeeds(joint.type, "width2"), joint.width2Nm, error)) {
     return false;
   }
   const bool countRequired = joint.type == JointType::Castle || joint.type == JointType::Dovetail ||
-                             joint.type == JointType::Finger || joint.type == JointType::HalfBlindDovetail;
+                             joint.type == JointType::Finger || joint.type == JointType::HalfBlindDovetail ||
+                             joint.type == JointType::WedgedTenon || joint.type == JointType::LooseTenon ||
+                             joint.type == JointType::Biscuit || joint.type == JointType::PocketScrew;
   if (!item.contains("count")) {
     joint.count = 0;
     if (countRequired) {
@@ -1251,6 +1271,8 @@ bool Document::setJointParameter(const std::string& id, std::string_view key, st
   else if (key == "depth") next.depthNm = nm;
   else if (key == "offset") next.offsetNm = nm;
   else if (key == "offset2") next.offset2Nm = nm;
+  else if (key == "length2") next.length2Nm = nm;
+  else if (key == "width2") next.width2Nm = nm;
   else if (key == "count") {
     if (nm < 1 || nm > 8) {
       error = "joint.parameter";
@@ -1333,6 +1355,8 @@ std::string Document::toJson() const {
                              {"offset2", joint.offset2Nm},
                              {"removeMinA", joint.removeMinA},
                              {"removeMinB", joint.removeMinB}};
+      if (joint.length2Nm != 0) item["length2"] = joint.length2Nm;
+      if (joint.width2Nm != 0) item["width2"] = joint.width2Nm;
       if (joint.count != 0) item["count"] = joint.count;
       joints.push_back(std::move(item));
     }

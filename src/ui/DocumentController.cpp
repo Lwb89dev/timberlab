@@ -1,5 +1,7 @@
 #include "DocumentController.hpp"
 
+#include "timberlab/geometry/solids.hpp"
+
 #include "AmberBridge.hpp"
 #include "timberlab/core/align.hpp"
 #include "timberlab/core/manufacturing.hpp"
@@ -8,6 +10,8 @@
 #include "timberlab/storage/archive.hpp"
 
 #include <openssl/crypto.h>
+
+#include <sstream>
 
 #include <QFile>
 #include <QLocale>
@@ -413,6 +417,8 @@ QVariantList DocumentController::joints() const {
     map.insert(QStringLiteral("depth"), text(joint.depthNm));
     map.insert(QStringLiteral("offset"), text(joint.offsetNm));
     map.insert(QStringLiteral("offset2"), text(joint.offset2Nm));
+    map.insert(QStringLiteral("length2"), text(joint.length2Nm));
+    map.insert(QStringLiteral("width2"), text(joint.width2Nm));
     map.insert(QStringLiteral("count"), QString::number(joint.count));
     list.push_back(map);
   }
@@ -1328,7 +1334,11 @@ bool DocumentController::armContact(const QString& idA, const QString& idB) {
     found = &contact;
     break;
   }
-  if (found == nullptr) return false;
+  if (found == nullptr) {
+    status_ = tr("These boards do not touch.");
+    emit statusChanged();
+    return false;
+  }
   const Component& partA = document_.components()[found->indexA];
   const Component& partB = document_.components()[found->indexB];
   const bool selectedIsB = selectedId_.toStdString() == partB.id;
@@ -1349,6 +1359,17 @@ bool DocumentController::armContact(const QString& idA, const QString& idB) {
   return true;
 }
 
+QStringList DocumentController::armSelectedPair() {
+  if (selectedIds_.size() != 2) {
+    clearContact();
+    status_ = tr("Select two boards to join.");
+    emit statusChanged();
+    return {};
+  }
+  if (!armContact(selectedIds_.first(), selectedIds_.last())) return {};
+  return armedJointTypes();
+}
+
 QStringList DocumentController::armedJointTypes() const {
   QStringList keys;
   const Component* selected = document_.find(armedSelected_);
@@ -1359,7 +1380,10 @@ QStringList DocumentController::armedJointTypes() const {
       timberlab::JointType::Groove,       timberlab::JointType::Rabbet,      timberlab::JointType::Bridle,
       timberlab::JointType::Castle,       timberlab::JointType::Miter,       timberlab::JointType::Dovetail,
       timberlab::JointType::SlidingDovetail, timberlab::JointType::Finger,   timberlab::JointType::HalfBlindDovetail,
-      timberlab::JointType::TongueGroove, timberlab::JointType::Dowel};
+      timberlab::JointType::TongueGroove, timberlab::JointType::Dowel,       timberlab::JointType::HaunchedTenon,
+      timberlab::JointType::WedgedTenon,  timberlab::JointType::LooseTenon,  timberlab::JointType::CrossLap,
+      timberlab::JointType::EndLap,       timberlab::JointType::SplinedMiter, timberlab::JointType::Biscuit,
+      timberlab::JointType::PocketScrew};
   for (const timberlab::JointType type : kTypes) {
     Joint joint;
     std::string error;
@@ -1506,6 +1530,15 @@ bool DocumentController::exportDrawing(const QUrl& url, const QString& kind) {
   } else if (kind == QLatin1String("pdf")) {
     text = manufacturing::wirePdf(*component, joints, parts, error);
     written = tr("PDF wire written. It is a tessellation wire, not a dimensioned drawing.");
+  } else if (kind == QLatin1String("hlr-sheet")) {
+    text = manufacturing::hiddenLineSheetSvg(*component, joints, parts, error);
+    written = tr("Hidden-line sheet written, with feature dimensions in millimetres.");
+  } else if (kind == QLatin1String("hlr-dxf")) {
+    text = manufacturing::hiddenLineDxf(*component, joints, parts, error);
+    written = tr("Hidden-line DXF written, with feature dimensions in millimetres.");
+  } else if (kind == QLatin1String("hlr-pdf")) {
+    text = manufacturing::hiddenLinePdf(*component, joints, parts, error);
+    written = tr("Hidden-line PDF written, with feature dimensions in millimetres.");
   } else if (kind == QLatin1String("dimensions")) {
     text = manufacturing::dimensionedFrontSvg(*component, joints, parts, error);
     written = tr("Front dimensions written. Width and height are the model sizes. The outline is still a tessellation, not hidden-line removal.");
@@ -1528,6 +1561,51 @@ bool DocumentController::exportDrawing(const QUrl& url, const QString& kind) {
     return false;
   }
   status_ = written;
+  emit statusChanged();
+  return true;
+}
+
+bool DocumentController::stepAvailable() const { return geometry::stepAvailable(); }
+
+bool DocumentController::exportModel(const QUrl& url, const QString& format, const QString& scope) {
+  const QString path = url.toLocalFile();
+  if (path.isEmpty()) {
+    report("storage.io", false);
+    return false;
+  }
+  const bool onePart = scope == QLatin1String("part");
+  if (onePart && selectedId_.isEmpty()) {
+    report("component.missing", false);
+    return false;
+  }
+  const std::string only = onePart ? selectedId_.toStdString() : std::string();
+  const std::vector<Joint>& joints = document_.joints();
+  const std::vector<Component>& parts = document_.components();
+  geometry::ExportResult result;
+  if (format == QLatin1String("stl")) result = geometry::exportStl(parts, joints, only, !onePart);
+  else if (format == QLatin1String("step")) result = geometry::exportStep(parts, joints, only, !onePart);
+  else {
+    report("drawing.kind", false);
+    return false;
+  }
+  if (!result.ok) {
+    report(result.error.empty() ? "geometry.invalid" : result.error, false);
+    return false;
+  }
+  QFile file(path);
+  if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+    report("storage.io", false);
+    return false;
+  }
+  const QByteArray bytes(result.data.data(), static_cast<qsizetype>(result.data.size()));
+  if (file.write(bytes) != bytes.size()) {
+    report("storage.io", false);
+    return false;
+  }
+  const QString where = onePart ? tr("in the part's own frame") : tr("at their placements");
+  status_ = format == QLatin1String("stl")
+                ? tr("STL written: %1 part(s), %2, millimetres.").arg(result.partCount).arg(where)
+                : tr("STEP written: %1 part(s), %2, millimetres.").arg(result.partCount).arg(where);
   emit statusChanged();
   return true;
 }
@@ -1745,19 +1823,62 @@ QVector3D DocumentController::colorForMaterial(const std::string& id) const {
   return {0.72f, 0.58f, 0.40f};
 }
 
+namespace {
+
+void appendPartShape(std::ostringstream& key, const Component& part) {
+  key << static_cast<int>(part.type) << ',' << part.widthNm << ',' << part.thicknessNm << ',' << part.heightNm << ','
+      << part.radiusNm << ';';
+}
+
+// Everything the cut solid of a part depends on: its own size, every joint that
+// cuts it, and the size of the two parts of each such joint. A part's placement,
+// material, and name do not change its solid.
+std::string meshKey(const Component& component, const Document& document, geometry::MeshQuality quality) {
+  std::ostringstream key;
+  key << static_cast<int>(quality) << ':' << component.id << ':';
+  appendPartShape(key, component);
+  for (const Joint& joint : document.joints()) {
+    if (!jointCutsPart(joint, component.id)) continue;
+    key << jointTypeKey(joint.type) << ',' << joint.partA << ',' << joint.partB << ',' << static_cast<int>(joint.faceA)
+        << ',' << static_cast<int>(joint.faceB) << ',' << static_cast<int>(joint.edge) << ',' << joint.lengthNm << ','
+        << joint.widthNm << ',' << joint.thicknessNm << ',' << joint.depthNm << ',' << joint.offsetNm << ','
+        << joint.offset2Nm << ',' << joint.length2Nm << ',' << joint.width2Nm << ',' << joint.count << ','
+        << joint.removeMinA << joint.removeMinB << ';';
+    for (const std::string* id : {&joint.partA, &joint.partB}) {
+      const Component* part = document.find(*id);
+      if (part != nullptr) appendPartShape(key, *part);
+    }
+  }
+  return key.str();
+}
+
+}  // namespace
+
 void DocumentController::rebuildScene() {
   std::vector<ScenePart> next;
   next.reserve(document_.components().size());
+  std::unordered_map<std::string, CachedMesh> nextCache;
+  nextCache.reserve(document_.components().size());
   for (const Component& component : document_.components()) {
-    geometry::SolidMesh mesh = geometry::meshFor(component, document_.joints(), document_.components(), quality_);
-    if (!mesh.ok) {
-      report(mesh.error, false);
-      continue;
+    const std::string key = meshKey(component, document_, quality_);
+    CachedMesh cached;
+    const auto found = meshCache_.find(component.id);
+    if (found != meshCache_.end() && found->second.key == key) {
+      cached = std::move(found->second);
+    } else {
+      geometry::SolidMesh mesh = geometry::meshFor(component, document_.joints(), document_.components(), quality_);
+      if (!mesh.ok) {
+        report(mesh.error, false);
+        continue;
+      }
+      cached.key = key;
+      cached.interleaved = std::move(mesh.interleaved);
+      cached.indices = std::move(mesh.indices);
     }
     ScenePart part;
     part.id = QString::fromStdString(component.id);
-    part.interleaved = std::move(mesh.interleaved);
-    part.indices = std::move(mesh.indices);
+    part.interleaved = cached.interleaved;
+    part.indices = cached.indices;
     part.color = colorForMaterial(component.materialId);
     if (const materials::CatalogEntry* entry = catalog_.find(component.materialId)) {
       part.faceTexture = QStringLiteral(":") + QString::fromStdString(entry->faceTexture);
@@ -1767,7 +1888,9 @@ void DocumentController::rebuildScene() {
     part.model = matrixFrom(component.placement);
     part.visible = component.visible;
     next.push_back(std::move(part));
+    nextCache.emplace(component.id, std::move(cached));
   }
+  meshCache_ = std::move(nextCache);
   std::lock_guard<std::mutex> lock(sceneMutex_);
   scene_ = std::move(next);
 }
@@ -1779,6 +1902,7 @@ QString DocumentController::messageFor(const QString& code) const {
   if (code == "dimension.non_positive") return tr("Dimensions must be greater than zero.");
   if (code == "dimension.too_large") return tr("That value is outside the supported range.");
   if (code == "dimension.not_applicable") return tr("That dimension does not apply to this part.");
+  if (code == "export.unavailable") return tr("This build has no STEP writer. Its Open CASCADE was built without data exchange.");
   if (code == "component.locked") return tr("Unlock the part before editing it.");
   if (code == "component.missing") return tr("That part is no longer in the project.");
   if (code == "component.cycle") return tr("That parent would make a loop.");

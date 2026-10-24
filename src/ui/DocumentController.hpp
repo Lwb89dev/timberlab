@@ -21,6 +21,8 @@
 
 #include <memory>
 #include <mutex>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace timberlab::ui {
@@ -179,6 +181,10 @@ class DocumentController : public QObject {
   Q_INVOKABLE bool exportCutList(const QUrl& url, const QString& allowanceText);
   Q_INVOKABLE bool exportFrontView(const QUrl& url);
   Q_INVOKABLE bool exportDrawing(const QUrl& url, const QString& kind);
+  // format is "stl" or "step". scope is "project" for every visible part at its
+  // placement, or "part" for the selected part in its own frame.
+  Q_INVOKABLE bool exportModel(const QUrl& url, const QString& format, const QString& scope);
+  Q_INVOKABLE bool stepAvailable() const;
   Q_INVOKABLE bool exportLibraryEvents(const QUrl& url);
   Q_INVOKABLE bool importLibraryEvents(const QUrl& url);
   Q_INVOKABLE bool restoreBackup();
@@ -208,6 +214,10 @@ class DocumentController : public QObject {
   void reportDragBlocked();
   std::vector<ContactZone> contactZones() const;
   bool armContact(const QString& idA, const QString& idB);
+  // Arms the two selected boards the way a right-click on their contact does,
+  // and returns the joint types that fit. Empty when the selection is not two
+  // touching boards; the status line says why.
+  Q_INVOKABLE QStringList armSelectedPair();
   Q_INVOKABLE QStringList armedJointTypes() const;
   Q_INVOKABLE bool addArmedJoint(const QString& typeKey);
   Q_INVOKABLE bool setJointFromText(const QString& id, const QString& key, const QString& text);
@@ -285,6 +295,14 @@ class DocumentController : public QObject {
   std::string bunkerSub_;
   mutable std::mutex sceneMutex_;
   std::vector<ScenePart> scene_;
+  // The tessellation of each part, with the key of everything that shaped it.
+  // An edit tessellates only the parts whose key changed.
+  struct CachedMesh {
+    std::string key;
+    std::vector<float> interleaved;
+    std::vector<std::uint32_t> indices;
+  };
+  std::unordered_map<std::string, CachedMesh> meshCache_;
   QString dragId_;
   std::int64_t dragStartX_ = 0;
   std::int64_t dragStartY_ = 0;

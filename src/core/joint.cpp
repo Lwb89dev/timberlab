@@ -3,6 +3,7 @@
 #include "timberlab/units/units.hpp"
 
 #include <algorithm>
+#include <cmath>
 
 namespace timberlab {
 namespace {
@@ -624,6 +625,539 @@ void addDowelHole(const Component& part, PartFace which, std::int64_t diameter, 
   cuts.push_back(cut);
 }
 
+constexpr double kPocketAngle = 15.0 * 3.14159265358979323846 / 180.0;
+constexpr std::int64_t kPocketMarginNm = 1000000;
+
+bool fitHaunched(const Joint& joint, const Component& mortise, const Component& tenon, std::string& error) {
+  const FaceAxes mortiseFace = faceAxes(joint.faceA);
+  const FaceAxes tenonEnd = faceAxes(joint.faceB);
+  const std::int64_t tenonNormal = axisNm(tenon, tenonEnd.normal);
+  const std::int64_t tenonU = axisNm(tenon, tenonEnd.u);
+  const std::int64_t tenonV = axisNm(tenon, tenonEnd.v);
+  const bool sized = inRange(joint.lengthNm) && inRange(joint.depthNm) && inRange(joint.thicknessNm) &&
+                     inRange(joint.widthNm) && inRange(joint.length2Nm);
+  if (!sized || joint.lengthNm >= tenonNormal || joint.depthNm > axisNm(mortise, mortiseFace.normal)) {
+    error = "joint.parameter";
+    return false;
+  }
+  if (joint.thicknessNm > tenonU || joint.widthNm >= tenonV) {
+    error = "joint.parameter";
+    return false;
+  }
+  if (joint.length2Nm >= joint.lengthNm || joint.length2Nm > joint.depthNm) {
+    error = "joint.parameter";
+    return false;
+  }
+  const std::int64_t mortiseU = axisNm(mortise, mortiseFace.u);
+  const std::int64_t mortiseV = axisNm(mortise, mortiseFace.v);
+  if (!inside(joint.offsetNm, joint.thicknessNm, mortiseU) || !inside(joint.offset2Nm, tenonV, mortiseV)) {
+    error = "joint.parameter";
+    return false;
+  }
+  return true;
+}
+
+// Two V ranges of a haunched tenon end: the tenon and the haunch beside it.
+void haunchRanges(std::int64_t vSize, std::int64_t tenonWidth, bool haunchLow, std::int64_t origin,
+                  std::int64_t range[2][2]) {
+  const std::int64_t haunch = vSize - tenonWidth;
+  range[0][0] = origin + (haunchLow ? haunch : 0);
+  range[0][1] = range[0][0] + tenonWidth;
+  range[1][0] = origin + (haunchLow ? 0 : tenonWidth);
+  range[1][1] = range[1][0] + haunch;
+}
+
+void addHaunchedTenonCuts(const Joint& joint, const Component& tenon, std::vector<LocalCut>& cuts) {
+  const FaceAxes face = faceAxes(joint.faceB);
+  const std::int64_t normal = axisNm(tenon, face.normal);
+  const std::int64_t uSize = axisNm(tenon, face.u);
+  const std::int64_t vSize = axisNm(tenon, face.v);
+  std::int64_t whole0 = 0;
+  std::int64_t whole1 = 0;
+  std::int64_t tip0 = 0;
+  std::int64_t tip1 = 0;
+  endSlab(face, joint.lengthNm, normal, whole0, whole1);
+  endSlab(face, joint.lengthNm - joint.length2Nm, normal, tip0, tip1);
+  const std::int64_t shoulder0 = face.atMax ? whole0 : tip1;
+  const std::int64_t shoulder1 = face.atMax ? tip0 : whole1;
+  const std::int64_t u0 = (uSize - joint.thicknessNm) / 2;
+  const std::int64_t u1 = u0 + joint.thicknessNm;
+  std::int64_t range[2][2];
+  haunchRanges(vSize, joint.widthNm, joint.removeMinB, 0, range);
+  pushIfOpen(cuts, ranged(tenon, face, whole0, whole1, 0, u0, range[0][0], range[0][1]));
+  pushIfOpen(cuts, ranged(tenon, face, whole0, whole1, u1, uSize, range[0][0], range[0][1]));
+  pushIfOpen(cuts, ranged(tenon, face, tip0, tip1, 0, uSize, range[1][0], range[1][1]));
+  pushIfOpen(cuts, ranged(tenon, face, shoulder0, shoulder1, 0, u0, range[1][0], range[1][1]));
+  pushIfOpen(cuts, ranged(tenon, face, shoulder0, shoulder1, u1, uSize, range[1][0], range[1][1]));
+}
+
+void addHaunchedMortiseCuts(const Joint& joint, const Component& mortise, const Component& tenon,
+                            std::vector<LocalCut>& cuts) {
+  const FaceAxes face = faceAxes(joint.faceA);
+  const std::int64_t tenonV = axisNm(tenon, faceAxes(joint.faceB).v);
+  std::int64_t range[2][2];
+  haunchRanges(tenonV, joint.widthNm, joint.removeMinA, joint.offset2Nm, range);
+  const std::int64_t u0 = joint.offsetNm;
+  const std::int64_t u1 = u0 + joint.thicknessNm;
+  addFaceSlot(mortise, face, joint.depthNm, u0, u1, range[0][0], range[0][1], cuts);
+  addFaceSlot(mortise, face, joint.length2Nm, u0, u1, range[1][0], range[1][1], cuts);
+}
+
+bool fitWedged(const Joint& joint, const Component& mortise, const Component& tenon, std::string& error) {
+  if (!fitMortise(joint, mortise, tenon, error)) return false;
+  if (joint.count < 1 || joint.count > 2 || !inRange(joint.length2Nm) || !inRange(joint.width2Nm)) {
+    error = "joint.parameter";
+    return false;
+  }
+  if (joint.length2Nm > joint.lengthNm || joint.width2Nm * 2 * joint.count > joint.widthNm) {
+    error = "joint.parameter";
+    return false;
+  }
+  return true;
+}
+
+void addWedgeKerfs(const Joint& joint, const Component& tenon, std::vector<LocalCut>& cuts) {
+  const FaceAxes face = faceAxes(joint.faceB);
+  const std::int64_t normal = axisNm(tenon, face.normal);
+  const std::int64_t uSize = axisNm(tenon, face.u);
+  const std::int64_t vSize = axisNm(tenon, face.v);
+  std::int64_t n0 = 0;
+  std::int64_t n1 = 0;
+  endSlab(face, joint.length2Nm, normal, n0, n1);
+  const std::int64_t u0 = (uSize - joint.thicknessNm) / 2;
+  const std::int64_t v0 = (vSize - joint.widthNm) / 2;
+  for (int kerf = 0; kerf < joint.count; ++kerf) {
+    const std::int64_t center = v0 + joint.widthNm * (2 * kerf + 1) / (2 * joint.count);
+    const std::int64_t k0 = center - joint.width2Nm / 2;
+    pushIfOpen(cuts, ranged(tenon, face, n0, n1, u0, u0 + joint.thicknessNm, k0, k0 + joint.width2Nm));
+  }
+}
+
+std::int64_t rowCenter(std::int64_t extent, std::int64_t pitch, int count, int index) {
+  return extent / 2 - ((count - 1) * pitch) / 2 + index * pitch;
+}
+
+bool fitPocketRow(const Joint& joint, std::int64_t footprint, const Component& partA, const Component& partB,
+                  std::string& error) {
+  const std::int64_t pitch = joint.count > 1 ? joint.offsetNm : 0;
+  const bool sized = joint.count >= 1 && joint.count <= 8 && inRange(joint.thicknessNm) && inRange(footprint) &&
+                     inRange(joint.depthNm) && (joint.count == 1 || (inRange(pitch) && pitch >= footprint));
+  if (!sized) {
+    error = "joint.parameter";
+    return false;
+  }
+  const std::int64_t span = (joint.count - 1) * pitch + footprint;
+  const Component* parts[2] = {&partA, &partB};
+  const PartFace faces[2] = {joint.faceA, joint.faceB};
+  for (int side = 0; side < 2; ++side) {
+    const FaceAxes face = faceAxes(faces[side]);
+    const bool fits = joint.thicknessNm < axisNm(*parts[side], face.u) && span <= axisNm(*parts[side], face.v) &&
+                      joint.depthNm < axisNm(*parts[side], face.normal);
+    if (!fits) {
+      error = "joint.parameter";
+      return false;
+    }
+  }
+  return true;
+}
+
+bool fitLooseTenon(const Joint& joint, const Component& partA, const Component& partB, std::string& error) {
+  return fitPocketRow(joint, joint.widthNm, partA, partB, error);
+}
+
+void addLooseTenonPockets(const Joint& joint, const Component& part, PartFace which, std::vector<LocalCut>& cuts) {
+  const FaceAxes face = faceAxes(which);
+  const std::int64_t uSize = axisNm(part, face.u);
+  const std::int64_t vSize = axisNm(part, face.v);
+  const std::int64_t pitch = joint.count > 1 ? joint.offsetNm : 0;
+  const std::int64_t u0 = (uSize - joint.thicknessNm) / 2;
+  for (int pocket = 0; pocket < joint.count; ++pocket) {
+    const std::int64_t v0 = rowCenter(vSize, pitch, joint.count, pocket) - joint.widthNm / 2;
+    addFaceSlot(part, face, joint.depthNm, u0, u0 + joint.thicknessNm, v0, v0 + joint.widthNm, cuts);
+  }
+}
+
+// The kerf a disc of that diameter leaves in a face when it plunges depth.
+std::int64_t biscuitChord(std::int64_t diameter, std::int64_t depth) {
+  const double radius = static_cast<double>(diameter) / 2.0;
+  const double reach = static_cast<double>(depth);
+  return static_cast<std::int64_t>(std::ceil(2.0 * std::sqrt(reach * (2.0 * radius - reach))));
+}
+
+bool fitBiscuit(const Joint& joint, const Component& partA, const Component& partB, std::string& error) {
+  if (!inRange(joint.widthNm) || (joint.widthNm % 2) != 0 || !inRange(joint.depthNm) ||
+      joint.depthNm > joint.widthNm / 2) {
+    error = "joint.parameter";
+    return false;
+  }
+  return fitPocketRow(joint, biscuitChord(joint.widthNm, joint.depthNm), partA, partB, error);
+}
+
+void addBiscuitKerfs(const Joint& joint, const Component& part, PartFace which, std::vector<LocalCut>& cuts) {
+  const FaceAxes face = faceAxes(which);
+  const std::int64_t uSize = axisNm(part, face.u);
+  const std::int64_t vSize = axisNm(part, face.v);
+  const std::int64_t normal = axisNm(part, face.normal);
+  const std::int64_t pitch = joint.count > 1 ? joint.offsetNm : 0;
+  const std::int64_t radius = joint.widthNm / 2;
+  const std::int64_t u0 = (uSize - joint.thicknessNm) / 2;
+  const std::int64_t reach = radius - joint.depthNm;
+  const std::int64_t centerN = face.atMax ? normal + reach : -reach;
+  for (int kerf = 0; kerf < joint.count; ++kerf) {
+    const std::int64_t centerV = rowCenter(vSize, pitch, joint.count, kerf);
+    LocalCut cut = ranged(part, face, centerN - radius, centerN + radius, u0, u0 + joint.thicknessNm,
+                          centerV - radius, centerV + radius);
+    cut.cylinderAxis = face.u;
+    cut.radiusNm = radius;
+    cuts.push_back(cut);
+  }
+}
+
+bool fitCrossLap(const Joint& joint, const Component& partA, const Component& partB, std::string& error) {
+  const FaceAxes faceA = faceAxes(joint.faceA);
+  const FaceAxes faceB = faceAxes(joint.faceB);
+  const std::int64_t normalA = axisNm(partA, faceA.normal);
+  const std::int64_t normalB = axisNm(partB, faceB.normal);
+  if (!inRange(joint.depthNm) || joint.depthNm >= normalA || joint.depthNm >= normalB) {
+    error = "joint.parameter";
+    return false;
+  }
+  const std::int64_t widthA = axisNm(partB, faceB.v);
+  const std::int64_t widthB = axisNm(partA, faceA.v);
+  if (!inside(joint.offsetNm, widthA, axisNm(partA, faceA.u)) ||
+      !inside(joint.offset2Nm, widthB, axisNm(partB, faceB.u))) {
+    error = "joint.parameter";
+    return false;
+  }
+  return true;
+}
+
+void addCrossLapCut(const Joint& joint, const Component& part, const Component& mate, std::vector<LocalCut>& cuts) {
+  const bool first = part.id == joint.partA;
+  const FaceAxes face = faceAxes(first ? joint.faceA : joint.faceB);
+  const std::int64_t normal = axisNm(part, face.normal);
+  const std::int64_t width = axisNm(mate, faceAxes(first ? joint.faceB : joint.faceA).v);
+  const std::int64_t start = first ? joint.offsetNm : joint.offset2Nm;
+  addFaceSlot(part, face, first ? joint.depthNm : normal - joint.depthNm, start, start + width, 0,
+              axisNm(part, face.v), cuts);
+}
+
+bool fitEndLap(const Joint& joint, const Component& host, const Component& end, std::string& error) {
+  const FaceAxes hostFace = faceAxes(joint.faceA);
+  const FaceAxes endFace = faceAxes(joint.faceB);
+  if (!inRange(joint.widthNm) || !inRange(joint.depthNm) || !inRange(joint.lengthNm)) {
+    error = "joint.parameter";
+    return false;
+  }
+  if (joint.depthNm >= axisNm(host, hostFace.normal) || joint.depthNm >= axisNm(end, endFace.u) ||
+      joint.lengthNm >= axisNm(end, endFace.normal)) {
+    error = "joint.parameter";
+    return false;
+  }
+  if (!inside(joint.offsetNm, joint.widthNm, axisNm(host, hostFace.u))) {
+    error = "joint.parameter";
+    return false;
+  }
+  return true;
+}
+
+void addEndLapCuts(const Joint& joint, const Component& part, std::vector<LocalCut>& cuts) {
+  if (part.id == joint.partA) {
+    const FaceAxes face = faceAxes(joint.faceA);
+    addFaceSlot(part, face, joint.depthNm, joint.offsetNm, joint.offsetNm + joint.widthNm, 0, axisNm(part, face.v),
+                cuts);
+    return;
+  }
+  const FaceAxes face = faceAxes(joint.faceB);
+  const std::int64_t normal = axisNm(part, face.normal);
+  const std::int64_t uSize = axisNm(part, face.u);
+  std::int64_t n0 = 0;
+  std::int64_t n1 = 0;
+  endSlab(face, joint.lengthNm, normal, n0, n1);
+  const std::int64_t u0 = joint.removeMinB ? 0 : joint.depthNm;
+  const std::int64_t u1 = joint.removeMinB ? uSize - joint.depthNm : uSize;
+  pushIfOpen(cuts, ranged(part, face, n0, n1, u0, u1, 0, axisNm(part, face.v)));
+}
+
+// The kerf of a splined miter as a quadrilateral in the normal and U plane:
+// the whole miter face, pushed margin into the removed corner and depth into the
+// material, perpendicular to the face. corners[i] is {normal, u} in nanometres.
+void miterKerfCorners(const Component& part, PartFace which, std::int64_t length, bool keepMin, std::int64_t depth,
+                      std::int64_t margin, std::int64_t corners[4][2]) {
+  const FaceAxes face = faceAxes(which);
+  const std::int64_t normal = axisNm(part, face.normal);
+  const std::int64_t uSize = axisNm(part, face.u);
+  std::int64_t outer = 0;
+  std::int64_t inner = 0;
+  faceDepth(face, normal, length, outer, inner);
+  const double cutU = keepMin ? static_cast<double>(uSize) : 0.0;
+  const double keepU = keepMin ? 0.0 : static_cast<double>(uSize);
+  const double a1[2] = {static_cast<double>(inner), cutU};
+  const double a2[2] = {static_cast<double>(outer), keepU};
+  const double run = std::hypot(a2[0] - a1[0], a2[1] - a1[1]);
+  double step[2] = {-(a2[1] - a1[1]) / run, (a2[0] - a1[0]) / run};
+  const double toRemoved = step[0] * (static_cast<double>(outer) - a1[0]) + step[1] * (cutU - a1[1]);
+  if (toRemoved > 0.0) {
+    step[0] = -step[0];
+    step[1] = -step[1];
+  }
+  const double reach[4] = {-static_cast<double>(margin), -static_cast<double>(margin), static_cast<double>(depth),
+                           static_cast<double>(depth)};
+  const double* base[4] = {a1, a2, a2, a1};
+  for (int i = 0; i < 4; ++i) {
+    corners[i][0] = std::llround(base[i][0] + step[0] * reach[i]);
+    corners[i][1] = std::llround(base[i][1] + step[1] * reach[i]);
+  }
+}
+
+bool fitSplinedMiter(const Joint& joint, const Component& partA, const Component& partB, std::string& error) {
+  if (!fitMiter(joint, partA, partB, error)) return false;
+  if (!inRange(joint.thicknessNm) || !inRange(joint.depthNm)) {
+    error = "joint.parameter";
+    return false;
+  }
+  const Component* parts[2] = {&partA, &partB};
+  const PartFace faces[2] = {joint.faceA, joint.faceB};
+  const bool keeps[2] = {joint.removeMinA, joint.removeMinB};
+  for (int side = 0; side < 2; ++side) {
+    const FaceAxes face = faceAxes(faces[side]);
+    if (!inside(joint.offsetNm, joint.thicknessNm, axisNm(*parts[side], face.v))) {
+      error = "joint.parameter";
+      return false;
+    }
+    std::int64_t corners[4][2];
+    miterKerfCorners(*parts[side], faces[side], joint.lengthNm, keeps[side], joint.depthNm, 0, corners);
+    const std::int64_t normal = axisNm(*parts[side], face.normal);
+    for (const auto& corner : corners) {
+      if (corner[0] < 0 || corner[0] > normal) {
+        error = "joint.parameter";
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+void addMiterKerf(const Joint& joint, const Component& part, PartFace which, bool keepMin,
+                  std::vector<LocalCut>& cuts) {
+  const FaceAxes face = faceAxes(which);
+  std::int64_t corners[4][2];
+  miterKerfCorners(part, which, joint.lengthNm, keepMin, joint.depthNm, 200000, corners);
+  ProfilePoint points[4];
+  for (int i = 0; i < 4; ++i) {
+    points[i] = profileAt(face.normal, corners[i][0], face.u, corners[i][1], face.v, joint.offsetNm);
+  }
+  pushPrism(cuts, face.v, joint.offsetNm + joint.thicknessNm, points, 4);
+}
+
+// Frame of a pocket hole in the part's local axes. The hole enters through the
+// side named by the edge and runs toward the end face at kPocketAngle.
+struct PocketFrame {
+  int head = 0;
+  int depth = 1;
+  int spread = 2;
+  double headDir = 1.0;
+  double depthDir = 1.0;
+  double entryHead = 0.0;
+  double entryDepth = 0.0;
+  double headExtent = 0.0;
+  double depthExtent = 0.0;
+  double spreadExtent = 0.0;
+};
+
+PocketFrame pocketFrame(const Joint& joint, const Component& part) {
+  const FaceAxes face = faceAxes(joint.faceA);
+  const bool onU = joint.edge == FaceEdge::U0 || joint.edge == FaceEdge::U1;
+  const bool entryMax = joint.edge == FaceEdge::U1 || joint.edge == FaceEdge::V1;
+  PocketFrame frame;
+  frame.head = face.normal;
+  frame.depth = onU ? face.u : face.v;
+  frame.spread = onU ? face.v : face.u;
+  frame.headExtent = static_cast<double>(axisNm(part, frame.head));
+  frame.depthExtent = static_cast<double>(axisNm(part, frame.depth));
+  frame.spreadExtent = static_cast<double>(axisNm(part, frame.spread));
+  frame.headDir = face.atMax ? 1.0 : -1.0;
+  frame.depthDir = entryMax ? -1.0 : 1.0;
+  const double inset = static_cast<double>(joint.offsetNm);
+  frame.entryHead = face.atMax ? frame.headExtent - inset : inset;
+  frame.entryDepth = entryMax ? frame.depthExtent : 0.0;
+  return frame;
+}
+
+bool fitPocketScrew(const Joint& joint, const Component& partA, std::string& error) {
+  const bool sized = inRange(joint.widthNm) && inRange(joint.thicknessNm) && inRange(joint.lengthNm) &&
+                     inRange(joint.offsetNm) && (joint.widthNm % 2) == 0 && (joint.thicknessNm % 2) == 0 &&
+                     joint.thicknessNm < joint.widthNm && joint.count >= 1 && joint.count <= 8 &&
+                     (joint.count == 1 || (inRange(joint.offset2Nm) && joint.offset2Nm >= joint.widthNm));
+  if (!sized) {
+    error = "joint.parameter";
+    return false;
+  }
+  const PocketFrame frame = pocketFrame(joint, partA);
+  const double sine = std::sin(kPocketAngle);
+  const double cosine = std::cos(kPocketAngle);
+  const double bore = static_cast<double>(joint.widthNm) / 2.0;
+  const double pilot = static_cast<double>(joint.thicknessNm) / 2.0;
+  const double inset = static_cast<double>(joint.offsetNm);
+  const double length = static_cast<double>(joint.lengthNm);
+  const double exitDepth = inset * std::tan(kPocketAngle);
+  const bool mouth = inset >= bore / sine && inset <= frame.headExtent;
+  const bool exits = exitDepth - pilot / cosine > 0.0 && exitDepth + pilot / cosine < frame.depthExtent;
+  const bool bottom = length * sine + bore / cosine < frame.depthExtent && length * cosine + bore * sine < inset;
+  const double span = static_cast<double>((joint.count - 1) * joint.offset2Nm) + static_cast<double>(joint.widthNm);
+  if (!mouth || !exits || !bottom || span > frame.spreadExtent) {
+    error = "joint.parameter";
+    return false;
+  }
+  return true;
+}
+
+LocalCut freeCylinder(const double from[3], const double to[3], std::int64_t radius) {
+  LocalCut cut;
+  cut.cylinderAxis = 3;
+  cut.radiusNm = radius;
+  cut.x0 = std::llround(from[0]);
+  cut.y0 = std::llround(from[1]);
+  cut.z0 = std::llround(from[2]);
+  cut.x1 = std::llround(to[0]);
+  cut.y1 = std::llround(to[1]);
+  cut.z1 = std::llround(to[2]);
+  return cut;
+}
+
+void addPocketScrewHoles(const Joint& joint, const Component& part, std::vector<LocalCut>& cuts) {
+  const PocketFrame frame = pocketFrame(joint, part);
+  const double sine = std::sin(kPocketAngle);
+  const double cosine = std::cos(kPocketAngle);
+  const std::int64_t boreRadius = joint.widthNm / 2;
+  const std::int64_t pilotRadius = joint.thicknessNm / 2;
+  double direction[3] = {};
+  direction[frame.head] = frame.headDir * cosine;
+  direction[frame.depth] = frame.depthDir * sine;
+  const double back = 4.0 * static_cast<double>(boreRadius) + static_cast<double>(kPocketMarginNm);
+  const double floorAt = static_cast<double>(joint.lengthNm);
+  const double through = static_cast<double>(joint.offsetNm) / cosine + static_cast<double>(pilotRadius) +
+                         static_cast<double>(kPocketMarginNm);
+  const std::int64_t pitch = joint.count > 1 ? joint.offset2Nm : 0;
+  for (int hole = 0; hole < joint.count; ++hole) {
+    double entry[3] = {};
+    entry[frame.head] = frame.entryHead;
+    entry[frame.depth] = frame.entryDepth;
+    entry[frame.spread] = static_cast<double>(rowCenter(static_cast<std::int64_t>(frame.spreadExtent), pitch,
+                                                        joint.count, hole));
+    double start[3], floorPoint[3], tip[3];
+    for (int axis = 0; axis < 3; ++axis) {
+      start[axis] = entry[axis] - direction[axis] * back;
+      floorPoint[axis] = entry[axis] + direction[axis] * floorAt;
+      tip[axis] = entry[axis] + direction[axis] * through;
+    }
+    cuts.push_back(freeCylinder(start, floorPoint, boreRadius));
+    cuts.push_back(freeCylinder(floorPoint, tip, pilotRadius));
+  }
+}
+
+void setTenonDefaults(Joint& out, const Component& selected, const Component& mate) {
+  out.partA = mate.id;
+  out.partB = selected.id;
+  out.faceA = PartFace::X1;
+  out.faceB = PartFace::X0;
+  out.thicknessNm = shrinkTo(selected.thicknessNm / 3, std::min(selected.thicknessNm, mate.thicknessNm));
+  out.widthNm = shrinkTo((selected.heightNm * 2) / 3, std::min(selected.heightNm, mate.heightNm));
+  const std::int64_t reach = std::min(selected.widthNm / 3, mate.widthNm / 2);
+  out.lengthNm = shrinkTo(reach, selected.widthNm);
+  out.depthNm = shrinkTo(out.lengthNm, mate.widthNm);
+  out.offsetNm = std::max<std::int64_t>(0, (mate.thicknessNm - out.thicknessNm) / 2);
+  out.offset2Nm = std::max<std::int64_t>(0, (mate.heightNm - out.widthNm) / 2);
+}
+
+std::int64_t evenDown(std::int64_t value) { return value - (value % 2); }
+
+// Starting sizes for the types that came after the first set. Returns false for
+// a type this function does not know.
+bool defaultLaterJoint(JointType type, const Component& selected, const Component& mate, Joint& out) {
+  const std::int64_t across = std::min(selected.thicknessNm, mate.thicknessNm);
+  const std::int64_t tall = std::min(selected.heightNm, mate.heightNm);
+  const std::int64_t reach = std::min(selected.widthNm, mate.widthNm);
+  if (type == JointType::HaunchedTenon) {
+    setTenonDefaults(out, selected, mate);
+    out.widthNm = shrinkTo((selected.heightNm * 2) / 3, selected.heightNm);
+    out.length2Nm = shrinkTo(out.lengthNm / 3, out.lengthNm);
+    out.offset2Nm = std::max<std::int64_t>(0, (mate.heightNm - selected.heightNm) / 2);
+  } else if (type == JointType::WedgedTenon) {
+    setTenonDefaults(out, selected, mate);
+    out.count = 1;
+    out.width2Nm = std::max<std::int64_t>(1, std::min(3 * units::kNmPerMm, out.widthNm / 8));
+    out.length2Nm = shrinkTo((out.lengthNm * 2) / 3, out.lengthNm);
+  } else if (type == JointType::LooseTenon) {
+    out.partA = mate.id;
+    out.partB = selected.id;
+    out.faceA = PartFace::X1;
+    out.faceB = PartFace::X0;
+    out.count = 1;
+    out.thicknessNm = shrinkTo(across / 3, across);
+    out.widthNm = shrinkTo(tall / 2, tall);
+    out.depthNm = shrinkTo(reach / 8, reach);
+  } else if (type == JointType::Biscuit) {
+    out.partA = mate.id;
+    out.partB = selected.id;
+    out.faceA = PartFace::X1;
+    out.faceB = PartFace::X0;
+    out.count = 1;
+    out.thicknessNm = shrinkTo(std::min(4 * units::kNmPerMm, across / 3), across);
+    const std::int64_t chord = std::min(tall / 2, 56 * units::kNmPerMm);
+    const std::int64_t plunge = std::min({10 * units::kNmPerMm, reach / 3, chord / 2});
+    if (plunge < 1) return true;
+    out.depthNm = plunge;
+    const double radius = (static_cast<double>(chord) * static_cast<double>(chord) / 4.0 +
+                           static_cast<double>(plunge) * static_cast<double>(plunge)) /
+                          (2.0 * static_cast<double>(plunge));
+    out.widthNm = 2 * std::llround(radius);
+  } else if (type == JointType::CrossLap) {
+    out.partA = selected.id;
+    out.partB = mate.id;
+    out.faceA = PartFace::Y1;
+    out.faceB = PartFace::Y0;
+    out.offsetNm = std::max<std::int64_t>(0, (selected.widthNm - mate.heightNm) / 2);
+    out.offset2Nm = std::max<std::int64_t>(0, (mate.widthNm - selected.heightNm) / 2);
+    out.depthNm = std::max<std::int64_t>(1, selected.thicknessNm / 2);
+  } else if (type == JointType::EndLap) {
+    out.partA = mate.id;
+    out.partB = selected.id;
+    out.faceA = PartFace::Y1;
+    out.faceB = PartFace::X0;
+    out.widthNm = selected.heightNm;
+    out.offsetNm = std::max<std::int64_t>(0, (mate.widthNm - out.widthNm) / 2);
+    out.depthNm = shrinkTo(mate.thicknessNm / 2, selected.thicknessNm);
+    out.lengthNm = shrinkTo(mate.heightNm, selected.widthNm);
+  } else if (type == JointType::SplinedMiter) {
+    out.partA = selected.id;
+    out.partB = mate.id;
+    out.faceA = PartFace::X0;
+    out.faceB = PartFace::X0;
+    out.removeMinA = true;
+    out.removeMinB = true;
+    out.lengthNm = shrinkTo(across, reach);
+    out.thicknessNm = std::max<std::int64_t>(1, std::min(3 * units::kNmPerMm, tall / 8));
+    out.offsetNm = std::max<std::int64_t>(0, (tall - out.thicknessNm) / 2);
+    out.depthNm = shrinkTo(across / 3, across);
+  } else if (type == JointType::PocketScrew) {
+    out.partA = selected.id;
+    out.partB = mate.id;
+    out.faceA = PartFace::X1;
+    out.faceB = PartFace::X0;
+    out.edge = FaceEdge::U0;
+    out.count = 1;
+    out.widthNm = evenDown(selected.thicknessNm / 2);
+    out.thicknessNm = evenDown((out.widthNm * 9) / 20);
+    const double inset = static_cast<double>(selected.thicknessNm) / 2.0 / std::tan(kPocketAngle);
+    out.offsetNm = std::llround(inset);
+    out.lengthNm = std::llround(inset / std::cos(kPocketAngle) / 2.0);
+  } else {
+    return false;
+  }
+  return true;
+}
+
 }  // namespace
 
 FaceAxes faceAxes(PartFace face) {
@@ -680,6 +1214,22 @@ const char* jointTypeKey(JointType type) {
       return "joint.tongue_groove";
     case JointType::Dowel:
       return "joint.dowel";
+    case JointType::HaunchedTenon:
+      return "joint.haunched_tenon";
+    case JointType::WedgedTenon:
+      return "joint.wedged_tenon";
+    case JointType::LooseTenon:
+      return "joint.loose_tenon";
+    case JointType::CrossLap:
+      return "joint.cross_lap";
+    case JointType::EndLap:
+      return "joint.end_lap";
+    case JointType::SplinedMiter:
+      return "joint.splined_miter";
+    case JointType::Biscuit:
+      return "joint.biscuit";
+    case JointType::PocketScrew:
+      return "joint.pocket_screw";
   }
   return "joint.mortise_tenon";
 }
@@ -739,6 +1289,18 @@ bool jointTypeFromKey(std::string_view key, JointType& out) {
   }
   if (key == "joint.dowel") {
     out = JointType::Dowel;
+    return true;
+  }
+  static constexpr struct {
+    const char* key;
+    JointType type;
+  } later[] = {{"joint.haunched_tenon", JointType::HaunchedTenon}, {"joint.wedged_tenon", JointType::WedgedTenon},
+               {"joint.loose_tenon", JointType::LooseTenon},       {"joint.cross_lap", JointType::CrossLap},
+               {"joint.end_lap", JointType::EndLap},               {"joint.splined_miter", JointType::SplinedMiter},
+               {"joint.biscuit", JointType::Biscuit},              {"joint.pocket_screw", JointType::PocketScrew}};
+  for (const auto& entry : later) {
+    if (key != entry.key) continue;
+    out = entry.type;
     return true;
   }
   return false;
@@ -825,7 +1387,8 @@ bool edgeFromKey(std::string_view key, FaceEdge& out) {
 }
 
 bool jointCutsPart(const Joint& joint, const std::string& partId) {
-  if (joint.type == JointType::Dado || joint.type == JointType::Groove || joint.type == JointType::Rabbet) {
+  if (joint.type == JointType::Dado || joint.type == JointType::Groove || joint.type == JointType::Rabbet ||
+      joint.type == JointType::PocketScrew) {
     return joint.partA == partId;
   }
   return joint.partA == partId || joint.partB == partId;
@@ -866,12 +1429,29 @@ bool jointFits(const Joint& joint, const Component& partA, const Component& part
       return fitTongue(joint, partA, partB, error);
     case JointType::Dowel:
       return fitDowel(joint, partA, partB, error);
+    case JointType::HaunchedTenon:
+      return fitHaunched(joint, partA, partB, error);
+    case JointType::WedgedTenon:
+      return fitWedged(joint, partA, partB, error);
+    case JointType::LooseTenon:
+      return fitLooseTenon(joint, partA, partB, error);
+    case JointType::CrossLap:
+      return fitCrossLap(joint, partA, partB, error);
+    case JointType::EndLap:
+      return fitEndLap(joint, partA, partB, error);
+    case JointType::SplinedMiter:
+      return fitSplinedMiter(joint, partA, partB, error);
+    case JointType::Biscuit:
+      return fitBiscuit(joint, partA, partB, error);
+    case JointType::PocketScrew:
+      return fitPocketScrew(joint, partA, error);
   }
   error = "joint.parameter";
   return false;
 }
 
-bool cutsForPart(const Joint& joint, const Component& part, std::vector<LocalCut>& cuts, std::string& error) {
+bool cutsForPart(const Joint& joint, const Component& part, const Component& mate, std::vector<LocalCut>& cuts,
+                 std::string& error) {
   if (!jointCutsPart(joint, part.id)) return true;
   const std::size_t before = cuts.size();
   switch (joint.type) {
@@ -935,6 +1515,40 @@ bool cutsForPart(const Joint& joint, const Component& part, std::vector<LocalCut
       if (part.id == joint.partA) addDowelHole(part, joint.faceA, joint.thicknessNm, joint.depthNm, cuts);
       if (part.id == joint.partB) addDowelHole(part, joint.faceB, joint.thicknessNm, joint.depthNm, cuts);
       break;
+    case JointType::HaunchedTenon:
+      if (part.id == joint.partA) addHaunchedMortiseCuts(joint, part, mate, cuts);
+      if (part.id == joint.partB) addHaunchedTenonCuts(joint, part, cuts);
+      break;
+    case JointType::WedgedTenon:
+      if (part.id == joint.partA) addMortiseCut(joint, part, cuts);
+      if (part.id == joint.partB) {
+        addTenonCuts(joint, part, cuts);
+        addWedgeKerfs(joint, part, cuts);
+      }
+      break;
+    case JointType::LooseTenon:
+      addLooseTenonPockets(joint, part, part.id == joint.partA ? joint.faceA : joint.faceB, cuts);
+      break;
+    case JointType::CrossLap:
+      addCrossLapCut(joint, part, mate, cuts);
+      break;
+    case JointType::EndLap:
+      addEndLapCuts(joint, part, cuts);
+      break;
+    case JointType::SplinedMiter: {
+      const bool first = part.id == joint.partA;
+      const PartFace face = first ? joint.faceA : joint.faceB;
+      const bool keepMin = first ? joint.removeMinA : joint.removeMinB;
+      addMiterCut(part, face, joint.lengthNm, keepMin, cuts);
+      addMiterKerf(joint, part, face, keepMin, cuts);
+      break;
+    }
+    case JointType::Biscuit:
+      addBiscuitKerfs(joint, part, part.id == joint.partA ? joint.faceA : joint.faceB, cuts);
+      break;
+    case JointType::PocketScrew:
+      addPocketScrewHoles(joint, part, cuts);
+      break;
   }
   if (cuts.size() == before) {
     error = "joint.no_effect";
@@ -946,18 +1560,10 @@ bool cutsForPart(const Joint& joint, const Component& part, std::vector<LocalCut
 bool defaultJoint(JointType type, const Component& selected, const Component& mate, Joint& out, std::string& error) {
   out = Joint{};
   out.type = type;
-  if (type == JointType::MortiseTenon) {
-    out.partA = mate.id;
-    out.partB = selected.id;
-    out.faceA = PartFace::X1;
-    out.faceB = PartFace::X0;
-    out.thicknessNm = shrinkTo(selected.thicknessNm / 3, std::min(selected.thicknessNm, mate.thicknessNm));
-    out.widthNm = shrinkTo((selected.heightNm * 2) / 3, std::min(selected.heightNm, mate.heightNm));
-    const std::int64_t reach = std::min(selected.widthNm / 3, mate.widthNm / 2);
-    out.lengthNm = shrinkTo(reach, selected.widthNm);
-    out.depthNm = shrinkTo(out.lengthNm, mate.widthNm);
-    out.offsetNm = std::max<std::int64_t>(0, (mate.thicknessNm - out.thicknessNm) / 2);
-    out.offset2Nm = std::max<std::int64_t>(0, (mate.heightNm - out.widthNm) / 2);
+  if (defaultLaterJoint(type, selected, mate, out)) {
+    // The later types keep their own starting sizes.
+  } else if (type == JointType::MortiseTenon) {
+    setTenonDefaults(out, selected, mate);
   } else if (type == JointType::HalfLap) {
     out.partA = selected.id;
     out.partB = mate.id;

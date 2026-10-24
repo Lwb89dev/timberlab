@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(TimberLab VERSION 0.4.1 LANGUAGES C CXX)
+project(TimberLab VERSION 0.5.0 LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -28,6 +28,19 @@ if(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
   if(EXISTS "${_TIMBERLAB_OCCT}/lib/cmake/opencascade/OpenCASCADEConfig.cmake")
     list(APPEND CMAKE_PREFIX_PATH "${_TIMBERLAB_OCCT}")
   endif()
+endif()
+
+# MSVC takes none of the GCC warning flags. The source is UTF-8, and the larger
+# translation units need /bigobj. NOMINMAX keeps <windows.h> from defining min
+# and max inside Qt and Open CASCADE headers.
+if(MSVC)
+  add_compile_options(/utf-8 /bigobj)
+  add_compile_definitions(NOMINMAX _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)
+  set(TIMBERLAB_CXX_WARNINGS /W3)
+  set(TIMBERLAB_C_WARNINGS /W3)
+else()
+  set(TIMBERLAB_CXX_WARNINGS -Wall -Wextra -Wpedantic)
+  set(TIMBERLAB_C_WARNINGS -Wall -Wextra)
 endif()
 
 find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick OpenGL QuickControls2 Network LinguistTools)
@@ -73,15 +86,24 @@ target_include_directories(timberlab-model SYSTEM PUBLIC "${OpenCASCADE_INCLUDE_
 target_compile_definitions(timberlab-model PUBLIC MINIZ_NO_ZLIB_COMPATIBLE_NAMES)
 target_compile_definitions(timberlab-model PRIVATE TIMBERLAB_VERSION="${PROJECT_VERSION}")
 target_compile_definitions(timberlab-model PRIVATE _LARGEFILE64_SOURCE=1 __USE_LARGEFILE64)
+# The toolkits this program uses, not everything an install may hold. The STEP
+# writer needs an OCCT built with its data-exchange module. Without it the
+# program still builds, and a STEP export says so.
+set(TIMBERLAB_OCCT_LIBRARIES TKernel TKMath TKG2d TKG3d TKGeomBase TKBRep TKGeomAlgo TKTopAlgo TKPrim TKBO
+    TKShHealing TKBool TKHLR TKFillet TKOffset TKFeat TKMesh TKXMesh)
+if(TARGET TKDESTEP)
+  list(APPEND TIMBERLAB_OCCT_LIBRARIES TKDESTEP TKDE TKXSBase TKXCAF TKLCAF)
+  target_compile_definitions(timberlab-model PRIVATE TIMBERLAB_HAS_STEP=1)
+endif()
 target_link_libraries(timberlab-model
   PUBLIC
-    ${OpenCASCADE_LIBRARIES}
+    ${TIMBERLAB_OCCT_LIBRARIES}
     OpenSSL::Crypto
     SQLite::SQLite3
 )
 target_compile_options(timberlab-model PRIVATE
-  $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra -Wpedantic>
-  $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra>
+  "$<$<COMPILE_LANGUAGE:CXX>:${TIMBERLAB_CXX_WARNINGS}>"
+  "$<$<COMPILE_LANGUAGE:C>:${TIMBERLAB_C_WARNINGS}>"
 )
 option(TIMBERLAB_SANITIZE "Instrument the model with AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 if(TIMBERLAB_SANITIZE)
@@ -93,6 +115,7 @@ qt_add_executable(timberlab
   apps/timberlab/main.cpp
   apps/timberlab/self_check.cpp
   apps/timberlab/accept.cpp
+  apps/timberlab/bench.cpp
   src/ui/DocumentController.cpp
   src/ui/ViewportItem.cpp
   src/ui/RelaySocket.cpp
@@ -122,7 +145,35 @@ target_link_libraries(timberlab PRIVATE
   Qt6::QuickControls2
   Qt6::Network
 )
-target_compile_options(timberlab PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_options(timberlab PRIVATE ${TIMBERLAB_CXX_WARNINGS})
+# A window program on Windows has no console, and on macOS it is an app bundle.
+# --check, --accept, and --bench report through the exit code and the console of
+# the shell that started them.
+if(WIN32)
+  set_target_properties(timberlab PROPERTIES WIN32_EXECUTABLE ON)
+endif()
+if(APPLE)
+  set_target_properties(timberlab PROPERTIES MACOSX_BUNDLE ON)
+endif()
+# The Android package carries Open CASCADE itself, because the OCCT libraries
+# are shared and the device has none. packaging/build-android.sh drives this.
+if(ANDROID)
+  # The Amber signer bridge uses QtAndroidPrivate for activity results.
+  target_link_libraries(timberlab PRIVATE Qt6::CorePrivate)
+  file(GLOB _timberlab_occt_libs "${OpenCASCADE_LIBRARY_DIR}/*.so")
+  # Qt's OpenSSL TLS backend loads libssl_3.so and libcrypto_3.so by name.
+  get_filename_component(_timberlab_ssl_dir "${OPENSSL_CRYPTO_LIBRARY}" DIRECTORY)
+  file(GLOB _timberlab_ssl_libs "${_timberlab_ssl_dir}/lib*_3.so")
+  math(EXPR _timberlab_version_code
+    "${PROJECT_VERSION_MAJOR} * 10000 + ${PROJECT_VERSION_MINOR} * 100 + ${PROJECT_VERSION_PATCH}")
+  set_target_properties(timberlab PROPERTIES
+    QT_ANDROID_EXTRA_LIBS "${_timberlab_occt_libs};${_timberlab_ssl_libs}"
+    QT_ANDROID_PACKAGE_NAME "local.timberlab.app"
+    QT_ANDROID_VERSION_NAME "${PROJECT_VERSION}"
+    QT_ANDROID_VERSION_CODE "${_timberlab_version_code}"
+    QT_ANDROID_TARGET_SDK_VERSION 34
+  )
+endif()
 # DT_RPATH, not DT_RUNPATH, and only for the GNU ld Linux build. OCCT's own
 # libraries do not carry a run path, and RUNPATH is not used when resolving
 # their dependencies. Android's lld does not take this flag.
@@ -167,7 +218,7 @@ if(BUILD_TESTING)
     TIMBERLAB_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
     TIMBERLAB_TEST_DIR="${CMAKE_BINARY_DIR}/testdata"
   )
-  target_compile_options(timberlab-tests PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(timberlab-tests PRIVATE ${TIMBERLAB_CXX_WARNINGS})
   if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_options(timberlab-tests PRIVATE LINKER:--disable-new-dtags)
     set_target_properties(timberlab-tests PROPERTIES

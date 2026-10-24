@@ -43,6 +43,16 @@ TIMBERLAB_DATA_DIR="$PWD/build/accept" ./build/timberlab --accept
 
 Both were run successfully on this baseline. See `TESTING.md`.
 
+## Timings
+
+```bash
+./build/timberlab --bench
+./build/timberlab --bench-project build/bench/frames-100.timberlab 100
+TIMBERLAB_FRAME_BENCH=5 QT_QPA_PLATFORM=xcb ./build/timberlab build/bench/frames-100.timberlab
+```
+
+`--bench` prints save, load, tessellation, edit, and export times for generated projects, with no window. `--bench-project` writes a grid of boards with joints. `TIMBERLAB_FRAME_BENCH` opens a window on that project, turns the swap interval off, orbits the camera one step per swapped frame for that many seconds, and prints the frame rate. It needs a display.
+
 ## Run the window
 
 ```bash
@@ -61,12 +71,31 @@ The process loads `assets/icons/icon.png` and calls `QGuiApplication::setDesktop
 
 ## OCCT options used for the vendored build
 
-Modeling only: Foundation, ModelingData, ModelingAlgorithms. Application frameworks, data exchange, Draw, and visualization were off. FreeType, OpenGL, RapidJSON, TBB, VTK, FreeImage, FFmpeg, and OpenVR were off. The libraries the application links are TKernel, TKMath, TKG2d, TKG3d, TKGeomBase, TKBRep, TKGeomAlgo, TKTopAlgo, TKPrim, TKBO, TKShHealing, TKBool, TKHLR, TKFillet, TKOffset, TKFeat, TKMesh, and TKXMesh.
+Foundation, ModelingData, ModelingAlgorithms, and DataExchange. The DataExchange module is there for the STEP writer: without it the program still builds, and a STEP export says it is unavailable (the Android build is made without it). Visualization, Draw, and the OCCT DETools were off. OCCT's own application framework toolkits are built only because the STEP writer needs two of them (TKXCAF and TKLCAF). FreeType, OpenGL, RapidJSON, TBB, VTK, FreeImage, FFmpeg, and OpenVR were off. The libraries the application links are TKernel, TKMath, TKG2d, TKG3d, TKGeomBase, TKBRep, TKGeomAlgo, TKTopAlgo, TKPrim, TKBO, TKShHealing, TKBool, TKHLR, TKFillet, TKOffset, TKFeat, TKMesh, and TKXMesh, plus TKDESTEP, TKDE, TKXSBase, TKXCAF, and TKLCAF when the install has TKDESTEP. CMake names them one by one. It does not take every toolkit an install happens to hold.
 
-## Unverified platform notes
+An older `deps/occt-install` built without DataExchange still works, with no STEP. To add the module to the existing build tree: `cmake -S deps/OCCT-7_9_2 -B deps/occt-build -DBUILD_MODULE_DataExchange=ON`, then `cmake --build deps/occt-build --target install`. That rebuilds every toolkit.
 
-These notes are not build scripts and have not been tried. Checked again on this Linux machine on 2026-10-17: there is still no Windows, macOS, or Android build.
+## Android
 
-- **Windows.** Length conversion no longer stops the compile when `__int128` is missing. The portable multiply and divide in `src/units/units.cpp` is what this Linux build runs, and it is checked against `__int128` here. MSVC itself has not been run. Qt and OCCT would come from their Windows packages. The viewport uses OpenGL 3.3 on desktop. Do not mark Windows supported until that compile exists.
-- **macOS.** Qt would be the macOS package, and the window must request OpenGL before show because the framebuffer item does not run on Metal. OCCT would be built the same way, without the visualization toolkit. Apple Silicon and Intel are both untested.
-- **Android arm64.** There is no NDK setup in this tree, and no tablet has been built. The shader bodies already have an OpenGL ES 3.00 variant, selected when the context is ES, and `Q_OS_ANDROID` requests an ES 3.0 surface instead of a desktop core profile. CMake does not append the Linux `deps/qt/6.8.3/gcc_64` or `deps/occt-install` prefixes when `CMAKE_SYSTEM_NAME` is Android, and it does not pass `--disable-new-dtags` except on Linux. An Android configure still needs its own Qt and OCCT prefixes. Qt Quick 3D stays out: it is not in this install, and Qt lists it as GPL rather than LGPL. Do not mark Android supported until an arm64 package has been installed and used on a tablet.
+`packaging/build-android.sh` builds a debug-signed arm64 package, `build/android/timberlab-<version>-arm64-debug.apk`. Run it from the repository root. It needs `sdkmanager`, a JDK 17, `perl`, `curl`, and `unzip` on the path, and `deps/venv/bin/aqt` for Qt. It installs everything else under `deps/` and `build/`, both gitignored. Gradle's cache and the Android tools' preferences are kept in `deps/gradle-home` and `deps/android-user-home`, not in the home directory.
+
+Stages, each skipped when its output exists: `sdk` (SDK platform 34, build-tools 34.0.0, NDK 26.1.10909125, after accepting the SDK licenses), `qt` (Qt 6.8.3 for `android_arm64_v8a`, with the host tools taken from `gcc_64`), `occt` (Open CASCADE 7.9.2 for the NDK, shared), `openssl` (OpenSSL 3.0.22, shared, built with a `_3` library suffix because Qt's TLS backend loads `libssl_3.so` and `libcrypto_3.so`), `sqlite` (the 3.45.1 amalgamation as a static library), `apk` (CMake and `androiddeployqt`), and `sign` (zipalign and a debug key kept in `deps/android-debug.keystore`). The sources of OpenSSL and SQLite are fetched over HTTPS. The OpenSSL archive is checked against its published SHA-256. The SQLite archive is not checked against a published digest.
+
+The package holds the Qt libraries, the QML plugins, the JPEG plugin, the Open CASCADE libraries, and OpenSSL. API 28 is the minimum and 34 the target. The package name is `local.timberlab.app`. The CMake `ANDROID` block adds the Open CASCADE and OpenSSL libraries to the package. `ViewportItem.cpp` includes the GLES 3 header on Android, and `main.cpp` points the data folder at the app's private storage, because an Android process has no `HOME`.
+
+This APK has been built and its structure checked (`aapt dump badging`, `apksigner verify`, the libraries inside). It has not been installed on a device or an emulator, so nothing in it has been run. The interface is the desktop one. The file dialogs on Android return `content://` addresses, and the project save and open take file paths, so they are expected not to work until that is handled.
+
+```bash
+packaging/build-android.sh
+adb install -r build/android/timberlab-0.5.0-arm64-debug.apk
+```
+
+## Windows
+
+`.github/workflows/windows.yml` builds a Windows x64 zip on a `windows-2022` runner, on a version tag or a manual run. It installs Qt 6.8.3 for MSVC 2022 with `aqtinstall`, builds Open CASCADE 7.9.2 with the modeling libraries only (cached), installs OpenSSL and SQLite with vcpkg, builds this tree with Ninja and `cl`, and runs the tests, `--check`, and `--accept`. It then runs `windeployqt`, copies the Open CASCADE, OpenSSL, and SQLite libraries and the license texts, runs `--check` and `--accept` from the package with only the Windows folders on `PATH`, zips it, and attaches the zip to the release on a tag.
+
+That workflow has not run. MSVC has not compiled this tree, so the first run may stop on a compile error. These changes were made for it without a Windows compiler: the file calls in `src/storage/archive.cpp` have a C runtime branch (no `O_NOFOLLOW` and no folder `fsync` there), `src/platform/paths.cpp` reads `LOCALAPPDATA`, the warning flags are chosen by compiler, and two tests skip the POSIX permission and symlink checks. Windows 10 and 11 on x64 are the only target. Windows on Arm is not.
+
+## macOS
+
+Not built and not set up. Qt would be the macOS package, and the window must request OpenGL before show because the framebuffer item does not run on Metal. OCCT would be built the same way, without the visualization toolkit. Apple Silicon and Intel are both untested.

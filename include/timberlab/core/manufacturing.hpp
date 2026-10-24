@@ -68,4 +68,22 @@ std::string wireDxf(const Component& component, const std::vector<Joint>& joints
 std::string wirePdf(const Component& component, const std::vector<Joint>& joints,
                     const std::vector<Component>& parts, std::string& error);
 
+// Hidden-line drawings of the cut solid. The edges come from OCCT's hidden-line
+// removal on the exact solid, not from its tessellation. Visible edges are solid
+// and hidden edges are dashed. The sheet places front, right, and top like the
+// wire sheet. Each view carries feature dimensions, in millimetres: the size and
+// position of every cut along the view's two axes, chained from the part's
+// corner, plus the overall size. They are read from the cuts the joints store,
+// not measured on the solid, so a cut that is not parallel to a view axis
+// contributes the extent of its bounding box. A cylinder part is drawn without
+// dimensions. DXF is R12 with layers VISIBLE, HIDDEN, and DIMENSIONS, and a
+// dashed HIDDEN line type. These are shop drawings of one part, not a checked
+// manufacturing drawing.
+std::string hiddenLineSheetSvg(const Component& component, const std::vector<Joint>& joints,
+                               const std::vector<Component>& parts, std::string& error);
+std::string hiddenLineDxf(const Component& component, const std::vector<Joint>& joints,
+                          const std::vector<Component>& parts, std::string& error);
+std::string hiddenLinePdf(const Component& component, const std::vector<Joint>& joints,
+                          const std::vector<Component>& parts, std::string& error);
+
 }  // namespace timberlab::manufacturing
