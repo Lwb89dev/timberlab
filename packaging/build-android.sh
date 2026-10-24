@@ -12,6 +12,9 @@
 # A stage whose output already exists is skipped.
 set -euo pipefail
 
+# The runner's own SDK is only a source for sdkmanager. This script installs its
+# own SDK under deps/ and then points ANDROID_HOME there.
+RUNNER_ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEPS="${ROOT}/deps"
 SDK="${DEPS}/android-sdk"
@@ -51,7 +54,8 @@ find_tool() {
 stage_sdk() {
   [[ -d "${NDK}" ]] && return
   local sdkmanager
-  sdkmanager="$(find_tool sdkmanager "${ANDROID_HOME:-/nonexistent}/cmdline-tools/latest/bin/sdkmanager")"
+  sdkmanager="$(find_tool sdkmanager "${RUNNER_ANDROID_HOME:-/nonexistent}/cmdline-tools/latest/bin/sdkmanager" \
+    /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager)"
   mkdir -p "${SDK}"
   yes | "${sdkmanager}" --sdk_root="${SDK}" --licenses > /dev/null || true
   "${sdkmanager}" --sdk_root="${SDK}" "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;${NDK_VERSION}"

@@ -53,7 +53,7 @@ jobs:
 
       - name: Restore the Qt, Open CASCADE, OpenSSL, and SQLite builds
         id: deps-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: |
             deps/qt
@@ -67,6 +67,17 @@ jobs:
         run: |
           set -euo pipefail
           packaging/build-android.sh qt occt openssl sqlite
+
+      - name: Save those dependencies
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            deps/qt
+            deps/occt-android-install
+            deps/openssl-android
+            deps/sqlite-android
+          key: android-deps-${{ hashFiles('packaging/build-android.sh') }}-v1
 
       - name: Build and sign the package
         run: |

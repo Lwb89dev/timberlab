@@ -49,7 +49,7 @@ jobs:
 
       - name: Restore Qt
         id: qt-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: ${{ github.workspace }}/.cache/qt
           key: qt-6.8.3-windows-msvc2022_64-desktop-v1
@@ -64,9 +64,16 @@ jobs:
             --archives qtbase qtdeclarative qtsvg qttools qttranslations qtshadertools
           test -f "${GITHUB_WORKSPACE}/.cache/qt/${QT_VERSION}/msvc2022_64/lib/cmake/Qt6/Qt6Config.cmake"
 
+      - name: Save Qt
+        if: steps.qt-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/.cache/qt
+          key: qt-6.8.3-windows-msvc2022_64-desktop-v1
+
       - name: Restore Open CASCADE
         id: occt-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: ${{ github.workspace }}/.cache/occt-install
           key: occt-7.9.2-with-step-windows-msvc-v2
@@ -115,6 +122,13 @@ jobs:
           cmake --build "${workspace}/.cache/occt-build" --target install
           test -f "${workspace}/.cache/occt-install/lib/cmake/opencascade/OpenCASCADEConfig.cmake"
 
+      - name: Save Open CASCADE
+        if: steps.occt-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/.cache/occt-install
+          key: occt-7.9.2-with-step-windows-msvc-v2
+
       - name: Install OpenSSL and SQLite
         run: |
           set -euo pipefail
@@ -126,6 +140,9 @@ jobs:
           set -euo pipefail
           workspace="$(cygpath -m "${GITHUB_WORKSPACE}")"
           vcpkg="$(cygpath -m "${VCPKG_INSTALLATION_ROOT}")/installed/x64-windows"
+          # The build runs the test program once to list its tests, so the
+          # Qt, Open CASCADE, and vcpkg libraries have to be on the path.
+          export PATH="$(cygpath -u "${GITHUB_WORKSPACE}")/.cache/qt/${QT_VERSION}/msvc2022_64/bin:$(cygpath -u "${GITHUB_WORKSPACE}")/.cache/occt-install/bin:$(cygpath -u "${VCPKG_INSTALLATION_ROOT}")/installed/x64-windows/bin:${PATH}"
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DCMAKE_PREFIX_PATH="${workspace}/.cache/qt/${QT_VERSION}/msvc2022_64;${workspace}/.cache/occt-install;${vcpkg}"
