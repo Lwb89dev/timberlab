@@ -3,18 +3,20 @@
 # from the repository root after the artwork changes. It needs ImageMagick.
 #
 # The icon is an adaptive icon: a flat dark background and a foreground layer.
-# The foreground is the inside of the artwork (the saw blade on its blueprint),
-# scaled so the blade fills the 66 dp safe zone of the 108 dp canvas. Round,
-# squircle, and square launcher masks all keep the blade whole.
+# The foreground is the whole desktop icon, the rounded square with its copper
+# edge, centered and scaled to fit the 72 dp that every launcher mask shows. A
+# squircle mask, which is what One UI uses, shows it as drawn. A circle mask
+# clips the four corners.
 set -euo pipefail
 
 ICON="assets/icons/icon.png"
 RES="packaging/android/res"
-# The inner panel of the 1254 px artwork, a square around the blade's center.
-CROP="860x860+197+177"
-# Share of the canvas the cropped panel covers. The blade is 79% of the
-# panel, so 0.772 puts it at 61% of the canvas.
-SHARE="0.772"
+# A square around the rounded square of the 1254 px artwork, a little wider
+# than its 1059 x 1044 px body.
+CROP="1070x1070+92+72"
+# Share of the 108 dp canvas the cropped square covers. The masks show 72 dp, 66.7%,
+# and the icon stays a little inside that so its edge is not clipped.
+SHARE="0.630"
 
 test -f "${ICON}"
 mkdir -p "${RES}/values" "${RES}/mipmap-anydpi-v26"
