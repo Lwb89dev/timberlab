@@ -172,6 +172,8 @@ if(ANDROID)
     QT_ANDROID_VERSION_NAME "${PROJECT_VERSION}"
     QT_ANDROID_VERSION_CODE "${_timberlab_version_code}"
     QT_ANDROID_TARGET_SDK_VERSION 34
+    # The manifest and the launcher icon. packaging/android/make-icons.sh writes the icon.
+    QT_ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/packaging/android"
   )
 endif()
 # DT_RPATH, not DT_RUNPATH, and only for the GNU ld Linux build. OCCT's own
