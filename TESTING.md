@@ -65,4 +65,6 @@ A 10 × 20 × 30 mm box is 12 triangles and 684 bytes of binary STL, spans 0 to 
 
 `timberlab --bench` and `TIMBERLAB_FRAME_BENCH=<seconds>` produced the numbers in the README. The frame run opened a window under X11 on this machine's display for five seconds per scene. It was not run on a tablet, Windows, or macOS.
 
-The Android package was rebuilt at 0.5.0. The workflows `android.yml` and `macos.yml` parsed as YAML and have not run. `windows.yml` has not run either.
+The Android package was rebuilt at 0.5.0. The runs on the 0.5.0 tag gave Package success, Android failure (the script looked for `sdkmanager` after overwriting `ANDROID_HOME`), and Windows failure (MSVC compiled everything, then the test discovery could not find the DLLs). After the fixes in commit 5061e79, manual runs of `windows.yml` and `android.yml` on `main` both passed every step. The Windows run covered the Catch2 suite, `--check`, `--accept`, and `--check` and `--accept` from the package with only the Windows folders on the path. No window was opened. `macos.yml` parsed as YAML and has not run.
+
+The release APK was built from scratch and signed with the release key. `apksigner verify` accepted it and printed the certificate digest that the keystore reports. `aapt dump badging` shows version code 500, minimum SDK 28, target SDK 34, `arm64-v8a`, and no debuggable flag. It was not installed or run.

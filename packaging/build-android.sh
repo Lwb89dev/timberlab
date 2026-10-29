@@ -161,23 +161,36 @@ stage_apk() {
   cmake --build "${BUILD}" --target apk
 }
 
-# A debug-signed package, so a tablet accepts it. The key lives in deps/ and is
-# the standard Android debug key. It is not a release signature.
+# Signs the package. With ANDROID_KEYSTORE and ANDROID_KEYSTORE_PASS in the
+# environment it is a release signature: the key alias is ANDROID_KEY_ALIAS
+# (default timberlab), the password reaches apksigner through the environment
+# and never the command line, and the file is timberlab-<version>-arm64.apk.
+# Without them it is signed with the standard Android debug key kept in deps/,
+# so a tablet accepts it, and the file is timberlab-<version>-arm64-debug.apk.
 stage_sign() {
   local version
   version="$(sed -n 's/^project(TimberLab VERSION \([0-9.]*\) .*/\1/p' "${ROOT}/CMakeLists.txt")"
   local unsigned="${BUILD}/android-build/build/outputs/apk/release/android-build-release-unsigned.apk"
   local aligned="${BUILD}/timberlab-${version}-arm64-aligned.apk"
-  local signed="${BUILD}/timberlab-${version}-arm64-debug.apk"
-  local keystore="${DEPS}/android-debug.keystore"
   local tools="${SDK}/build-tools/34.0.0"
-  if [[ ! -f "${keystore}" ]]; then
-    keytool -genkeypair -keystore "${keystore}" -storepass android -keypass android -alias androiddebugkey \
-      -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-  fi
+  local signed
   "${tools}/zipalign" -f -p 4 "${unsigned}" "${aligned}"
-  "${tools}/apksigner" sign --ks "${keystore}" --ks-pass pass:android --key-pass pass:android \
-    --ks-key-alias androiddebugkey --out "${signed}" "${aligned}"
+  if [[ -n "${ANDROID_KEYSTORE:-}" ]]; then
+    : "${ANDROID_KEYSTORE_PASS:?ANDROID_KEYSTORE_PASS is not set}"
+    signed="${BUILD}/timberlab-${version}-arm64.apk"
+    "${tools}/apksigner" sign --ks "${ANDROID_KEYSTORE}" --ks-pass env:ANDROID_KEYSTORE_PASS \
+      --key-pass env:ANDROID_KEYSTORE_PASS --ks-key-alias "${ANDROID_KEY_ALIAS:-timberlab}" \
+      --out "${signed}" "${aligned}"
+  else
+    local keystore="${DEPS}/android-debug.keystore"
+    signed="${BUILD}/timberlab-${version}-arm64-debug.apk"
+    if [[ ! -f "${keystore}" ]]; then
+      keytool -genkeypair -keystore "${keystore}" -storepass android -keypass android -alias androiddebugkey \
+        -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+    fi
+    "${tools}/apksigner" sign --ks "${keystore}" --ks-pass pass:android --key-pass pass:android \
+      --ks-key-alias androiddebugkey --out "${signed}" "${aligned}"
+  fi
   "${tools}/apksigner" verify "${signed}"
   rm -f "${aligned}"
   echo "${signed}"

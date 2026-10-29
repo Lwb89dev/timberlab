@@ -41,9 +41,9 @@ The package installs `/usr/bin/timberlab`, the desktop file, and the icon. The p
 
 ## Android and Windows
 
-`packaging/build-android.sh` builds a debug-signed arm64 APK (`build/android/timberlab-<version>-arm64-debug.apk`). It downloads the Android SDK and NDK, Qt for Android, and sources for Open CASCADE, OpenSSL, and SQLite into `deps/`, and builds them with the NDK. That APK has been built here. It has not been installed on a device or an emulator. The interface is the desktop one. Touch input and the Android file dialogs have not been tried, and the file dialogs return `content://` addresses that the project save and open do not handle.
+`packaging/build-android.sh` builds a debug-signed arm64 APK (`build/android/timberlab-<version>-arm64-debug.apk`). It downloads the Android SDK and NDK, Qt for Android, and sources for Open CASCADE, OpenSSL, and SQLite into `deps/`, and builds them with the NDK. That APK has been built here and by the Android workflow on a clean runner. The release APK is signed with a release key when `ANDROID_KEYSTORE` and `ANDROID_KEYSTORE_PASS` are set. It has not been installed on a device or an emulator. The interface is the desktop one. Touch input and the Android file dialogs have not been tried, and the file dialogs return `content://` addresses that the project save and open do not handle.
 
-`.github/workflows/windows.yml` builds a Windows x64 zip with MSVC on a version tag or a manual run, runs the tests and an isolated run of the packaged program, and attaches the zip to the release. It has not run yet. MSVC has not compiled this tree.
+`.github/workflows/windows.yml` builds a Windows x64 zip with MSVC on a version tag or a manual run, runs the tests and an isolated run of the packaged program, and attaches the zip to the release. A manual run on 2026-10-24 compiled the tree with MSVC, passed the tests, `--check`, and `--accept`, and ran the package on its own. Nobody has opened the window on a Windows desktop.
 
 ```bash
 sudo apt install ./timberlab_0.2.0_amd64.deb
@@ -68,7 +68,7 @@ Frame rate, with the swap interval set to 0 so it is not held to the refresh rat
 
 ## What is not implemented
 
-Tolerances, section views, and a title block on the drawings. STEP with colours or assemblies: parts are plain named solids. A published project, and any relay that stores one. CNC. A macOS package. An Android or a Windows package that has been installed and used: the Android APK builds and the Windows workflow is written, and neither has been run on a device or on a runner yet. A live Amber session has not been run, and a live bunker session was not run for this change. Automatic crash recovery: a failed open does not replace the project with the backup. Those targets are described in `ROADMAP.md`. Do not treat this build as supporting them.
+Tolerances, section views, and a title block on the drawings. STEP with colours or assemblies: parts are plain named solids. A published project, and any relay that stores one. CNC. A macOS package. An Android or a Windows package that has been installed and used: the Android APK and the Windows zip build on their runners, and neither has been started on a device or a desktop. A live Amber session has not been run, and a live bunker session was not run for this change. Automatic crash recovery: a failed open does not replace the project with the backup. Those targets are described in `ROADMAP.md`. Do not treat this build as supporting them.
 
 ## Run it
 
